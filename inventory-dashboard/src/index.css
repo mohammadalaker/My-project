@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,3 +7,13 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   background-color: #F7F9FF;
 }
+=======
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #F7F9FF;
+}
+>>>>>>> fea0a82cfd606a9ad96144983f837e51af84636f
