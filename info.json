@@ -1,0 +1,62 @@
+info.json{
+  "site_metadata": {
+    "project_title": "Developer Inventory & Task Dashboard",
+    "theme_reference": "Soft-UI Minimalist (From Mood Tracker Screenshots)",
+    "data_source": "Small Parts Inventory - January 2026"
+  },
+  "design_system": {
+    "palette": {
+      "background": "#F8F9FF",
+      "surface": "#FFFFFF",
+      "primary": "#4E66D1",
+      "status_colors": {
+        "completed": "#99E6B3",
+        "pending": "#99D6FF",
+        "alert": "#FF9999"
+      }
+    },
+    "visual_rules": {
+      "border_radius": "28px",
+      "card_padding": "24px",
+      "font_family": "Inter, sans-serif",
+      "chart_style": "Rounded Capsule Bars"
+    }
+  },
+  "content_structure": {
+    "hero_section": {
+      "greeting": "Hello, Developer!",
+      "subtitle": "Inventory Status for January 2026",
+      "action_button": "Log New Entry"
+    },
+    "inventory_summary_widgets": [
+      {
+        "label": "Total Parts Count",
+        "value": "Calculated from Excel",
+        "trend": "Up 5% from last month"
+      },
+      {
+        "label": "Inventory Health",
+        "value": "Stable",
+        "style": "Neutral Blue"
+      }
+    ],
+    "main_data_table_style": {
+      "type": "Modern List View",
+      "columns_mapped_from_excel": [
+        "رقم القطعة / Item ID",
+        "الوصف / Description",
+        "الحالة / Status",
+        "التاريخ / Date"
+      ]
+    },
+    "visual_analytics": {
+      "chart_title": "Stock Distribution Trends",
+      "x_axis": "January Dates",
+      "y_axis": "Quantity",
+      "bar_top_icons": "Settings/Part Icons"
+    }
+  },
+  "implementation_notes": {
+    "framework": "React.js + Tailwind CSS",
+    "animation_library": "Framer Motion",
+    "pixel_perfection": "Match the 8px

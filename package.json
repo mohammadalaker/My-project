@@ -1,0 +1,15 @@
+{
+  "name": "my-porject-1",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix my-website",
+    "dev:website": "npm run dev --prefix my-website",
+    "dev:dashboard": "npm run dev --prefix inventory-dashboard",
+    "install:website": "npm install --prefix my-website",
+    "install:dashboard": "npm install --prefix inventory-dashboard",
+    "read-excel": "npm run read-excel --prefix my-website",
+    "update-products": "npm run update-products --prefix my-website",
+    "sync-electric": "npm run sync-electric --prefix my-website",
+    "update-electric": "npm run update-electric --prefix my-website"
+  }
+}
