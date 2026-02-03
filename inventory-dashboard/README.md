@@ -21,6 +21,8 @@ Then open the URL shown in the terminal (e.g. `http://localhost:5173`).
 
 ## Data source
 
+- **Supabase**: إذا عيّنت `VITE_SUPABASE_URL` و `VITE_SUPABASE_ANON_KEY` و `VITE_SUPABASE_TABLE`، التطبيق يحمّل الأصناف من جدولك تلقائياً. انظر إعداد Supabase في الملف `.env.example` ومتغيرات البيئة في Vercel.
+
 - **Load your file**: Click **“Load Excel / CSV”** and choose `كشف القطع الصغيرة شهر 01-2026.xlsx` (or any sheet with columns for name, quantity, and price).
 - The parser looks for columns named **Eng-Name** (or Description/الوصف), **Qty** (or Quantity/الكمية), and **Price** (or السعر).
 - **Use sample data**: Click **“Use sample data”** to try the UI without a file.
