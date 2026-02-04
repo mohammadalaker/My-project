@@ -1,19 +1,26 @@
-<<<<<<< HEAD
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: #F7F9FF;
-}
-=======
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer base {
+  body {
+    @apply antialiased;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background-color: #F8FAFF;
+    min-height: 100vh;
+  }
 
-body {
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: #F7F9FF;
+  #root {
+    min-height: 100vh;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
 }
->>>>>>> fea0a82cfd606a9ad96144983f837e51af84636f
+
+@layer components {
+  .card-soft {
+    @apply rounded-[32px] bg-white shadow-sm;
+  }
+}
