@@ -2,12 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --app-bg: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 35%, #eef2ff 70%, #f0f9ff 100%);
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --card-radius: 24px;
+  --card-shadow: 0 4px 24px -4px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  --card-shadow-hover: 0 20px 40px -12px rgba(99, 102, 241, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 @layer base {
   body {
     @apply antialiased;
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-    background-color: #F8FAFF;
+    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
+    background: var(--app-bg);
+    /* لا نستخدم fixed لتجنب ثقل الرسم عند التمرير */
   }
 
   #root {
@@ -22,5 +32,16 @@
 @layer components {
   .card-soft {
     @apply rounded-[32px] bg-white shadow-sm;
+  }
+
+  .card-modern {
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+  }
+
+  .card-modern:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
   }
 }

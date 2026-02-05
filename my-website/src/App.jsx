@@ -3,7 +3,6 @@ import ExcelJS from 'exceljs';
 import {
   Search,
   Plus,
-  Pencil,
   Trash2,
   Upload,
   X,
@@ -29,7 +28,7 @@ import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 
 const BUCKET = 'Pic_of_items';
-const PAGE_SIZE = 80;
+const PAGE_SIZE = 36;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /** إرجاع رابط عام للصورة من bucket Pic_of_items - إذا كانت مساراً. الروابط الخارجية (http) تُرجع كما هي. */
@@ -261,23 +260,23 @@ function App() {
   const kitchenwareGroupsSorted = [...kitchenwareGroups];
   const kitchenwareIcons = [Home, Utensils, UtensilsCrossed, ChefHat, Wine, Flame, Cookie, Package];
 
-  /** فوق 1 = موجود، تحت 1 = غير موجود */
+  /** فوق 1 = موجود، 0 = غير موجود */
   const getStockStatus = (item) => {
     const s = item?.stock;
     if (s == null || s === '') return 'غير موجود';
     const n = Number(s);
-    if (isNaN(n)) return 'غير موجود';
-    return n > 1 ? 'موجود' : 'غير موجود';
+    if (isNaN(n) || n <= 0) return 'غير موجود';
+    return 'موجود';
   };
 
-  /** عرض المخزون حسب الصناديق. فوق 1 = موجود، تحت 1 = غير موجود */
+  /** عرض المخزون حسب الصناديق. فوق 1 = موجود، 0 = غير موجود */
   const getStockByBoxes = (item) => {
     const s = item?.stock;
     const box = item?.box;
     if (s == null || s === '') return { text: '—', hasStock: false };
     const stockNum = Number(s);
     if (isNaN(stockNum)) return { text: '—', hasStock: false };
-    const hasStock = stockNum > 1;
+    const hasStock = stockNum >= 1;
     if (stockNum <= 0) return { text: '—', hasStock: false };
     const boxNum = box != null && String(box).trim() !== '' && !isNaN(Number(box)) ? Math.max(1, Math.round(Number(box))) : null;
     if (boxNum != null && boxNum > 0) {
@@ -704,60 +703,66 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   return (
     <div
       className={`font-sans flex h-screen overflow-hidden ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
-      style={{ background: 'linear-gradient(180deg, #fdf2f8 0%, #fce7f3 20%, #f5f3ff 50%, #eff6ff 80%, #f0fdf4 100%)' }}
     >
       <div
         className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden ${showOrderPanel ? 'p-3 sm:p-4' : 'p-4 sm:p-6 lg:p-8'}`}
       >
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <header className="flex-shrink-0 py-2.5 px-4 sm:px-6 lg:px-8 -mx-4 sm:-mx-6 lg:-mx-8 bg-white/80 backdrop-blur-sm shadow-[0_1px_4px_rgba(0,0,0,0.04)] z-20 border-b border-teal-100">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h1 className="text-lg font-bold text-violet-900 shrink-0">نظام إدارة المخازن</h1>
-            <span className="text-slate-500 text-xs shrink-0 hidden sm:inline">
-              {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </span>
-            <span className="w-px h-4 bg-slate-200 shrink-0 hidden sm:block" aria-hidden />
-            <div className="flex items-center gap-1.5 shrink-0">
+        <header className="flex-shrink-0 py-4 px-4 sm:px-6 lg:px-8 -mx-4 sm:-mx-6 lg:-mx-8 bg-[var(--header-bg)] backdrop-blur-xl border-b border-slate-200/60 z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.8)_inset]">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                <Package className="text-white" size={22} />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-800 tracking-tight">نظام إدارة المخازن</h1>
+                <p className="text-slate-500 text-xs mt-0.5 hidden sm:block">
+                  {new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+            <span className="w-px h-8 bg-slate-200/80 shrink-0 hidden sm:block" aria-hidden />
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedGroup(selectedGroup === '__electrical__' ? null : '__electrical__')}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[12px] border text-xs font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all duration-200 ${
                   selectedGroup === '__electrical__'
-                    ? 'bg-violet-100 border-violet-400 text-violet-800'
-                    : 'bg-white border-violet-200 text-violet-700 hover:bg-violet-50 hover:border-violet-300'
+                    ? 'bg-indigo-500 border-indigo-500 text-white shadow-md shadow-indigo-500/25'
+                    : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 <Zap size={14} className="shrink-0" />
                 <span className="hidden sm:inline">Electrical</span>
-                <span className="text-slate-400 text-[10px]">({items.filter((i) => isElectricalGroup(i.group)).length})</span>
+                <span className="opacity-80" dir="ltr">({items.filter((i) => isElectricalGroup(i.group)).length})</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedGroup(selectedGroup === '__home__' ? null : '__home__')}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[12px] border text-xs font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all duration-200 ${
                   selectedGroup === '__home__'
-                    ? 'bg-sky-100 border-sky-400 text-sky-800'
-                    : 'bg-white border-violet-200 text-violet-700 hover:bg-sky-50 hover:border-sky-300'
+                    ? 'bg-sky-500 border-sky-500 text-white shadow-md shadow-sky-500/25'
+                    : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
                 }`}
               >
                 <Home size={14} className="shrink-0" />
                 <span className="hidden sm:inline">Kitchenware</span>
-                <span className="text-slate-400 text-[10px]" dir="ltr" lang="en">({items.filter((i) => !isElectricalGroup(i.group)).length})</span>
+                <span className="opacity-80" dir="ltr">({items.filter((i) => !isElectricalGroup(i.group)).length})</span>
               </button>
             </div>
             {(selectedGroup === '__electrical__' || (selectedGroup && electricalGroupsSorted.includes(selectedGroup))) && electricalGroupsSorted.length > 0 && (
               <>
-                <span className="w-px h-4 bg-slate-200 shrink-0" aria-hidden />
-                <div className="flex items-center gap-1 flex-wrap min-w-0">
-                  {electricalGroupsSorted.map((g, idx) => {
+                <span className="w-px h-6 bg-slate-200/80 shrink-0" aria-hidden />
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  {electricalGroupsSorted.map((g) => {
                     const isActive = selectedGroup === g;
                     return (
                       <button
                         key={g}
                         type="button"
                         onClick={() => setSelectedGroup(isActive ? '__electrical__' : g)}
-                        className={`shrink-0 px-2 py-1 rounded-[10px] text-[11px] font-medium border transition-all ${
-                          isActive ? 'bg-violet-100 border-violet-400 text-violet-800' : 'bg-white border-violet-200 text-violet-700 hover:bg-violet-50 hover:border-violet-300'
+                        className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all duration-200 ${
+                          isActive ? 'bg-indigo-100 border-indigo-300 text-indigo-800' : 'bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         {g}
@@ -769,8 +774,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             )}
             {(selectedGroup === '__home__' || (selectedGroup && kitchenwareGroupsSorted.includes(selectedGroup))) && kitchenwareGroupsSorted.length > 0 && (
               <>
-                <span className="w-px h-4 bg-slate-200 shrink-0" aria-hidden />
-                <div className="flex items-center gap-1 flex-wrap min-w-0">
+                <span className="w-px h-6 bg-slate-200/80 shrink-0" aria-hidden />
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                   {kitchenwareGroupsSorted.map((g) => {
                     const isActive = selectedGroup === g;
                     return (
@@ -778,8 +783,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         key={g}
                         type="button"
                         onClick={() => setSelectedGroup(isActive ? '__home__' : g)}
-                        className={`shrink-0 px-2 py-1 rounded-[10px] text-[11px] font-medium border transition-all ${
-                          isActive ? 'bg-sky-100 border-sky-400 text-sky-800' : 'bg-white border-violet-200 text-violet-700 hover:bg-sky-50 hover:border-sky-300'
+                        className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all duration-200 ${
+                          isActive ? 'bg-sky-100 border-sky-300 text-sky-800' : 'bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         {g}
@@ -789,49 +794,50 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               </>
             )}
-            <div className="flex-1 min-w-[120px] max-w-[280px] sm:max-w-xs">
+            <div className="flex-1 min-w-[140px] max-w-[300px] sm:max-w-sm">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-violet-400 shrink-0" size={14} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 shrink-0" size={16} />
                 <input
                   type="text"
-                  placeholder="بحث لحظي بالاسم أو الباركود..."
+                  placeholder="بحث بالاسم أو الباركود..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-[16px] border border-violet-200/70 focus:ring-2 focus:ring-violet-200 outline-none bg-white/95 placeholder:text-violet-300 shadow-[0_1px_4px_rgba(139,92,246,0.04)]"
+                  className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200/80 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none bg-white/90 placeholder:text-slate-400 transition-shadow duration-200"
                 />
               </div>
             </div>
             <button
               onClick={openAddModal}
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[16px] bg-violet-500 text-white text-xs font-semibold hover:bg-violet-600 transition-colors shadow-[0_2px_8px_rgba(139,92,246,0.25)]"
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 text-white text-sm font-semibold hover:bg-indigo-600 transition-all duration-200 shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/30"
             >
-              <Plus size={14} />
+              <Plus size={16} />
               Add Item
             </button>
           </div>
         </header>
 
-        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto pt-4">
+        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto pt-6 scroll-smooth">
           {loading ? (
-            <div className="flex justify-center py-24">
-              <Loader2 className="animate-spin text-violet-500" size={40} />
+            <div className="flex flex-col items-center justify-center py-32 gap-4">
+              <Loader2 className="animate-spin text-indigo-500" size={44} />
+              <p className="text-slate-500 text-sm font-medium">جاري تحميل الأصناف...</p>
             </div>
           ) : (
-            <div className="pb-6 space-y-10">
+            <div className="pb-8 space-y-12">
               {[
-                { title: 'Electrical Appliances', items: filteredItems.filter((i) => isElectricalGroup(i.group)), color: 'indigo' },
-                { title: 'Kitchenware', items: filteredItems.filter((i) => !isElectricalGroup(i.group)), color: 'amber' },
-              ].map(({ title, items: sectionItems, color }) => {
+                { title: 'Electrical Appliances', titleAr: 'أجهزة كهربائية', items: filteredItems.filter((i) => isElectricalGroup(i.group)), color: 'indigo' },
+                { title: 'Kitchenware', titleAr: 'أدوات المطبخ', items: filteredItems.filter((i) => !isElectricalGroup(i.group)), color: 'sky' },
+              ].map(({ title, titleAr, items: sectionItems, color }) => {
                 const sorted = sortByBarcodeOrder(sectionItems, BARCODE_ORDER);
                 return (
                 <section key={title}>
-                  <h2 className="text-lg font-bold text-violet-900 mb-4 flex items-center gap-2">
-                    <span className={`w-1 h-6 rounded-full ${color === 'indigo' ? 'bg-violet-500' : 'bg-sky-500'}`} />
-                    {title}
-                    <span className="text-slate-500 font-normal text-sm" dir="ltr" lang="en">({sorted.length})</span>
+                  <h2 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3">
+                    <span className={`w-1.5 h-7 rounded-full ${color === 'indigo' ? 'bg-indigo-500' : 'bg-sky-500'}`} />
+                    <span>{titleAr}</span>
+                    <span className="text-slate-400 font-normal text-sm" dir="ltr">({sorted.length})</span>
                   </h2>
                   <div
-                    className={`grid items-stretch ${showOrderPanel ? 'gap-4' : 'gap-6'}`}
+                    className={`grid items-stretch ${showOrderPanel ? 'gap-4' : 'gap-5'}`}
                     style={{
                       gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${showOrderPanel ? 220 : 280}px), 1fr))`,
                     }}
@@ -839,25 +845,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     {sorted.map((item) => (
                 <div
                   key={item.id}
-                  className="relative flex flex-col h-full min-h-[420px] bg-white rounded-[32px] border border-violet-100/80 shadow-[0_2px_16px_rgba(139,92,246,0.06)] overflow-hidden hover:shadow-[0_8px 32px_rgba(167,139,250,0.12)] transition-all duration-300"
+                  className="card-modern relative flex flex-col h-full min-h-[420px] bg-white rounded-[var(--card-radius)] border border-slate-100/80 overflow-hidden"
                 >
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
-                    className="absolute top-3 left-3 z-10 w-9 h-9 flex items-center justify-center rounded-[12px] bg-white/95 shadow-[0_2px_8px_rgba(139,92,246,0.15)] hover:bg-violet-50 hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)] text-violet-600 transition-all"
-                    title="تعديل السعر والكمية"
-                  >
-                    <Pencil size={16} />
-                  </button>
                   {item.group && (
                     <div
-                      className={`shrink-0 px-4 py-3.5 text-center rounded-t-[32px] transition-all duration-200 ${
+                      className={`shrink-0 px-4 py-3 text-center rounded-t-[var(--card-radius)] transition-all duration-200 ${
                         isElectricalGroup(item.group)
-                          ? 'bg-gradient-to-r from-violet-50 via-fuchsia-50/80 to-pink-50 border-b border-violet-100'
-                          : 'bg-gradient-to-r from-sky-50 via-cyan-50/80 to-teal-50 border-b border-sky-100'
+                          ? 'bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100/80'
+                          : 'bg-gradient-to-r from-sky-50 to-cyan-50/80 border-b border-sky-100/80'
                       }`}
                     >
-                      <p className={`text-base font-bold tracking-wide line-clamp-1 ${
-                        isElectricalGroup(item.group) ? 'text-violet-800' : 'text-sky-800'
+                      <p className={`text-sm font-bold tracking-wide line-clamp-1 ${
+                        isElectricalGroup(item.group) ? 'text-indigo-800' : 'text-sky-800'
                       }`}>{item.group}</p>
                     </div>
                   )}
@@ -866,16 +865,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     onClick={() => setSelectedItem(item)}
                     className="flex flex-col flex-1 min-h-0"
                   >
-                    <div className="w-full h-[180px] shrink-0 bg-gradient-to-b from-violet-50/40 via-pink-50/20 to-white flex items-center justify-center">
+                    <div className="w-full h-[180px] shrink-0 bg-gradient-to-b from-slate-50/80 to-white flex items-center justify-center">
                       {getImage(item) ? (
                         <img
                           src={getImage(item)}
                           alt=""
-                          className="w-full h-full object-contain p-2"
+                          className="w-full h-full object-contain p-3"
+                          loading="lazy"
+                          decoding="async"
                           onError={(e) => (e.target.style.display = 'none')}
                         />
                       ) : (
-                        <Package className="text-violet-200" size={48} />
+                        <Package className="text-slate-200" size={48} />
                       )}
                     </div>
                     <div className="p-4 flex-1 flex flex-col min-h-[140px]">
@@ -885,29 +886,29 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           e.stopPropagation();
                           addToOrder(item, 1);
                         }}
-                        className="w-full py-2 rounded-[16px] border border-violet-200/80 text-violet-800 text-sm font-medium hover:bg-violet-50/80 shrink-0 transition-colors"
+                        className="w-full py-2.5 rounded-xl border-2 border-indigo-200 text-indigo-700 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 shrink-0 transition-all duration-200"
                       >
                         🛒 إضافة للسلة
                       </button>
-                      <p className="mt-2 font-bold text-slate-800 line-clamp-2 min-h-[2.5rem]">{item.name || '—'}</p>
-                      <p className="mt-2 text-slate-600 shrink-0 text-lg font-semibold">السعر: <span dir="ltr" lang="en">₪{item.price ?? 0}</span></p>
-                      <p className="font-bold text-emerald-600 shrink-0 text-xl">السعر بعد الخصم: <span dir="ltr" lang="en">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
-                      <p className="mt-1.5 text-slate-500 text-sm shrink-0"><span className="font-semibold">الكمية:</span> <span dir="ltr" lang="en" className={getStockStatus(item) === 'موجود' ? 'text-emerald-600 font-medium' : 'text-slate-500'}>{item.stock != null && item.stock !== '' ? Number(item.stock) : '—'}</span></p>
+                      <p className="mt-2.5 font-bold text-slate-800 line-clamp-2 min-h-[2.5rem] text-[15px]">{item.name || '—'}</p>
+                      <p className="mt-2 text-slate-500 shrink-0 text-base">السعر: <span dir="ltr" lang="en" className="font-semibold text-slate-700">₪{item.price ?? 0}</span></p>
+                      <p className="font-bold text-emerald-600 shrink-0 text-lg">بعد الخصم: <span dir="ltr" lang="en">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
+                      <p className="mt-1.5 text-slate-500 text-sm shrink-0"><span className="font-medium">المخزون:</span> <span className={getStockStatus(item) === 'موجود' ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
                     </div>
                   </div>
-                  <div className="shrink-0 px-3 py-2 bg-violet-50/50 border-t border-violet-100 flex items-center justify-center min-h-[2.75rem]">
-                    <span className="text-violet-700 text-sm font-mono font-semibold tracking-wide break-all text-center" dir="ltr" lang="en">{item.barcode || '—'}</span>
+                  <div className="shrink-0 px-3 py-2.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-center min-h-[2.75rem]">
+                    <span className="text-slate-600 text-xs font-mono font-semibold tracking-wide break-all text-center" dir="ltr" lang="en">{item.barcode || '—'}</span>
                   </div>
-                  <div className="p-2 flex gap-2 border-t border-violet-100 shrink-0">
+                  <div className="p-2.5 flex gap-2 border-t border-slate-100 shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-[12px] border border-violet-200/80 text-violet-700 text-xs font-medium hover:bg-violet-50/80"
+                      className="flex-1 flex items-center justify-center py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-colors"
                     >
-                      <Pencil size={12} /> تعديل السعر والكمية
+                      تعديل
                     </button>
                     <button
                       onClick={() => handleDelete(item.barcode)}
-                      className="p-1.5 rounded-[12px] border border-rose-200/80 text-rose-600 hover:bg-rose-50"
+                      className="p-2 rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 transition-colors"
                     >
                       <Trash2 size={12} />
                     </button>
@@ -923,7 +924,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
           {hasMore && items.length > 0 && (
             <div ref={loadMoreRef} className="flex justify-center py-8 min-h-[60px]">
-              {loadingMore && <Loader2 className="animate-spin text-violet-500" size={32} />}
+              {loadingMore && <Loader2 className="animate-spin text-indigo-500" size={32} />}
             </div>
           )}
         </div>
@@ -933,7 +934,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       {!showOrderPanel && (
         <button
           onClick={() => setShowOrderPanel(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-4 rounded-l-2xl bg-gradient-to-b from-orange-500 to-orange-600 text-white text-xl font-bold shadow-[0_0_24px_-4px_rgba(249,115,22,0.4)] hover:from-orange-600 hover:to-orange-700 transition-all"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-4 rounded-l-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white text-lg font-bold shadow-[0_0_32px_-8px_rgba(249,115,22,0.45)] hover:shadow-[0_0_40px_-4px_rgba(249,115,22,0.5)] hover:from-orange-600 hover:to-amber-700 transition-all duration-300 border-l-4 border-amber-400/80"
           style={{ writingMode: 'vertical-rl' }}
         >
           اتفاقية بيع طلبية
@@ -1014,7 +1015,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-orange-300 to-amber-300 opacity-60 group-hover:opacity-100 transition-opacity" />
                       <div className="flex gap-3 items-start pr-1">
                         <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center justify-center">
-                          {getImage(o.item) && <img src={getImage(o.item)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />}
+                          {getImage(o.item) && <img src={getImage(o.item)} alt="" className="w-full h-full object-contain" loading="lazy" decoding="async" onError={(e) => (e.target.style.display = 'none')} />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] font-medium text-slate-400 tracking-wide mb-0.5">المنتج والموديل</p>
@@ -1085,47 +1086,47 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       )}
 
       {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedItem(null)}>
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between mb-4">
-              <h3 className="font-bold">تفاصيل المنتج</h3>
-              <button onClick={() => setSelectedItem(null)} className="p-2 rounded-lg bg-slate-100">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800">تفاصيل المنتج</h3>
+              <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">✕</button>
             </div>
-            <div className="aspect-square max-h-48 rounded-xl bg-slate-50 flex items-center justify-center mb-4">
-              {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={64} className="text-slate-300" />}
+            <div className="aspect-square max-h-48 rounded-xl bg-slate-50 flex items-center justify-center mb-4 overflow-hidden">
+              {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-4" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={64} className="text-slate-300" />}
             </div>
-            <p className="text-slate-700 mb-2">{selectedItem.name}</p>
-            {selectedItem.group && <span className="text-xs bg-orange-50 text-orange-700 px-2 py-1 rounded">{selectedItem.group}</span>}
-            <p className="mt-2">السعر: <span dir="ltr" lang="en">₪{selectedItem.price ?? 0}</span> | السعر بعد الخصم: <span dir="ltr" lang="en">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
-            <p className="mt-1 text-slate-600 text-sm">المخزون: <span className={getStockStatus(selectedItem) === 'موجود' ? 'text-emerald-600 font-medium' : ''}>{getStockStatus(selectedItem)}</span></p>
-            <button onClick={() => { addToOrder(selectedItem, 1); setSelectedItem(null); }} className="w-full mt-4 py-3 rounded-xl bg-orange-500 text-white font-bold">إضافة لاتفاقية البيع</button>
+            <p className="text-slate-800 font-semibold mb-2">{selectedItem.name}</p>
+            {selectedItem.group && <span className="inline-block text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg font-medium">{selectedItem.group}</span>}
+            <p className="mt-3 text-slate-600">السعر: <span dir="ltr" lang="en" className="font-semibold text-slate-800">₪{selectedItem.price ?? 0}</span> — بعد الخصم: <span dir="ltr" lang="en" className="font-semibold text-emerald-600">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
+            <p className="mt-1 text-slate-500 text-sm">المخزون: <span className={getStockStatus(selectedItem) === 'موجود' ? 'text-emerald-600 font-semibold' : ''}>{getStockStatus(selectedItem)}</span></p>
+            <button onClick={() => { addToOrder(selectedItem, 1); setSelectedItem(null); }} className="w-full mt-5 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">إضافة لاتفاقية البيع</button>
           </div>
         </div>
       )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setModalOpen(false)}>
-          <div className="bg-white rounded-[32px] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[0_24px_48px_rgba(139,92,246,0.15)] border border-violet-100" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between mb-4">
-              <h2 className="font-bold text-violet-900">{editingItem ? 'تعديل السعر والكمية' : 'إضافة صنف'}</h2>
-              <button onClick={() => setModalOpen(false)} className="w-8 h-8 rounded-[12px] bg-violet-100 hover:bg-violet-200 text-violet-700 flex items-center justify-center">✕</button>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-slate-800">{editingItem ? 'تعديل السعر والكمية' : 'إضافة صنف'}</h2>
+              <button onClick={() => setModalOpen(false)} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">✕</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <label><span className="text-xs block text-violet-800 font-medium">الباركود</span><input required value={formData.barcode} onChange={(e) => setFormData((p) => ({ ...p, barcode: e.target.value }))} disabled={!!editingItem} dir="ltr" lang="en" className="w-full rounded-[12px] border border-violet-200/80 px-3 py-2 focus:ring-2 focus:ring-violet-200" /></label>
-              <label><span className="text-xs block">الاسم</span><input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-lg border px-3 py-2" /></label>
-              <label><span className="text-xs block">المجموعة</span><input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-lg border px-3 py-2" /></label>
+              <label><span className="text-xs block text-slate-600 font-medium mb-1">الباركود</span><input required value={formData.barcode} onChange={(e) => setFormData((p) => ({ ...p, barcode: e.target.value }))} disabled={!!editingItem} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-shadow" /></label>
+              <label><span className="text-xs block text-slate-600 font-medium mb-1">الاسم</span><input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+              <label><span className="text-xs block text-slate-600 font-medium mb-1">المجموعة</span><input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
               <div className="grid grid-cols-2 gap-2">
-                <label><span className="text-xs block text-violet-800 font-medium">الكمية (المخزون)</span><input type="number" value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-[12px] border border-violet-200/80 px-3 py-2 focus:ring-2 focus:ring-violet-200" /></label>
-                <label><span className="text-xs block text-violet-800 font-medium">صندوق</span><input type="number" value={formData.box_count} onChange={(e) => setFormData((p) => ({ ...p, box_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-[12px] border border-violet-200/80 px-3 py-2 focus:ring-2 focus:ring-violet-200" /></label>
+                <label><span className="text-xs block text-slate-600 font-medium mb-1">الكمية (المخزون)</span><input type="number" value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+                <label><span className="text-xs block text-slate-600 font-medium mb-1">صندوق</span><input type="number" value={formData.box_count} onChange={(e) => setFormData((p) => ({ ...p, box_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <label><span className="text-xs block text-violet-800 font-medium">السعر</span><input type="number" step="0.01" value={formData.full_price} onChange={(e) => setFormData((p) => ({ ...p, full_price: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-[12px] border border-violet-200/80 px-3 py-2 focus:ring-2 focus:ring-violet-200" /></label>
-                <label><span className="text-xs block text-violet-800 font-medium">بعد الخصم</span><input type="number" step="0.01" value={formData.price_after_disc} onChange={(e) => setFormData((p) => ({ ...p, price_after_disc: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-[12px] border border-violet-200/80 px-3 py-2 focus:ring-2 focus:ring-violet-200" /></label>
+                <label><span className="text-xs block text-slate-600 font-medium mb-1">السعر</span><input type="number" step="0.01" value={formData.full_price} onChange={(e) => setFormData((p) => ({ ...p, full_price: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+                <label><span className="text-xs block text-slate-600 font-medium mb-1">بعد الخصم</span><input type="number" step="0.01" value={formData.price_after_disc} onChange={(e) => setFormData((p) => ({ ...p, price_after_disc: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
               </div>
               <div className="space-y-2">
-                <span className="text-xs block text-violet-800 font-medium">الصورة</span>
+                <span className="text-xs block text-slate-600 font-medium">الصورة</span>
                 <div className="flex gap-3 items-start">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-violet-100">
+                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
                     {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
                       <img src={getPublicImageUrl(formData.image_url)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
                     ) : (
@@ -1134,7 +1135,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </div>
                   <label className={`flex-1 min-w-0 cursor-pointer ${!formData.barcode || uploading ? 'opacity-70' : ''}`}>
                     <input type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={handleImageUpload} className="sr-only" />
-                    <span className={`inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 border-dashed border-violet-200 hover:border-violet-400 hover:bg-violet-50/50 text-violet-700 text-sm font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                    <span className={`inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 text-sm font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                       {uploading ? <Loader2 size={18} className="animate-spin shrink-0" /> : <Upload size={18} className="shrink-0" />}
                       {uploading ? 'جاري الرفع…' : formData.image_url ? 'استبدال الصورة' : 'رفع صورة جديدة'}
                     </span>
@@ -1143,8 +1144,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 {!formData.barcode && <p className="text-[11px] text-amber-600">أدخل الباركود أولاً لتمكين رفع الصورة</p>}
               </div>
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2 rounded-[16px] border border-violet-200 text-violet-700 hover:bg-violet-50">إلغاء</button>
-                <button type="submit" className="flex-1 py-2 rounded-[16px] bg-violet-500 text-white font-semibold hover:bg-violet-600 shadow-[0_4px_12px_rgba(139,92,246,0.3)]">حفظ</button>
+                <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">إلغاء</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-lg shadow-indigo-500/25 transition-all">حفظ</button>
               </div>
             </form>
           </div>
