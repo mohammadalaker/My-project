@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background-color: #F8FAFF;
+    min-height: 100vh;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .card-soft {
+    @apply rounded-[32px] bg-white shadow-sm;
+  }
+}
