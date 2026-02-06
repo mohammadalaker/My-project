@@ -745,28 +745,36 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         .upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+      const { error: dbError } = await supabase
+        .from('items')
+        .update({ image_url: fileName })
+        .eq('barcode', barcode);
+      if (dbError) throw dbError;
 
-      if (editingItem) {
-        const { error: dbError } = await supabase
-          .from('items')
-          .update({ image_url: fileName })
-          .eq('barcode', barcode);
-        if (dbError) throw dbError;
-        setItems((prev) =>
-          prev.map((i) => (i.barcode === barcode ? { ...i, image: fileName } : i))
-        );
+      setItems((prev) =>
+        prev.map((i) => (i.barcode === barcode ? { ...i, image: fileName } : i))
+      );
+      if (editingItem && editingItem.barcode === barcode) {
         setEditingItem((p) => (p ? { ...p, image: fileName } : null));
+        setFormData((p) => ({ ...p, image_url: fileName }));
       }
-      setFormData((p) => ({ ...p, image_url: fileName }));
     } catch (err) {
       console.error('Upload Error:', err);
       alert('Failed to upload image: ' + (err?.message || err));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cardUploadRef.current) cardUploadRef.current.value = '';
       e.target.value = '';
     }
+  };
+
+  const cardUploadRef = useRef(null);
+  const cardUploadItemRef = useRef(null);
+  const triggerCardImageUpload = (item) => {
+    if (!item?.barcode) return;
+    cardUploadItemRef.current = item;
+    cardUploadRef.current?.click?.();
   };
 
   const getCatalogHtml = useCallback((items) => {
@@ -1016,6 +1024,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
           )}
 
+          <input
+            ref={cardUploadRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => {
+              const it = cardUploadItemRef.current;
+              if (it) handleImageUpload(e, it);
+            }}
+          />
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto pt-6 scroll-smooth">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -1046,7 +1064,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </div>
                             )}
                             <div className="aspect-[4/3] min-h-[160px] bg-slate-50 relative overflow-hidden flex-shrink-0">
-                              <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors z-10" />
+                              <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors z-10" />
                               {getImage(item) ? (
                                 <img
                                   src={getImage(item)}
@@ -1061,6 +1079,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <div className={`absolute inset-0 flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
                                 <Package size={32} className="text-slate-300/80" />
                               </div>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
+                                disabled={uploading}
+                                className="absolute bottom-2 right-2 z-20 p-2 rounded-xl bg-white/90 shadow-md hover:bg-indigo-500 hover:text-white text-slate-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                                title="Change image (saves to Supabase)"
+                              >
+                                {uploading && cardUploadItemRef.current?.id === item.id ? (
+                                  <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                  <Upload size={18} />
+                                )}
+                              </button>
                             </div>
 
                             <div className="p-3 flex-1 flex flex-col min-h-0">
