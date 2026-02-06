@@ -960,13 +960,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <div className="product-grid px-1">
                         {sorted.map((item) => (
                           <div key={item.id} className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col min-h-0">
-                            <div className="aspect-[4/3] max-h-[140px] bg-slate-50 relative overflow-hidden flex-shrink-0">
+                            {item.group && (
+                              <div className="shrink-0 px-3 py-1.5 bg-slate-100/90 border-b border-slate-200/60 text-slate-600 text-xs font-semibold truncate">
+                                {item.group}
+                              </div>
+                            )}
+                            <div className="aspect-[4/3] min-h-[160px] bg-slate-50 relative overflow-hidden flex-shrink-0">
                               <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors z-10" />
                               {getImage(item) ? (
                                 <img
                                   src={getImage(item)}
                                   alt={item.name}
-                                  className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105 mix-blend-multiply"
+                                  className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105 mix-blend-multiply"
                                   onError={(e) => {
                                     e.target.style.display = 'none';
                                     e.target.nextSibling.style.display = 'flex';
@@ -997,12 +1002,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 accept="image/*"
                                 onChange={(e) => handleImageUpload(e, item)}
                               />
-                              <div className={`absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm backdrop-blur-md ${getStockStatus(item) === 'In Stock'
-                                ? 'bg-emerald-500/90 text-white'
-                                : 'bg-slate-900/60 text-white'
-                                }`}>
-                                {getStockStatus(item)}
-                              </div>
                             </div>
 
                             <div className="p-3 flex-1 flex flex-col min-h-0">
@@ -1046,14 +1045,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   Add to Cart
                                 </button>
                               )}
-                              <p className="mt-1.5 font-bold text-slate-800 line-clamp-2 text-[13px] leading-tight">{item.name || '—'}</p>
-                              <p className="mt-1 text-slate-500 shrink-0 text-xs">Price: <span className="font-semibold text-slate-700">₪{item.price ?? 0}</span></p>
-                              <p className="font-bold text-emerald-600 shrink-0 text-sm">Discounted: <span>₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
-                              <p className="mt-1 text-slate-500 text-xs shrink-0"><span className="font-medium">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
+                              <p className="mt-2 font-bold text-slate-800 line-clamp-2 text-sm leading-tight">{item.name || '—'}</p>
+                              <p className="mt-2 shrink-0 text-sm"><span className="text-slate-500">Price:</span> <span className="font-bold text-slate-800 text-base">₪{item.price ?? 0}</span></p>
+                              <p className="shrink-0 text-sm"><span className="text-slate-500">Discounted:</span> <span className="font-bold text-emerald-600 text-lg">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
                             </div>
 
-                            <div className="shrink-0 px-2 py-1.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-center">
-                              <span className="text-slate-600 text-xs font-mono font-semibold tracking-wide break-all text-center">{item.barcode || '—'}</span>
+                            <div className="shrink-0 px-3 py-2 bg-slate-50/80 border-t border-slate-100 space-y-1">
+                              <p className="text-slate-600 text-xs font-medium"><span className="text-slate-500">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
+                              <p className="text-slate-600 text-xs font-mono font-semibold tracking-wide break-all">{item.barcode || '—'}</p>
                             </div>
 
                             <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0">
