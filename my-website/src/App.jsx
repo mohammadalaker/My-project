@@ -689,16 +689,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  const fileInputRef = useRef(null);
+
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !formData.barcode) return;
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const path = `${formData.barcode.trim()}.${ext}`;
       await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const publicUrl = data.publicUrl;
+      const ts = Date.now();
+      const publicUrl = `${data.publicUrl}?v=${ts}`;
       setFormData((p) => ({ ...p, image_url: publicUrl }));
       if (editingItem) {
         await supabase.from('items').update({ image_url: publicUrl }).eq('barcode', editingItem.barcode);
@@ -711,11 +714,34 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       alert(err.message || 'فشل رفع الصورة');
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       e.target.value = '';
     }
   };
 
   const handleRemoveImage = async () => {
+    if (!formData.image_url) return;
+    if (!confirm('هل أنت متأكد من حذف الصورة نهائياً؟')) return;
+    
+    // محاولة حذف الملف من التخزين السحابي لتوفير المساحة
+    try {
+      // استخراج مسار الملف من الرابط
+      // الرابط: .../BUCKET/path/to/file.jpg?t=...
+      const urlObj = new URL(formData.image_url);
+      // قد يختلف المسار حسب إعدادات Supabase، ولكن غالباً يكون آخر جزء
+      const pathPart = urlObj.pathname.split(`/${BUCKET}/`)[1]; 
+      // أو استخدام التسمية الافتراضية إذا كنا نعرفها
+      const probablePath = `${formData.barcode.trim()}.${formData.image_url.split('.').pop()?.split('?')[0]}`;
+      
+      // سنحاول حذف المسار المحتمل (الباركود)
+      if (probablePath) {
+         await supabase.storage.from(BUCKET).remove([probablePath]);
+      }
+    } catch (e) {
+      console.warn('Could not delete file from storage', e);
+    }
+
+    // تحديث الواجهة وقاعدة البيانات
     setFormData((p) => ({ ...p, image_url: '' }));
     if (editingItem?.barcode) {
       try {
@@ -1158,7 +1184,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className="flex gap-3 items-start">
                   <div className="relative w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
                     {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
-                      <img src={getPublicImageUrl(formData.image_url)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
+                      <img
+                        key={formData.image_url}
+                        src={getPublicImageUrl(formData.image_url)}
+                        alt=""
+                        className="w-full h-full object-contain"
+                        onError={(e) => (e.target.style.display = 'none')}
+                      />
                     ) : (
                       <Package size={28} className="text-slate-300" />
                     )}
@@ -1183,7 +1215,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       dir="ltr"
                     />
                     <label className={`block cursor-pointer ${uploading ? 'opacity-70' : ''}`}>
-                      <input type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={handleImageUpload} className="sr-only" />
+                      <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={handleImageUpload} className="sr-only" />
                       <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                         {uploading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Upload size={14} className="shrink-0" />}
                         {uploading ? 'جاري الرفع…' : 'رفع من الجهاز'}
