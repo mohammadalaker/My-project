@@ -926,16 +926,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <span>{title}</span>
                         <span className="text-slate-400 font-normal text-sm">({sorted.length})</span>
                       </h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-1">
+                      <div className="product-grid px-1">
                         {sorted.map((item) => (
-                          <div key={item.id} className="group relative bg-white rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col">
-                            <div className="aspect-[4/3] bg-slate-50 relative overflow-hidden">
+                          <div key={item.id} className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col min-h-0">
+                            <div className="aspect-[4/3] max-h-[140px] bg-slate-50 relative overflow-hidden flex-shrink-0">
                               <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors z-10" />
                               {getImage(item) ? (
                                 <img
                                   src={getImage(item)}
                                   alt={item.name}
-                                  className="w-full h-full object-contain p-6 transition-transform duration-500 group-hover:scale-110 mix-blend-multiply"
+                                  className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105 mix-blend-multiply"
                                   onError={(e) => {
                                     e.target.style.display = 'none';
                                     e.target.nextSibling.style.display = 'flex';
@@ -943,18 +943,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 />
                               ) : null}
                               <div className={`absolute inset-0 flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
-                                <Package size={48} className="text-slate-300/80" />
+                                <Package size={32} className="text-slate-300/80" />
                               </div>
                               <button
                                 onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${item.barcode}`).click(); }}
-                                className="absolute top-3 right-3 z-20 w-8 h-8 rounded-xl bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-white transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 duration-200"
+                                className="absolute top-2 right-2 z-20 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-white transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 duration-200"
                               >
                                 <Camera size={16} />
                               </button>
                               {item.image && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleDeleteImage(item); }}
-                                  className="absolute top-3 left-3 z-20 w-8 h-8 rounded-xl bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 duration-200 delay-75"
+                                  className="absolute top-2 left-2 z-20 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 duration-200 delay-75"
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -966,7 +966,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 accept="image/*"
                                 onChange={(e) => handleImageUpload(e, item)}
                               />
-                              <div className={`absolute bottom-3 right-3 z-10 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm backdrop-blur-md ${getStockStatus(item) === 'In Stock'
+                              <div className={`absolute bottom-2 right-2 z-10 px-2 py-0.5 rounded text-[9px] font-bold shadow-sm backdrop-blur-md ${getStockStatus(item) === 'In Stock'
                                 ? 'bg-emerald-500/90 text-white'
                                 : 'bg-slate-900/60 text-white'
                                 }`}>
@@ -974,7 +974,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </div>
                             </div>
 
-                            <div className="p-4 flex-1 flex flex-col min-h-[140px]">
+                            <div className="p-3 flex-1 flex flex-col min-h-0">
                               {mode === 'catalog' ? (
                                 <button
                                   type="button"
@@ -986,7 +986,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       addToCatalog(item);
                                     }
                                   }}
-                                  className={`w-full py-2.5 rounded-xl border-2 text-sm font-semibold shrink-0 transition-all duration-200 flex items-center justify-center gap-2 ${catalogItems.some((i) => i.id === item.id)
+                                  className={`w-full py-2 rounded-lg border-2 text-xs font-semibold shrink-0 transition-all duration-200 flex items-center justify-center gap-2 ${catalogItems.some((i) => i.id === item.id)
                                     ? 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
                                     : 'border-rose-200 text-rose-700 hover:bg-rose-50'
                                     }`}
@@ -1010,31 +1010,31 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     e.stopPropagation();
                                     addToOrder(item, 1);
                                   }}
-                                  className="w-full py-2.5 rounded-xl border-2 border-indigo-200 text-indigo-700 text-sm font-semibold hover:bg-indigo-50 hover:border-indigo-300 shrink-0 transition-all duration-200"
+                                  className="w-full py-2 rounded-lg border-2 border-indigo-200 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 hover:border-indigo-300 shrink-0 transition-all duration-200"
                                 >
                                   Add to Cart
                                 </button>
                               )}
-                              <p className="mt-2.5 font-bold text-slate-800 line-clamp-2 min-h-[2.5rem] text-[15px]">{item.name || '—'}</p>
-                              <p className="mt-2 text-slate-500 shrink-0 text-base">Price: <span className="font-semibold text-slate-700">₪{item.price ?? 0}</span></p>
-                              <p className="font-bold text-emerald-600 shrink-0 text-lg">Discounted: <span>₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
-                              <p className="mt-1.5 text-slate-500 text-sm shrink-0"><span className="font-medium">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
+                              <p className="mt-1.5 font-bold text-slate-800 line-clamp-2 text-[13px] leading-tight">{item.name || '—'}</p>
+                              <p className="mt-1 text-slate-500 shrink-0 text-xs">Price: <span className="font-semibold text-slate-700">₪{item.price ?? 0}</span></p>
+                              <p className="font-bold text-emerald-600 shrink-0 text-sm">Discounted: <span>₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
+                              <p className="mt-1 text-slate-500 text-xs shrink-0"><span className="font-medium">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
                             </div>
 
-                            <div className="shrink-0 px-3 py-2.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-center min-h-[2.75rem]">
-                              <span className="text-slate-600 text-lg font-mono font-bold tracking-wide break-all text-center">{item.barcode || '—'}</span>
+                            <div className="shrink-0 px-2 py-1.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-center">
+                              <span className="text-slate-600 text-xs font-mono font-semibold tracking-wide break-all text-center">{item.barcode || '—'}</span>
                             </div>
 
-                            <div className="p-2.5 flex gap-2 border-t border-slate-100 shrink-0">
+                            <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0">
                               <button
                                 onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
-                                className="flex-1 flex items-center justify-center py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 transition-colors"
+                                className="flex-1 flex items-center justify-center py-1.5 rounded-md border border-slate-200 text-slate-600 text-[11px] font-medium hover:bg-slate-50 transition-colors"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => handleDelete(item.barcode)}
-                                className="p-2 rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                                className="p-1.5 rounded-md border border-slate-200 text-rose-600 hover:bg-rose-50 transition-colors"
                               >
                                 <Trash2 size={12} />
                               </button>
