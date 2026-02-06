@@ -1148,15 +1148,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <Package size={28} className="text-slate-300" />
                     )}
                   </div>
-                  <label className={`flex-1 min-w-0 cursor-pointer ${!formData.barcode || uploading ? 'opacity-70' : ''}`}>
-                    <input type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={handleImageUpload} className="sr-only" />
-                    <span className={`inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 text-sm font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                      {uploading ? <Loader2 size={18} className="animate-spin shrink-0" /> : <Upload size={18} className="shrink-0" />}
-                      {uploading ? 'جاري الرفع…' : formData.image_url ? 'استبدال الصورة' : 'رفع صورة جديدة'}
-                    </span>
-                  </label>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <input
+                      type="url"
+                      placeholder="رابط الصورة (اختياري)"
+                      value={formData.image_url || ''}
+                      onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value.trim() }))}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none"
+                      dir="ltr"
+                    />
+                    <label className={`block cursor-pointer ${uploading ? 'opacity-70' : ''}`}>
+                      <input type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={handleImageUpload} className="sr-only" />
+                      <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                        {uploading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Upload size={14} className="shrink-0" />}
+                        {uploading ? 'جاري الرفع…' : 'رفع من الجهاز'}
+                      </span>
+                    </label>
+                  </div>
                 </div>
-                {!formData.barcode && <p className="text-[11px] text-amber-600">أدخل الباركود أولاً لتمكين رفع الصورة</p>}
+                {!formData.barcode && <p className="text-[11px] text-amber-600">أدخل الباركود أولاً لتمكين رفع الصورة من الجهاز</p>}
+                <p className="text-[11px] text-slate-500">يمكنك لصق رابط صورة من الإنترنت في الحقل أعلاه أو رفع صورة من الجهاز.</p>
               </div>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">إلغاء</button>
