@@ -905,6 +905,37 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
             </div>
           </header>
+
+          {!loading && (
+            <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-slate-500 text-sm font-medium mr-1 hidden sm:inline">Category:</span>
+                {[
+                  { key: null, label: 'All', count: items.length },
+                  { key: '__electrical__', label: 'Electrical Appliances', count: items.filter((i) => isElectricalGroup(i.group)).length },
+                  { key: '__home__', label: 'Household / Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length },
+                ].map(({ key, label, count }) => (
+                  <button
+                    key={key ?? 'all'}
+                    type="button"
+                    onClick={() => setSelectedGroup(key)}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      selectedGroup === key
+                        ? key === '__electrical__'
+                          ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
+                          : key === '__home__'
+                            ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25'
+                            : 'bg-slate-700 text-white shadow-md'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
+                    }`}
+                  >
+                    {label} <span className="opacity-80 font-normal">({count})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto pt-6 scroll-smooth">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32 gap-4">
