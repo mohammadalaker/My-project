@@ -125,6 +125,8 @@ function App() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [showOrderPanel, setShowOrderPanel] = useState(false);
+  const [showCatalogPanel, setShowCatalogPanel] = useState(false);
+  const [catalogItems, setCatalogItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
   const [orderInfo, setOrderInfo] = useState(() => ({
@@ -306,18 +308,7 @@ function App() {
   const getImage = (item) => getPublicImageUrl(item?.image);
 
   /* Catalog Helpers */
-  const addToCatalog = (item) => {
-    setCatalogItems((prev) => {
-      if (prev.find((i) => i.id === item.id)) return prev;
-      return [...prev, item];
-    });
-  };
 
-  const removeFromCatalog = (itemId) => {
-    setCatalogItems((prev) => prev.filter((i) => i.id !== itemId));
-  };
-
-  const clearCatalog = () => setCatalogItems([]);
 
   const addToOrder = useCallback((item, qty = 1) => {
     setOrderItems((prev) => {
@@ -386,85 +377,7 @@ function App() {
 
   /* Catalog State */
   const [mode, setMode] = useState('order'); // 'order' or 'catalog'
-  const [catalogItems, setCatalogItems] = useState([]);
-  const [showCatalogPanel, setShowCatalogPanel] = useState(false);
 
-  const getCatalogHtml = useCallback(() => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const safeSrc = (s) => {
-      if (!s) return '';
-      const str = String(s);
-      return str.startsWith('data:') ? str : str.startsWith('/') ? origin + str : str;
-    };
-
-    // Group items for better display if needed, or just list them grid-style
-    const cards = catalogItems.map((item) => {
-      const imgSrc = getImage(item);
-      const imgHtml = imgSrc
-        ? `<div class="cat-img"><img src="${safeSrc(imgSrc)}" alt="" /></div>`
-        : '<div class="cat-img"><span class="cat-no-img">📦</span></div>';
-
-      return `
-        <div class="cat-card">
-          ${imgHtml}
-          <div class="cat-info">
-             <div class="cat-name">${(item.name || '').replace(/</g, '&lt;')}</div>
-             <div class="cat-barcode">${(item.barcode || '').replace(/</g, '&lt;')}</div>
-             <div class="cat-price">₪${item.price ?? 0}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    return `<!DOCTYPE html>
-<html dir="ltr" lang="en">
-<head>
-<meta charset="utf-8">
-<title>Product Catalog</title>
-<style>
-  body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; background: #fff; }
-  .cat-header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-  .cat-title { font-size: 2.5rem; color: #1e293b; margin: 0; }
-  .cat-sub { font-size: 1.1rem; color: #64748b; margin-top: 5px; }
-  
-  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px; }
-  
-  .cat-card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; page-break-inside: avoid; background: #fff; }
-  .cat-img { height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px; }
-  .cat-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
-  .cat-no-img { font-size: 3rem; opacity: 0.3; }
-  
-  .cat-info { padding: 16px; text-align: center; }
-  .cat-name { font-weight: 700; font-size: 1rem; color: #1e293b; margin-bottom: 8px; line-height: 1.4; height: 2.8em; overflow: hidden; }
-  .cat-barcode { font-family: monospace; color: #64748b; font-size: 0.9rem; margin-bottom: 8px; }
-  .cat-price { color: #ea580c; font-weight: 700; font-size: 1.2rem; }
-
-  @media print {
-    body { padding: 0; }
-    .cat-grid { gap: 16px; }
-    .cat-card { border: 1px solid #ddd; }
-  }
-</style>
-</head>
-<body>
-  <div class="cat-header">
-    <h1 class="cat-title">Product Catalog</h1>
-    <p class="cat-sub">${new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-  </div>
-  <div class="cat-grid">
-    ${cards}
-  </div>
-    <script>window.print();</script>
-</body>
-</html>`;
-  }, [catalogItems]);
-
-  const handlePrintCatalog = () => {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(getCatalogHtml());
-    w.document.close();
-  };
 
   const getPrintHtml = useCallback(() => {
     const rows = orderLines
@@ -788,34 +701,145 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   const fileInputRef = useRef(null);
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = async (e, item) => {
     const file = e.target.files?.[0];
-    if (!file || !formData.barcode) return;
-    setUploading(true);
+    if (!file) return;
+
+    if (!item.barcode) {
+      alert('الباركود مفقود!');
+      return;
+    }
+
     try {
-      const barcode = formData.barcode.trim();
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${barcode}_${Date.now()}.${ext}`;
-      await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      // Add timestamp to ensure no caching issues
-      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-      setFormData((p) => ({ ...p, image_url: publicUrl }));
-      if (editingItem) {
-        await supabase.from('items').update({ image_url: publicUrl }).eq('barcode', editingItem.barcode);
-        setItems((prev) =>
-          prev.map((i) => (i.barcode === editingItem.barcode ? { ...i, image: publicUrl } : i))
-        );
-        setEditingItem((prev) => (prev ? { ...prev, image: publicUrl } : null));
-      }
+      const ext = file.name.split('.').pop();
+      const fileName = `${item.barcode}.${ext}`;
+      const filePath = `${fileName}`;
+
+      setUploading(true); // Assuming you have this state
+
+      // 1. Upload/Upsert the file
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Get Public URL (Force cache bust by appending timestamp)
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+      const publicUrl = `${data.publicUrl}?t=${new Date().getTime()}`;
+
+      // 3. Update Item in DB
+      const { error: dbError } = await supabase
+        .from('items')
+        .update({ image_url: fileName }) // Store filename, or publicUrl if you prefer
+        .eq('barcode', item.barcode);
+
+      if (dbError) throw dbError;
+
+      // 4. Update Local State
+      setItems((prev) =>
+        prev.map((i) =>
+          i.barcode === item.barcode ? { ...i, image: fileName } : i
+        )
+      );
+
+      // Force UI refresh if needed (rarely needed if state updates correctly)
     } catch (err) {
-      alert(err.message || 'Image upload failed');
+      console.error('Upload Error:', err);
+      alert('فشل رفع الصورة: ' + err.message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
       e.target.value = '';
     }
   };
+
+  const getCatalogHtml = useCallback((items) => {
+    const cards = items.map(item => {
+      const imgUrl = getPublicImageUrl(item.image);
+      const img = imgUrl
+        ? `<div class="cat-img"><img src="${imgUrl}" alt="${item.name}" /></div>`
+        : `<div class="cat-img"><div class="cat-no-img">📦</div></div>`;
+
+      return `
+        <div class="cat-card">
+          ${img}
+          <div class="cat-info">
+            <div class="cat-name">${item.name}</div>
+            <div class="cat-barcode">${item.barcode}</div>
+            <div class="cat-price">₪${item.price ?? 0}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+<meta charset="utf-8">
+<title>Product Catalog</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; background: #fff; }
+  .cat-header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+  .cat-title { font-size: 2.5rem; color: #1e293b; margin: 0; }
+  .cat-sub { font-size: 1.1rem; color: #64748b; margin-top: 5px; }
+  
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px; }
+  
+  .cat-card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; page-break-inside: avoid; background: #fff; }
+  .cat-img { height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px; }
+  .cat-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .cat-no-img { font-size: 3rem; opacity: 0.3; }
+  
+  .cat-info { padding: 16px; text-align: center; }
+  .cat-name { font-weight: 700; font-size: 1rem; color: #1e293b; margin-bottom: 8px; line-height: 1.4; height: 2.8em; overflow: hidden; }
+  .cat-barcode { font-family: monospace; color: #64748b; font-size: 0.9rem; margin-bottom: 8px; }
+  .cat-price { color: #ea580c; font-weight: 700; font-size: 1.2rem; }
+
+  @media print {
+    body { padding: 0; }
+    .cat-grid { gap: 16px; }
+    .cat-card { border: 1px solid #ddd; }
+  }
+</style>
+</head>
+<body>
+  <div class="cat-header">
+    <h1 class="cat-title">Product Catalog</h1>
+    <p class="cat-sub">${new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+  </div>
+  <div class="cat-grid">
+    ${cards}
+  </div>
+    <script>window.print();</script>
+</body>
+</html>`;
+  }, []);
+
+  const addToCatalog = (item) => {
+    setCatalogItems(prev => {
+      if (prev.some(i => i.id === item.id)) return prev;
+      return [...prev, item];
+    });
+  };
+
+  const removeFromCatalog = (id) => {
+    setCatalogItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const clearCatalog = () => {
+    if (window.confirm('Clear all items from catalog?')) {
+      setCatalogItems([]);
+    }
+  };
+
+  const handlePrintCatalog = useCallback(() => {
+    if (catalogItems.length === 0) return;
+    const html = getCatalogHtml(catalogItems);
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+  }, [catalogItems, getCatalogHtml]);
 
   const handleRemoveImage = async () => {
     if (!formData.image_url) return;
