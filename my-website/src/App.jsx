@@ -24,7 +24,6 @@ import {
   Cookie,
   FileText,
   Grid,
-  Camera,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -53,13 +52,22 @@ function getPublicImageUrl(imageValue) {
   return data?.publicUrl ?? (SUPABASE_URL ? `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}` : img);
 }
 
+/** Electrical Appliances: Tefal Electric, Moulinex, Braun, Kenwood, Babyliss, Babyliss Pro, KMG midea SDA/VC/ACE/MWO */
 const ELECTRICAL_GROUPS = [
-  'Tefal Electric', 'Tefal', 'Moulinex', 'Mounliex', 'Babyliss', 'Babyliss Pro', 'Kenwood', 'Braun',
+  'Tefal Electric', 'Moulinex', 'Braun', 'Kenwood', 'Babyliss', 'Babyliss Pro',
   'KMG midea SDA', 'KMG midea VC', 'KMG ACE', 'KMG midea MWO',
+].map((s) => s.trim().toLowerCase());
+
+/** Household / Kitchenware: Tefal Cookware, Tefal kitchen, Pyrex, Pressure Cookers, Luminarc, KMG Desore */
+const HOUSEHOLD_GROUPS = [
+  'Tefal Cookware', 'Tefal kitchen', 'Pyrex Glass', 'Pyrex Zhejiang Better', 'Pyrex Kitchen',
+  'Pressure Cookers', 'Luminarc', 'KMG Desore',
 ].map((s) => s.trim().toLowerCase());
 
 const isElectricalGroup = (g) =>
   g && ELECTRICAL_GROUPS.some((eg) => String(g).trim().toLowerCase() === eg);
+const isHouseholdGroup = (g) =>
+  g && HOUSEHOLD_GROUPS.some((hg) => String(g).trim().toLowerCase() === hg);
 
 /** Convert amount to English words (Shekels and Agoras) */
 function amountToEnglishWords(amount) {
@@ -285,7 +293,14 @@ function App() {
   });
   const electricalIcons = [Zap, Plug, Power, Cable, Battery, BatteryCharging, PlugZap, Cpu];
   const kitchenwareGroups = allGroups.filter((g) => !isElectricalGroup(g));
-  const kitchenwareGroupsSorted = [...kitchenwareGroups];
+  const kitchenwareGroupsSorted = [...kitchenwareGroups].sort((a, b) => {
+    const ia = HOUSEHOLD_GROUPS.indexOf(String(a).trim().toLowerCase());
+    const ib = HOUSEHOLD_GROUPS.indexOf(String(b).trim().toLowerCase());
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return String(a).localeCompare(String(b));
+  });
   const kitchenwareIcons = [Home, Utensils, UtensilsCrossed, ChefHat, Wine, Flame, Cookie, Package];
 
   /** In stock if qty > 0, else Out of Stock */
@@ -714,49 +729,39 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   const handleImageUpload = async (e, item) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!item.barcode) {
-      alert('الباركود مفقود!');
+    const barcode = item?.barcode || formData.barcode;
+    if (!barcode) {
+      alert('Barcode is required to upload an image.');
       return;
     }
 
     try {
       const ext = file.name.split('.').pop();
-      const fileName = `${item.barcode}.${ext}`;
-      const filePath = `${fileName}`;
+      const fileName = `${barcode}_${Date.now()}.${ext}`;
+      setUploading(true);
 
-      setUploading(true); // Assuming you have this state
-
-      // 1. Upload/Upsert the file
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
-        .upload(filePath, file, { upsert: true });
-
+        .upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      // 2. Get Public URL (Force cache bust by appending timestamp)
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
-      const publicUrl = `${data.publicUrl}?t=${new Date().getTime()}`;
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
 
-      // 3. Update Item in DB
-      const { error: dbError } = await supabase
-        .from('items')
-        .update({ image_url: fileName }) // Store filename, or publicUrl if you prefer
-        .eq('barcode', item.barcode);
-
-      if (dbError) throw dbError;
-
-      // 4. Update Local State
-      setItems((prev) =>
-        prev.map((i) =>
-          i.barcode === item.barcode ? { ...i, image: fileName } : i
-        )
-      );
-
-      // Force UI refresh if needed (rarely needed if state updates correctly)
+      if (editingItem) {
+        const { error: dbError } = await supabase
+          .from('items')
+          .update({ image_url: fileName })
+          .eq('barcode', barcode);
+        if (dbError) throw dbError;
+        setItems((prev) =>
+          prev.map((i) => (i.barcode === barcode ? { ...i, image: fileName } : i))
+        );
+        setEditingItem((p) => (p ? { ...p, image: fileName } : null));
+      }
+      setFormData((p) => ({ ...p, image_url: fileName }));
     } catch (err) {
       console.error('Upload Error:', err);
-      alert('فشل رفع الصورة: ' + err.message);
+      alert('Failed to upload image: ' + (err?.message || err));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -907,34 +912,86 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </header>
 
           {!loading && (
-            <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm">
+            <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-slate-500 text-sm font-medium mr-1 hidden sm:inline">Group:</span>
                 {[
-                  { key: null, label: 'All', count: items.length, icon: null },
-                  { key: '__electrical__', label: 'Electrical Appliances', count: items.filter((i) => isElectricalGroup(i.group)).length, icon: Zap },
-                  { key: '__home__', label: 'Household / Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed },
-                ].map(({ key, label, count, icon: Icon }) => (
-                  <button
-                    key={key ?? 'all'}
-                    type="button"
-                    onClick={() => setSelectedGroup(key)}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
-                      selectedGroup === key
-                        ? key === '__electrical__'
-                          ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
-                          : key === '__home__'
-                            ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25'
-                            : 'bg-slate-700 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
-                    }`}
-                  >
-                    {Icon && <Icon size={18} className="shrink-0" />}
-                    <span>{label}</span>
-                    <span className="opacity-80 font-normal">({count})</span>
-                  </button>
-                ))}
+                  { key: null, label: 'All', count: items.length, icon: null, type: 'all' },
+                  { key: '__electrical__', label: 'Electrical Appliances', count: items.filter((i) => isElectricalGroup(i.group)).length, icon: Zap, type: 'electrical' },
+                  { key: '__home__', label: 'Household / Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed, type: 'household' },
+                ].map(({ key, label, count, icon: Icon, type }) => {
+                  const isSelected = selectedGroup === key || (key === '__electrical__' && selectedGroup && isElectricalGroup(selectedGroup)) || (key === '__home__' && selectedGroup && !isElectricalGroup(selectedGroup));
+                  const btnClass = isSelected
+                    ? type === 'electrical'
+                      ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
+                      : type === 'household'
+                        ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25'
+                        : 'bg-slate-700 text-white shadow-md'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800';
+                  return (
+                    <button
+                      key={key ?? 'all'}
+                      type="button"
+                      onClick={() => setSelectedGroup(key)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${btnClass}`}
+                    >
+                      {Icon && <Icon size={18} className="shrink-0" />}
+                      <span>{label}</span>
+                      <span className="opacity-80 font-normal">({count})</span>
+                    </button>
+                  );
+                })}
               </div>
+              {(selectedGroup === '__electrical__' || (selectedGroup && isElectricalGroup(selectedGroup))) && electricalGroupsSorted.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-12 border-l-0 sm:border-l-2 border-indigo-200 sm:ml-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGroup('__electrical__')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedGroup === '__electrical__' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
+                  >
+                    All
+                  </button>
+                  {electricalGroupsSorted.map((g) => {
+                    const count = items.filter((i) => (i.group || '').trim().toLowerCase() === g.trim().toLowerCase()).length;
+                    const sel = selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase();
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setSelectedGroup(g)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sel ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
+                      >
+                        {g} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {(selectedGroup === '__home__' || (selectedGroup && selectedGroup !== '__electrical__' && !isElectricalGroup(selectedGroup))) && kitchenwareGroupsSorted.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-12 border-l-0 sm:border-l-2 border-sky-200 sm:ml-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGroup('__home__')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedGroup === '__home__' ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100'}`}
+                  >
+                    All
+                  </button>
+                  {kitchenwareGroupsSorted.map((g) => {
+                    const count = items.filter((i) => (i.group || '').trim().toLowerCase() === g.trim().toLowerCase()).length;
+                    const sel = selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase();
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setSelectedGroup(g)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sel ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100'}`}
+                      >
+                        {g} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -983,13 +1040,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <div className={`absolute inset-0 flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
                                 <Package size={32} className="text-slate-300/80" />
                               </div>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); document.getElementById(`file-${item.barcode}`).click(); }}
-                                className="absolute top-2 right-2 z-20 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-white transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 duration-200"
-                              >
-                                <Camera size={16} />
-                              </button>
-                              <input type="file" id={`file-${item.barcode}`} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, item)} />
                             </div>
 
                             <div className="p-3 flex-1 flex flex-col min-h-0">
@@ -1371,7 +1421,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         dir="ltr"
                       />
                       <label className={`block cursor-pointer ${uploading ? 'opacity-70' : ''}`}>
-                        <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={handleImageUpload} className="sr-only" />
+                        <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={(e) => handleImageUpload(e, editingItem || { barcode: formData.barcode })} className="sr-only" />
                         <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                           {uploading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Upload size={14} className="shrink-0" />}
                           {uploading ? 'Uploading...' : 'Upload'}
