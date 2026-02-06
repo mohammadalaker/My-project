@@ -1,0 +1,2 @@
+my-website
+If you see this file, the deployment is from the correct folder (my-website).

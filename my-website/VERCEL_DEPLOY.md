@@ -1,45 +1,71 @@
-# Deploy Warehouse Management System on Vercel
+# Deploy on Vercel — مهم جداً
 
-## 1. Root Directory (required)
+## السبب الأكثر شيوعاً لعدم عمل الموقع على Vercel
 
-This repo has two folders:
-
-- **my-website** ← The actual app (inventory, orders, catalog)
-- **inventory-dashboard** ← Another dashboard
-
-Set Vercel **Root Directory** to **`my-website`** so the correct app is built.
-
-1. Open [Vercel Dashboard](https://vercel.com/dashboard) → your project (linked to GitHub).
-2. Go to **Settings** → **General**.
-3. Under **Root Directory**, click **Edit**, enter **`my-website`**, then **Save**.
-4. Go to **Deployments** → open the latest deployment → **Redeploy**.
+المشروع موجود داخل مجلد **`my-website`**. إذا لم تختر هذا المجلد كمجلد جذر (Root Directory) في Vercel، يتم البناء من المجلد الأعلى ويظهر موقع خاطئ أو لا يعمل.
 
 ---
 
-## 2. Environment variables (required for data)
+## الخطوات (ابدأ من هنا)
 
-The app needs Supabase for products and images. Add these in Vercel:
+### 1. تعيين مجلد الجذر (Root Directory)
 
-1. **Settings** → **Environment Variables**.
-2. Add:
-   - **Name:** `VITE_SUPABASE_URL`  
-     **Value:** your Supabase project URL (e.g. `https://xxxx.supabase.co`)
-   - **Name:** `VITE_SUPABASE_ANON_KEY`  
-     **Value:** your Supabase anon/public key
-3. **Save**, then **Redeploy** the project.
+1. ادخل إلى [Vercel Dashboard](https://vercel.com/dashboard).
+2. افتح **المشروع** المرتبط بمستودع GitHub.
+3. من القائمة الجانبية: **Settings** → **General**.
+4. في قسم **Root Directory**:
+   - اضغط **Edit**.
+   - اكتب: **`my-website`** (بدون شرطة مائلة في النهاية).
+   - اضغط **Save**.
 
-Without these, the site may load but the product list will be empty and images may not work.
+### 2. إعادة النشر (Redeploy)
+
+1. اذهب إلى **Deployments**.
+2. افتح آخر نشر (الأعلى).
+3. اضغط على **⋯** (القائمة) ثم **Redeploy**.
+4. انتظر حتى ينتهي البناء (Building ثم Ready).
+
+### 3. فتح الرابط
+
+اضغط على **Visit** أو افتح الرابط الذي يظهر لك. يفترض أن ترى نفس واجهة **http://localhost:5173/** (نظام إدارة المخزون، أقسام Electrical و Kitchenware).
 
 ---
 
-## 3. If the page still doesn’t work
+## إذا استمرت المشكلة
 
-- **Blank or broken page**
-  - Confirm **Root Directory** is exactly `my-website` (no trailing slash).
-  - Check **Deployments** → latest run: if **Building** failed, open the log and fix the error (e.g. missing env, Node version).
-- **404 on refresh or direct URL**
-  - The project’s `vercel.json` includes SPA rewrites. Ensure you’re deploying from the `my-website` folder so that `vercel.json` is used.
-- **No products / images**
-  - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in **Settings → Environment Variables** and redeploy.
+- **صفحة بيضاء أو "Something went wrong"**
+  - تأكد أن **Root Directory** = **`my-website`** ثم أعد النشر.
+  - من **Deployments** → آخر نشر → **Building**: تأكد أن البناء نجح (بدون أخطاء حمراء).
 
-After a successful deploy you should see the Warehouse Management System with Electrical Appliances, Kitchenware, and the Order / Catalog panels.
+- **404 أو صفحة مختلفة عن الموقع المحلي**
+  - عادة يعني أن البناء تم من مجلد خاطئ. راجع تعيين **Root Directory** كما في الخطوة 1.
+
+- **الموقع يفتح لكن بدون منتجات أو صور**
+  - أضف في **Settings** → **Environment Variables**:
+    - `VITE_SUPABASE_URL` = رابط مشروع Supabase
+    - `VITE_SUPABASE_ANON_KEY` = المفتاح العام (anon key)
+  - ثم أعد النشر مرة أخرى.
+
+---
+
+## تشخيص الصفحة البيضاء
+
+إذا ظهرت صفحة بيضاء تماماً بعد النشر:
+
+1. **حدّث الصفحة (F5)** — أحياناً يظهر "Loading…" ثم التطبيق.
+2. **افتح أدوات المطوّر (F12)** → تبويب **Network** → حدّث الصفحة:
+   - إذا ظهر طلب لملف مثل **index-xxxxx.js** بحالة **404** → المسار خاطئ أو البناء من مجلد خاطئ. تأكد أن **Root Directory** = **my-website** وأعد النشر.
+   - إذا ظهرت كل الطلبات بحالة **200** والصفحة ما زالت بيضاء → افتح تبويب **Console** وانسخ أي رسالة خطأ باللون الأحمر.
+3. **تأكد من مشروع Vercel الصحيح**: في Vercel Dashboard تأكد أنك داخل المشروع الذي ربطته بمستودع GitHub، وأن **Root Directory** مضبوط على **my-website** (Settings → General).
+
+---
+
+## ملخص
+
+| الإعداد        | القيمة المطلوبة   |
+|----------------|-------------------|
+| Root Directory | **my-website**    |
+| Build Command  | (يُستخدم من vercel.json) |
+| Output         | **dist**          |
+
+بعد ضبط **Root Directory** على **my-website** وإعادة النشر، الموقع على Vercel يعمل مثل **http://localhost:5173/**.

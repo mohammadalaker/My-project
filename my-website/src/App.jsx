@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import ExcelJS from 'exceljs';
 import {
   Search,
   Plus,
@@ -25,6 +24,7 @@ import {
   Cookie,
   FileText,
   Grid,
+  Camera,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -32,6 +32,15 @@ import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 250;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+/** Safe date format so changing browser language never crashes the app. */
+function safeLocaleDate(options = {}) {
+  try {
+    return new Date().toLocaleDateString('en-GB', options);
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
 
 /** Returns public URL for image from bucket Pic_of_items; external http(s) URLs returned as-is. */
 function getPublicImageUrl(imageValue) {
@@ -509,6 +518,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const handleExportExcel = useCallback(async () => {
+    const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Sales Order', { views: [{ rightToLeft: false }] });
     const colors = {
@@ -806,7 +816,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 <body>
   <div class="cat-header">
     <h1 class="cat-title">Product Catalog</h1>
-    <p class="cat-sub">${new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <p class="cat-sub">${safeLocaleDate({ year: 'numeric', month: 'long', day: 'numeric' })}</p>
   </div>
   <div class="cat-grid">
     ${cards}
@@ -886,7 +896,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div>
                   <h1 className="text-xl font-bold text-slate-800 tracking-tight">{mode === 'catalog' ? 'Catalog Creator' : 'Warehouse Management System'}</h1>
                   <p className="text-slate-500 text-xs mt-0.5 hidden sm:block">
-                    {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    {safeLocaleDate({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
               </div>

@@ -11,7 +11,13 @@
     <title>Inventory Management</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><p style="font-family:system-ui;padding:2rem;text-align:center;color:#64748b;">Loading…</p></div>
+    <script>
+      window.onerror = function(msg, url, line) {
+        var el = document.getElementById('root');
+        if (el) el.innerHTML = '<div style="font-family:system-ui;padding:2rem;max-width:480px;margin:0 auto;color:#dc2626;"><p><strong>Script error:</strong> ' + (msg || 'unknown') + '</p><p>Check console (F12) for details.</p></div>';
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
