@@ -159,6 +159,10 @@ function App() {
     async (reset = false) => {
       const from = reset ? 0 : page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
+
+      if (!reset && fetchingFromRef.current === from) return;
+      fetchingFromRef.current = from;
+
       if (reset) setLoading(true);
       else setLoadingMore(true);
       try {
@@ -179,8 +183,13 @@ function App() {
         if (reset) {
           setItems(normalized);
           setPage(0);
+          fetchingFromRef.current = null;
         } else {
-          setItems((prev) => [...prev, ...normalized]);
+          setItems((prev) => {
+            const existingIds = new Set((prev || []).map((i) => String(i.barcode || i.id || '').trim()));
+            const newItems = normalized.filter((n) => !existingIds.has(String(n.barcode || n.id || '').trim()));
+            return newItems.length ? [...prev, ...newItems] : prev;
+          });
         }
         const more = (data?.length || 0) === PAGE_SIZE;
         setHasMore(more);
@@ -189,6 +198,7 @@ function App() {
         console.error('Supabase fetch error:', err);
         setItems([]);
       } finally {
+        fetchingFromRef.current = null;
         setLoading(false);
         setLoadingMore(false);
       }
@@ -215,6 +225,7 @@ function App() {
 
   const loadMoreRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const fetchingFromRef = useRef(null);
 
   useEffect(() => {
     const el = loadMoreRef.current;
