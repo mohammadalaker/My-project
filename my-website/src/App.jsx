@@ -715,6 +715,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  const handleRemoveImage = async () => {
+    setFormData((p) => ({ ...p, image_url: '' }));
+    if (editingItem?.barcode) {
+      try {
+        await supabase.from('items').update({ image_url: null }).eq('barcode', editingItem.barcode);
+        setItems((prev) =>
+          prev.map((i) => (i.barcode === editingItem.barcode ? { ...i, image: null } : i))
+        );
+        setEditingItem((prev) => (prev ? { ...prev, image: null } : null));
+      } catch (err) {
+        alert(err?.message || 'فشل حذف الصورة');
+      }
+    }
+  };
+
   return (
     <div
       className={`font-sans flex h-screen overflow-hidden ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
@@ -1141,12 +1156,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div className="space-y-2">
                 <span className="text-xs block text-slate-600 font-medium">الصورة</span>
                 <div className="flex gap-3 items-start">
-                  <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
+                  <div className="relative w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
                     {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
                       <img src={getPublicImageUrl(formData.image_url)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
                     ) : (
                       <Package size={28} className="text-slate-300" />
                     )}
+                    {formData.image_url ? (
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute bottom-1 right-1 w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow"
+                        title="حذف الصورة"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ) : null}
                   </div>
                   <div className="flex-1 min-w-0 space-y-2">
                     <input
