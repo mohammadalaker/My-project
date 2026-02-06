@@ -893,13 +893,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       >
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <header className="flex-shrink-0 py-4 px-4 sm:px-6 lg:px-8 -mx-4 sm:-mx-6 lg:-mx-8 bg-[var(--header-bg)] backdrop-blur-xl border-b border-slate-200/60 z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.8)_inset]">
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-3 shrink-0">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-colors ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/25' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/25'}`}>
                   {mode === 'catalog' ? <Grid className="text-white" size={22} /> : <Package className="text-white" size={22} />}
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-slate-800 tracking-tight">{mode === 'catalog' ? 'Catalog Creator' : 'Warehouse Management System'}</h1>
+                  <h1 className="text-xl font-bold text-slate-800 tracking-tight">Sales System</h1>
                   <p className="text-slate-500 text-xs mt-0.5 hidden sm:block">
                     {safeLocaleDate({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
@@ -908,6 +908,27 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               <span className="w-px h-8 bg-slate-200/80 shrink-0 hidden sm:block" aria-hidden />
 
+              <div className="flex items-center gap-2 ml-auto shrink-0">
+                {mode === 'catalog' ? (
+                  <button
+                    type="button"
+                    onClick={() => setMode('order')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-semibold text-sm transition-all"
+                  >
+                    <Package size={18} />
+                    Sales
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setMode('catalog')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold text-sm shadow-lg shadow-rose-500/25 transition-all"
+                  >
+                    <Grid size={18} />
+                    Catalog
+                  </button>
+                )}
+              </div>
             </div>
           </header>
 
