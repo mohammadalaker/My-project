@@ -696,12 +696,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     if (!file || !formData.barcode) return;
     setUploading(true);
     try {
+      const barcode = formData.barcode.trim();
       const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${formData.barcode.trim()}.${ext}`;
+      const path = `${barcode}_${Date.now()}.${ext}`;
       await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const ts = Date.now();
-      const publicUrl = `${data.publicUrl}?v=${ts}`;
+      const publicUrl = data.publicUrl;
       setFormData((p) => ({ ...p, image_url: publicUrl }));
       if (editingItem) {
         await supabase.from('items').update({ image_url: publicUrl }).eq('barcode', editingItem.barcode);
