@@ -1039,7 +1039,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </h2>
                       <div className="product-grid px-1">
                         {sorted.map((item) => (
-                          <div key={item.id} className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col min-h-0 cursor-pointer" onClick={() => setSelectedItem(item)}>
+                          <div key={item.id} className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col min-h-0">
                             {item.group && (
                               <div className="shrink-0 px-3 py-1.5 bg-slate-100/90 border-b border-slate-200/60 text-slate-600 text-xs font-semibold truncate">
                                 {item.group}
@@ -1111,7 +1111,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                             <div className="shrink-0 px-3 py-2 bg-slate-50/80 border-t border-slate-100 space-y-1">
                               <p className="text-slate-600 text-xs font-medium"><span className="text-slate-500">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
-                              <p className="text-slate-600 text-xs font-mono font-semibold tracking-wide break-all">{item.barcode || '—'}</p>
+                              <p className="text-slate-700 text-sm sm:text-base font-mono font-bold tracking-widest break-all" dir="ltr">{item.barcode || '—'}</p>
                             </div>
 
                             <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0" onClick={(e) => e.stopPropagation()}>
