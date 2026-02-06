@@ -1465,8 +1465,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     </div>
                     <div className="flex-1 min-w-0 space-y-2">
                       <input
-                        type="url"
-                        placeholder="Image URL (Optional)"
+                        type="text"
+                        placeholder="Image path or URL (Optional)"
                         value={formData.image_url || ''}
                         onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value.trim() }))}
                         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none"
