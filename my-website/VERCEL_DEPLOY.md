@@ -1,38 +1,45 @@
-# نشر موقع «نظام إدارة المخازن» على Vercel
+# Deploy Warehouse Management System on Vercel
 
-## مهم جداً: إعداد المجلد الجذر (Root Directory)
+## 1. Root Directory (required)
 
-المشروع يحتوي على **مجلدين**:
-- **my-website** ← هذا هو موقعك الحقيقي (نظام إدارة المخازن، أجهزة كهربائية، إضافة للسلة)
-- **inventory-dashboard** ← لوحة أخرى (Hello Developer / بيانات تجريبية)
+This repo has two folders:
 
-لكي يظهر الموقع الصحيح على Vercel، يجب تعيين **Root Directory** إلى مجلد **my-website** فقط.
+- **my-website** ← The actual app (inventory, orders, catalog)
+- **inventory-dashboard** ← Another dashboard
 
----
+Set Vercel **Root Directory** to **`my-website`** so the correct app is built.
 
-## الخطوات (حل نهائي)
-
-1. ادخل إلى [Vercel Dashboard](https://vercel.com/dashboard) وافتح **مشروعك** (المربوط بمستودع GitHub).
-
-2. من القائمة الجانبية اختر **Settings** (الإعدادات).
-
-3. من القائمة الفرعية اختر **General**.
-
-4. في قسم **Root Directory**:
-   - اضغط **Edit**.
-   - اكتب بالضبط: **`my-website`**
-   - اضغط **Save**.
-
-5. من تبويب **Deployments** اضغط **Redeploy** لأحدث نشر، واختر **Redeploy** مرة أخرى للتأكيد.
-
-6. بعد انتهاء البناء، افتح رابط الموقع: يجب أن ترى **نظام إدارة المخازن** مع أقسام Electrical و Kitchenware وشبكة المنتجات وزر «اتفاقية بيع طلبية»، وليس صفحة "Hello, Developer!".
+1. Open [Vercel Dashboard](https://vercel.com/dashboard) → your project (linked to GitHub).
+2. Go to **Settings** → **General**.
+3. Under **Root Directory**, click **Edit**, enter **`my-website`**, then **Save**.
+4. Go to **Deployments** → open the latest deployment → **Redeploy**.
 
 ---
 
-## متغيرات البيئة (إن وُجدت)
+## 2. Environment variables (required for data)
 
-في **Settings → Environment Variables** تأكد من إضافة قيم Supabase إذا كان الموقع يحتاجها:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+The app needs Supabase for products and images. Add these in Vercel:
 
-ثم أعد النشر بعد الحفظ.
+1. **Settings** → **Environment Variables**.
+2. Add:
+   - **Name:** `VITE_SUPABASE_URL`  
+     **Value:** your Supabase project URL (e.g. `https://xxxx.supabase.co`)
+   - **Name:** `VITE_SUPABASE_ANON_KEY`  
+     **Value:** your Supabase anon/public key
+3. **Save**, then **Redeploy** the project.
+
+Without these, the site may load but the product list will be empty and images may not work.
+
+---
+
+## 3. If the page still doesn’t work
+
+- **Blank or broken page**
+  - Confirm **Root Directory** is exactly `my-website` (no trailing slash).
+  - Check **Deployments** → latest run: if **Building** failed, open the log and fix the error (e.g. missing env, Node version).
+- **404 on refresh or direct URL**
+  - The project’s `vercel.json` includes SPA rewrites. Ensure you’re deploying from the `my-website` folder so that `vercel.json` is used.
+- **No products / images**
+  - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in **Settings → Environment Variables** and redeploy.
+
+After a successful deploy you should see the Warehouse Management System with Electrical Appliances, Kitchenware, and the Order / Catalog panels.
