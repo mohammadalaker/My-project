@@ -10,7 +10,8 @@
     "sync-electric": "node scripts/syncElectric.cjs",
     "read-excel": "node scripts/readExcel.cjs",
     "update-products": "node scripts/readExcel.cjs",
-    "update-electric": "node scripts/syncElectric.cjs"
+    "update-electric": "node scripts/syncElectric.cjs",
+    "delete-not-in-excel": "node scripts/deleteNotInExcel.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3",

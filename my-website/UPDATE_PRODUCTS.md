@@ -70,3 +70,18 @@ npm run read-excel
 
 - لتحديث **كل** المنتجات والصور: شغّل `npm run update-products` (مزامنة Electric + قراءة الإكسل).
 - لتحديث **صور Electric فقط** دون إعادة قراءة الإكسل: شغّل `npm run sync-electric` أو `npm run update-electric`، ثم أعد تحميل التطبيق (أو أعد تشغيل `npm run dev`) لتحميل `electricByBarcode.json` الجديد.
+
+## 6. حذف المنتجات غير الموجودة في الإكسل من Supabase
+
+إذا رفعت المنتجات إلى Supabase (جدول `items`) وتريد **حذف أي صنف من Supabase لا يظهر في ملف الإكسل**:
+
+1. ضع ملف الإكسل في مكانه: `كشف القطع الصغيرة و المنزلي.xlsx` (في مجلد المشروع الجذر).
+2. تأكد من وجود متغيرات البيئة في `my-website/.env`: `VITE_SUPABASE_URL` و `VITE_SUPABASE_ANON_KEY`.
+3. شغّل:
+
+```bash
+cd my-website
+npm run delete-not-in-excel
+```
+
+السكربت يقرأ كل الباركودات من الإكسل، يجلب كل أصناف جدول `items` من Supabase، ويحذف كل صنف باركوده **غير موجود** في الإكسل. النتيجة: محتويات Supabase تطابق الإكسل (من حيث وجود/عدم وجود الباركود).
