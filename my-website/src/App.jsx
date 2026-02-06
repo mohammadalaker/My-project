@@ -33,7 +33,7 @@ const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 250;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-/** إرجاع رابط عام للصورة من bucket Pic_of_items - إذا كانت مساراً. الروابط الخارجية (http) تُرجع كما هي. */
+/** Returns public URL for image from bucket Pic_of_items; external http(s) URLs returned as-is. */
 function getPublicImageUrl(imageValue) {
   if (!imageValue || typeof imageValue !== 'string') return null;
   const img = String(imageValue).trim();
@@ -277,7 +277,7 @@ function App() {
   const kitchenwareGroupsSorted = [...kitchenwareGroups];
   const kitchenwareIcons = [Home, Utensils, UtensilsCrossed, ChefHat, Wine, Flame, Cookie, Package];
 
-  /** فوق 1 = موجود، 0 = غير موجود */
+  /** In stock if qty > 0, else Out of Stock */
   const getStockStatus = (item) => {
     const s = item?.stock;
     if (s == null || s === '') return 'Out of Stock';
@@ -534,7 +534,7 @@ function App() {
             <div class="inv-meta">
               <span class="inv-price" dir="ltr" lang="en">₪${unitPrice}</span>
               <span class="inv-qty" dir="ltr" lang="en">× ${o.qty}</span>
-              ${discPercent > 0 ? `<span class="inv-disc" dir="ltr" lang="en">خصم ${discPercent}%</span>` : ''}
+              ${discPercent > 0 ? `<span class="inv-disc" dir="ltr" lang="en">Discount ${discPercent}%</span>` : ''}
             </div>
           </div>
           <div class="inv-total" dir="ltr" lang="en">₪${total.toFixed(2)}</div>
@@ -821,25 +821,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     if (!formData.image_url) return;
     if (!confirm('Are you sure you want to permanently delete this image?')) return;
 
-    // محاولة حذف الملف من التخزين السحابي لتوفير المساحة
     try {
-      // استخراج مسار الملف من الرابط
-      // الرابط: .../BUCKET/path/to/file.jpg?t=...
       const urlObj = new URL(formData.image_url);
-      // قد يختلف المسار حسب إعدادات Supabase، ولكن غالباً يكون آخر جزء
       const pathPart = urlObj.pathname.split(`/${BUCKET}/`)[1];
-      // أو استخدام التسمية الافتراضية إذا كنا نعرفها
       const probablePath = `${formData.barcode.trim()}.${formData.image_url.split('.').pop()?.split('?')[0]}`;
-
-      // سنحاول حذف المسار المحتمل (الباركود)
       if (probablePath) {
         await supabase.storage.from(BUCKET).remove([probablePath]);
       }
     } catch (e) {
       console.warn('Could not delete file from storage', e);
     }
-
-    // تحديث الواجهة وقاعدة البيانات
     setFormData((p) => ({ ...p, image_url: '' }));
     if (editingItem?.barcode) {
       try {
@@ -849,7 +840,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         );
         setEditingItem((prev) => (prev ? { ...prev, image: null } : null));
       } catch (err) {
-        alert(err?.message || 'فشل حذف الصورة');
+        alert(err?.message || 'Failed to delete image');
       }
     }
   };
@@ -1103,7 +1094,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     onClick={() => setShowCustomerForm(false)}
                     className="w-full py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
                   >
-                    انتهيت من التعبئة — إغلاق
+                    Done — Close
                   </button>
                 </div>
               )}
@@ -1202,7 +1193,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         showCatalogPanel && (
           <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60 transition-all duration-300">
             <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
-              <h2 className="text-base font-bold text-slate-800">الكتالوج <span className="text-rose-500" dir="ltr" lang="en">({catalogItems.length})</span></h2>
+              <h2 className="text-base font-bold text-slate-800">Catalog <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
               <button onClick={() => setShowCatalogPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5">
@@ -1230,8 +1221,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
             {catalogItems.length > 0 && (
               <div className="p-3 border-t border-slate-200/60 bg-white/50 backdrop-blur-sm space-y-2">
-                <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">طباعة / عرض الكتالوج</button>
-                <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">تفريغ الكتالوج</button>
+                <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">Print / View Catalog</button>
+                <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">Clear Catalog</button>
               </div>
             )}
           </aside>

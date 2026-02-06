@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-/** يتصل بسوبابيس باستخدام المتغيرات من ملف .env */
+/** Connects to Supabase using env variables from .env */
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 

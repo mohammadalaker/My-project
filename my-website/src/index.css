@@ -17,7 +17,7 @@
     font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
     background: var(--app-bg);
-    /* لا نستخدم fixed لتجنب ثقل الرسم عند التمرير */
+    /* no fixed to avoid heavy repaint on scroll */
   }
 
   #root {

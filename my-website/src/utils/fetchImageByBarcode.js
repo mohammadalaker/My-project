@@ -1,7 +1,7 @@
 /**
- * جلب رابط صورة المنتج من الإنترنت حسب الباركود.
- * يستخدم Open Food Facts (مجاني، بدون مفتاح API).
- * للإلكترونيات/أدوات منزلية قد لا تكون كل الباركودات متوفرة.
+ * Fetch product image URL by barcode from the web.
+ * Uses Open Food Facts (free, no API key). For electronics/household items
+ * not all barcodes may be available.
  */
 const OPEN_FOOD_FACTS_API = 'https://world.openfoodfacts.org/api/v0/product';
 
@@ -21,7 +21,7 @@ export async function fetchImageUrlByBarcode(barcode) {
 }
 
 /**
- * جلب الصور لعدة باركودات مع تأخير بين الطلبات لتجنب الحظر.
+ * Fetch images for multiple barcodes with delay between requests to avoid rate limits.
  */
 export async function fetchImageUrlsForBarcodes(barcodes, onProgress) {
   const results = {};

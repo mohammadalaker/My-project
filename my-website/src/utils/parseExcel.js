@@ -95,7 +95,7 @@ export function parseWorkbook(workbook, embeddedImages = []) {
 
     items.push({
       id: `row-${r}`,
-      name: name || 'بدون اسم',
+      name: name || 'Unnamed',
       group: group || '—',
       price: Math.max(0, price),
       qty: Math.max(0, qty),
@@ -131,7 +131,7 @@ export function parseFile(file) {
         reject(err);
       }
     };
-    reader.onerror = () => reject(new Error('فشل قراءة الملف'));
+    reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsArrayBuffer(file);
   });
 }

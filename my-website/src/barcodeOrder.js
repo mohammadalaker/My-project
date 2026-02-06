@@ -1,4 +1,4 @@
-/** ترتيب الصفحة الرئيسية حسب الباركود - محدّث */
+/** Main page order by barcode - updated list */
 export const BARCODE_ORDER = [
   '3168430785618', '7290020124128', '7290020124180', '7290020124197', '7290020124159', '7290020124166',
   '7290020124135', '7290020124203', '7290020124173', '7290020124142', '7290020124210', '3045386376063',
@@ -130,7 +130,7 @@ export const BARCODE_ORDER = [
   '7290020124845', '7290020124821', '7290020124838', '7290020124852', '7290020124869', '7290020124876'
 ];
 
-/** ترتيب المنتجات حسب الباركود: أولاً حسب القائمة المرفقة، ثم حسب قيمة الباركود */
+/** Sort items by barcode: first by attached list order, then by barcode value */
 export const sortByBarcodeOrder = (items, barcodeOrder) => {
   const orderMap = new Map((barcodeOrder || []).map((b, i) => [String(b).trim(), i]));
   const toKey = (item) => String(item?.barcode ?? item?.id ?? '').trim();
