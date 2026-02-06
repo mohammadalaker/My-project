@@ -100,9 +100,10 @@ const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, pri
 
 function normalizeItemFromSupabase(row) {
   if (!row) return null;
+  const barcodeStr = String(row.barcode ?? '').trim();
   return {
-    id: row.barcode ?? '',
-    barcode: row.barcode ?? '',
+    id: barcodeStr,
+    barcode: barcodeStr,
     name: (row.eng_name ?? '').toString().trim(),
     group: (row.brand_group ?? '').toString().trim(),
     box: row.box_count != null && row.box_count !== '' ? String(row.box_count) : '',

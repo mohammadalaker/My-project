@@ -108,16 +108,16 @@ export const BARCODE_ORDER = [
   '7290020124852', '7290020124869', '7290020124876',
 ];
 
+/** ترتيب المنتجات حسب الباركود: أولاً حسب القائمة المرفقة، ثم حسب قيمة الباركود */
 export const sortByBarcodeOrder = (items, barcodeOrder) => {
-  const orderMap = new Map(barcodeOrder.map((b, i) => [String(b).trim(), i]));
+  const orderMap = new Map((barcodeOrder || []).map((b, i) => [String(b).trim(), i]));
+  const toKey = (item) => String(item?.barcode ?? item?.id ?? '').trim();
   return [...items].sort((a, b) => {
-    const idxA = orderMap.has(String(a.barcode || a.id || '').trim())
-      ? orderMap.get(String(a.barcode || a.id || '').trim())
-      : Infinity;
-    const idxB = orderMap.has(String(b.barcode || b.id || '').trim())
-      ? orderMap.get(String(b.barcode || b.id || '').trim())
-      : Infinity;
+    const keyA = toKey(a);
+    const keyB = toKey(b);
+    const idxA = orderMap.has(keyA) ? orderMap.get(keyA) : Infinity;
+    const idxB = orderMap.has(keyB) ? orderMap.get(keyB) : Infinity;
     if (idxA !== idxB) return idxA - idxB;
-    return String(a.name || '').localeCompare(String(b.name || ''));
+    return keyA.localeCompare(keyB, undefined, { numeric: true });
   });
 };
