@@ -909,17 +909,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           {!loading && (
             <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-slate-500 text-sm font-medium mr-1 hidden sm:inline">Category:</span>
+                <span className="text-slate-500 text-sm font-medium mr-1 hidden sm:inline">Group:</span>
                 {[
-                  { key: null, label: 'All', count: items.length },
-                  { key: '__electrical__', label: 'Electrical Appliances', count: items.filter((i) => isElectricalGroup(i.group)).length },
-                  { key: '__home__', label: 'Household / Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length },
-                ].map(({ key, label, count }) => (
+                  { key: null, label: 'All', count: items.length, icon: null },
+                  { key: '__electrical__', label: 'Electrical Appliances', count: items.filter((i) => isElectricalGroup(i.group)).length, icon: Zap },
+                  { key: '__home__', label: 'Household / Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed },
+                ].map(({ key, label, count, icon: Icon }) => (
                   <button
                     key={key ?? 'all'}
                     type="button"
                     onClick={() => setSelectedGroup(key)}
-                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                       selectedGroup === key
                         ? key === '__electrical__'
                           ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
@@ -929,7 +929,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
                     }`}
                   >
-                    {label} <span className="opacity-80 font-normal">({count})</span>
+                    {Icon && <Icon size={18} className="shrink-0" />}
+                    <span>{label}</span>
+                    <span className="opacity-80 font-normal">({count})</span>
                   </button>
                 ))}
               </div>
@@ -959,7 +961,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </h2>
                       <div className="product-grid px-1">
                         {sorted.map((item) => (
-                          <div key={item.id} className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col min-h-0">
+                          <div key={item.id} className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col min-h-0 cursor-pointer" onClick={() => setSelectedItem(item)}>
                             {item.group && (
                               <div className="shrink-0 px-3 py-1.5 bg-slate-100/90 border-b border-slate-200/60 text-slate-600 text-xs font-semibold truncate">
                                 {item.group}
@@ -987,21 +989,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               >
                                 <Camera size={16} />
                               </button>
-                              {item.image && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteImage(item); }}
-                                  className="absolute top-2 left-2 z-20 w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm shadow-sm border border-slate-200/60 flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 duration-200 delay-75"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              )}
-                              <input
-                                type="file"
-                                id={`file-${item.barcode}`}
-                                className="hidden"
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(e, item)}
-                              />
+                              <input type="file" id={`file-${item.barcode}`} className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, item)} />
                             </div>
 
                             <div className="p-3 flex-1 flex flex-col min-h-0">
@@ -1055,7 +1043,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <p className="text-slate-600 text-xs font-mono font-semibold tracking-wide break-all">{item.barcode || '—'}</p>
                             </div>
 
-                            <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0">
+                            <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
                                 className="flex-1 flex items-center justify-center py-1.5 rounded-md border border-slate-200 text-slate-600 text-[11px] font-medium hover:bg-slate-50 transition-colors"
@@ -1063,7 +1051,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDelete(item.barcode)}
+                                onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }}
                                 className="p-1.5 rounded-md border border-slate-200 text-rose-600 hover:bg-rose-50 transition-colors"
                               >
                                 <Trash2 size={12} />
@@ -1301,14 +1289,27 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <h3 className="text-lg font-bold text-slate-800">Product Details</h3>
                 <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">✕</button>
               </div>
-              <div className="aspect-square max-h-48 rounded-xl bg-slate-50 flex items-center justify-center mb-4 overflow-hidden">
-                {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-4" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={64} className="text-slate-300" />}
+              <div className="aspect-square max-h-64 rounded-xl bg-slate-50 flex items-center justify-center mb-4 overflow-hidden">
+                {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-6" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={80} className="text-slate-300" />}
               </div>
-              <p className="text-slate-800 font-semibold mb-2">{selectedItem.name}</p>
-              {selectedItem.group && <span className="inline-block text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg font-medium">{selectedItem.group}</span>}
-              <p className="mt-3 text-slate-600">Price: <span dir="ltr" lang="en" className="font-semibold text-slate-800">₪{selectedItem.price ?? 0}</span> — Discounted: <span dir="ltr" lang="en" className="font-semibold text-emerald-600">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
-              <p className="mt-1 text-slate-500 text-sm">Stock: <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-semibold' : ''}>{getStockStatus(selectedItem)}</span></p>
-              <button onClick={() => { addToOrder(selectedItem, 1); setSelectedItem(null); }} className="w-full mt-5 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">Add to Cart</button>
+              {selectedItem.group && <p className="text-xs font-semibold text-indigo-600 mb-1">Group: {selectedItem.group}</p>}
+              <p className="text-slate-800 font-bold text-base mb-3 leading-snug">{selectedItem.name}</p>
+              <div className="space-y-2 text-sm">
+                <p className="text-slate-600">Price: <span dir="ltr" className="font-bold text-slate-800 text-base">₪{selectedItem.price ?? 0}</span></p>
+                <p className="text-slate-600">Discounted: <span dir="ltr" className="font-bold text-emerald-600 text-lg">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
+                <p className="text-slate-600">Stock: <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(selectedItem)}</span></p>
+                <p className="text-slate-600 font-mono text-xs break-all">Barcode: <span dir="ltr" className="font-bold text-slate-800">{selectedItem.barcode || '—'}</span></p>
+              </div>
+              <div className="flex gap-2 mt-5">
+                <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Edit</button>
+                {mode === 'catalog' ? (
+                  <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`flex-1 py-3 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-rose-200 text-rose-700 hover:bg-rose-50'}`}>
+                    {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove from Catalog' : 'Add to Catalog'}
+                  </button>
+                ) : (
+                  <button onClick={() => { addToOrder(selectedItem, 1); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">Add to Cart</button>
+                )}
+              </div>
             </div>
           </div>
         )
