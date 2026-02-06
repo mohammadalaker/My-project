@@ -28,7 +28,7 @@ import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 
 const BUCKET = 'Pic_of_items';
-const PAGE_SIZE = 36;
+const PAGE_SIZE = 250;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /** إرجاع رابط عام للصورة من bucket Pic_of_items - إذا كانت مساراً. الروابط الخارجية (http) تُرجع كما هي. */
@@ -182,7 +182,9 @@ function App() {
         } else {
           setItems((prev) => [...prev, ...normalized]);
         }
-        setHasMore((data?.length || 0) === PAGE_SIZE);
+        const more = (data?.length || 0) === PAGE_SIZE;
+        setHasMore(more);
+        if (more) setPage((p) => p + 1);
       } catch (err) {
         console.error('Supabase fetch error:', err);
         setItems([]);
@@ -195,7 +197,7 @@ function App() {
   );
 
   useEffect(() => {
-    const debounce = setTimeout(() => fetchItems(true), 100);
+    const debounce = setTimeout(() => fetchItems(true), 80);
     return () => clearTimeout(debounce);
   }, [search]);
 
@@ -213,6 +215,7 @@ function App() {
 
   const loadMoreRef = useRef(null);
   const scrollContainerRef = useRef(null);
+
   useEffect(() => {
     const el = loadMoreRef.current;
     const root = scrollContainerRef.current;
