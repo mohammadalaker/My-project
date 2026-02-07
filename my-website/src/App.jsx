@@ -1063,7 +1063,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 {item.group}
                               </div>
                             )}
-                            <div className="aspect-[4/3] min-h-[160px] bg-slate-50 relative overflow-hidden flex-shrink-0">
+                            <div className="aspect-[4/3] min-h-[200px] bg-slate-50 relative overflow-hidden flex-shrink-0">
                               <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors z-10" />
                               {getImage(item) ? (
                                 <img
@@ -1135,14 +1135,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   Add to Cart
                                 </button>
                               )}
-                              <p className="mt-2 font-bold text-slate-800 line-clamp-2 text-sm leading-tight">{item.name || '—'}</p>
-                              <p className="mt-2 shrink-0 text-sm"><span className="text-slate-500">Price:</span> <span className="font-bold text-slate-800 text-base">₪{item.price ?? 0}</span></p>
-                              <p className="shrink-0 text-sm"><span className="text-slate-500">Discounted:</span> <span className="font-bold text-emerald-600 text-lg">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
+                              <p className="mt-2 font-bold text-slate-800 line-clamp-2 text-base leading-tight">{item.name || '—'}</p>
+                              <p className="mt-2 shrink-0 text-base"><span className="text-slate-500">Price:</span> <span className="font-bold text-slate-800 text-lg">₪{item.price ?? 0}</span></p>
+                              <p className="shrink-0 text-base"><span className="text-slate-500">Discounted:</span> <span className="font-bold text-emerald-600 text-xl">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
                             </div>
 
                             <div className="shrink-0 px-3 py-2 bg-slate-50/80 border-t border-slate-100 space-y-1">
-                              <p className="text-slate-600 text-xs font-medium"><span className="text-slate-500">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
-                              <p className="text-slate-700 text-sm sm:text-base font-mono font-bold tracking-widest break-all" dir="ltr">{item.barcode || '—'}</p>
+                              <p className="text-slate-600 text-sm font-medium"><span className="text-slate-500">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
+                              <p className="text-slate-700 text-base sm:text-lg font-mono font-bold tracking-widest break-all" dir="ltr">{item.barcode || '—'}</p>
                             </div>
 
                             <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0" onClick={(e) => e.stopPropagation()}>
