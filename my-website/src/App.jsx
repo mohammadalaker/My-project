@@ -134,6 +134,8 @@ function normalizeItemFromSupabase(row) {
 }
 
 import Login from './components/Login';
+import SkeletonGrid from './components/SkeletonLoader';
+import BottomNav from './components/BottomNav';
 
 function App() {
 
@@ -1135,10 +1137,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           />
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto pt-6 scroll-smooth">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-4">
-                <Loader2 className="animate-spin text-indigo-500" size={44} />
-                <p className="text-slate-500 text-sm font-medium">Loading items...</p>
-              </div>
+              <SkeletonGrid />
             ) : (
               <div className="pb-8 space-y-12">
                 {[
@@ -1650,6 +1649,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         )
       }
+      {/* Mobile Bottom Nav */}
+      <BottomNav
+        mode={mode}
+        setMode={setMode}
+        cartCount={orderLines.length}
+        onOpenCart={() => setShowOrderPanel(true)}
+      />
     </div >
   );
 }
