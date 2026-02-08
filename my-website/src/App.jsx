@@ -1308,53 +1308,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <button onClick={() => setShowOrderPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto">
-              {!showCustomerForm ? (
-                <div className="mx-3 mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomerForm(true)}
-                    className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-dashed border-orange-200 text-orange-700 font-semibold text-sm hover:from-orange-100 hover:to-amber-100 hover:border-orange-300 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-orange-400" />
-                    Fill Customer Details
-                  </button>
-                </div>
-              ) : (
-                <div className="relative p-4 mx-3 mt-3 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/30 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
-                  <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400 opacity-80" />
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-2 pt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" /> Customer Details
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomerForm(false)}
-                      className="text-xs font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2.5 py-1.5 rounded-xl transition-colors"
-                    >
-                      Done — Close
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Company Name</span><input type="text" value={orderInfo.companyName} onChange={(e) => setOrderInfoField('companyName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Merchant Name</span><input type="text" value={orderInfo.merchantName} onChange={(e) => setOrderInfoField('merchantName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Phone</span><input type="tel" value={orderInfo.phone} onChange={(e) => setOrderInfoField('phone', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Date</span><input type="date" value={orderInfo.orderDate} onChange={(e) => setOrderInfoField('orderDate', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Address</span><input type="text" value={orderInfo.address} onChange={(e) => setOrderInfoField('address', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Customer Number</span><input type="text" value={orderInfo.customerNumber} onChange={(e) => setOrderInfoField('customerNumber', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Payment Method</span><select value={orderInfo.paymentMethod} onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none"><option value="">—</option><option value="Cash">Cash</option><option value="Checks">Checks</option></select></label>
-                    {orderInfo.paymentMethod === 'Checks' && (
-                      <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Checks Count</span><input type="number" min="1" value={orderInfo.checksCount} onChange={(e) => setOrderInfoField('checksCount', e.target.value)} placeholder="3" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomerForm(false)}
-                    className="w-full py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
-                  >
-                    Done — Close
-                  </button>
-                </div>
-              )}
               <div className="p-3 space-y-2.5">
                 {orderLines.length === 0 ? (
                   <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
@@ -1421,6 +1374,55 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   })
                 )}
               </div>
+
+              {!showCustomerForm ? (
+                <div className="mx-3 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerForm(true)}
+                    className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-dashed border-orange-200 text-orange-700 font-semibold text-sm hover:from-orange-100 hover:to-amber-100 hover:border-orange-300 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-orange-400" />
+                    Fill Customer Details
+                  </button>
+                </div>
+              ) : (
+                <div className="relative p-4 mx-3 mt-3 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/30 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
+                  <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400 opacity-80" />
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-2 pt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" /> Customer Details
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerForm(false)}
+                      className="text-xs font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2.5 py-1.5 rounded-xl transition-colors"
+                    >
+                      Done — Close
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Company Name</span><input type="text" value={orderInfo.companyName} onChange={(e) => setOrderInfoField('companyName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Merchant Name</span><input type="text" value={orderInfo.merchantName} onChange={(e) => setOrderInfoField('merchantName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Phone</span><input type="tel" value={orderInfo.phone} onChange={(e) => setOrderInfoField('phone', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Date</span><input type="date" value={orderInfo.orderDate} onChange={(e) => setOrderInfoField('orderDate', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Address</span><input type="text" value={orderInfo.address} onChange={(e) => setOrderInfoField('address', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Customer Number</span><input type="text" value={orderInfo.customerNumber} onChange={(e) => setOrderInfoField('customerNumber', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Payment Method</span><select value={orderInfo.paymentMethod} onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none"><option value="">—</option><option value="Cash">Cash</option><option value="Checks">Checks</option></select></label>
+                    {orderInfo.paymentMethod === 'Checks' && (
+                      <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Checks Count</span><input type="number" min="1" value={orderInfo.checksCount} onChange={(e) => setOrderInfoField('checksCount', e.target.value)} placeholder="3" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerForm(false)}
+                    className="w-full py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
+                  >
+                    Done — Close
+                  </button>
+                </div>
+              )}
+
               {orderLines.length > 0 && (
                 <div className="relative mx-3 mb-3 p-4 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/40 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
                   <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 opacity-90" />
