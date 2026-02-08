@@ -1130,9 +1130,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     e.stopPropagation();
                                     addToOrder(item, 1);
                                   }}
-                                  className="w-full py-2 rounded-lg border-2 border-indigo-200 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 hover:border-indigo-300 shrink-0 transition-all duration-200"
+                                  className="w-full py-3 rounded-xl border-2 border-indigo-200 text-indigo-700 text-sm font-bold hover:bg-indigo-50 hover:border-indigo-300 shrink-0 transition-all duration-200 shadow-sm"
                                 >
-                                  Add to Cart
+                                  إضافة إلى السلة
                                 </button>
                               )}
                               <p className="mt-2 font-bold text-slate-800 line-clamp-2 text-base leading-tight">{item.name || '—'}</p>
@@ -1409,7 +1409,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove from Catalog' : 'Add to Catalog'}
                   </button>
                 ) : (
-                  <button onClick={() => { addToOrder(selectedItem, 1); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">Add to Cart</button>
+                  <button onClick={() => { addToOrder(selectedItem, 1); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">إضافة إلى السلة</button>
                 )}
               </div>
             </div>
