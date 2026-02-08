@@ -140,12 +140,15 @@ function App() {
 
   /* Login State */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null); // 'admin' or 'customer'
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
     const auth = localStorage.getItem('sales_auth');
+    const role = localStorage.getItem('sales_role');
     if (auth === 'true') {
       setIsAuthenticated(true);
+      setUserRole(role || 'customer');
     }
     setHasCheckedAuth(true);
   }, []);
@@ -153,7 +156,14 @@ function App() {
   const handleLogin = (username, password, setError) => {
     if (username === 'admin' && password === '123456') {
       localStorage.setItem('sales_auth', 'true');
+      localStorage.setItem('sales_role', 'admin');
       setIsAuthenticated(true);
+      setUserRole('admin');
+    } else if (username === '123' && password === '123') {
+      localStorage.setItem('sales_auth', 'true');
+      localStorage.setItem('sales_role', 'customer');
+      setIsAuthenticated(true);
+      setUserRole('customer');
     } else {
       setError('Invalid username or password');
     }
@@ -162,7 +172,9 @@ function App() {
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
       localStorage.removeItem('sales_auth');
+      localStorage.removeItem('sales_role');
       setIsAuthenticated(false);
+      setUserRole(null);
     }
   };
 
@@ -695,6 +707,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const openAddModal = () => {
+    if (userRole !== 'admin') return;
     setEditingItem(null);
     setFormData({
       barcode: '',
@@ -710,6 +723,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const openEditModal = (item) => {
+    if (userRole !== 'admin') return;
     setEditingItem(item);
     setFormData({
       barcode: item.barcode || '',
@@ -726,6 +740,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (userRole !== 'admin') return;
     try {
       const payload = {
         barcode: formData.barcode.trim(),
@@ -752,6 +767,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const handleDelete = async (barcode) => {
+    if (userRole !== 'admin') return;
     if (!confirm('Delete this item?')) return;
     try {
       await supabase.from('items').delete().eq('barcode', barcode);
@@ -764,6 +780,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   const fileInputRef = useRef(null);
 
   const handleImageUpload = async (e, item) => {
+    if (userRole !== 'admin') return;
     const file = e.target.files?.[0];
     if (!file) return;
     const barcode = item?.barcode || formData.barcode;
@@ -920,6 +937,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   }, [catalogItems, getCatalogHtml]);
 
   const handleRemoveImage = async () => {
+    if (userRole !== 'admin') return;
     if (!formData.image_url) return;
     if (!confirm('Are you sure you want to permanently delete this image?')) return;
 
@@ -1147,19 +1165,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <div className={`absolute inset-0 flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
                                 <Package size={32} className="text-slate-300/80" />
                               </div>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
-                                disabled={uploading}
-                                className="absolute bottom-2 right-2 z-20 p-2 rounded-xl bg-white/90 shadow-md hover:bg-indigo-500 hover:text-white text-slate-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                                title="Change image (saves to Supabase)"
-                              >
-                                {uploading && cardUploadItemRef.current?.id === item.id ? (
-                                  <Loader2 size={18} className="animate-spin" />
-                                ) : (
-                                  <Upload size={18} />
-                                )}
-                              </button>
+                              {userRole === 'admin' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
+                                  disabled={uploading}
+                                  className="absolute bottom-2 right-2 z-20 p-2 rounded-xl bg-white/90 shadow-md hover:bg-indigo-500 hover:text-white text-slate-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                                  title="Change image (saves to Supabase)"
+                                >
+                                  {uploading && cardUploadItemRef.current?.id === item.id ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                  ) : (
+                                    <Upload size={18} />
+                                  )}
+                                </button>
+                              )}
                             </div>
 
                             <div className="p-3 flex-1 flex flex-col min-h-0">
@@ -1214,20 +1234,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <p className="text-slate-700 text-base sm:text-lg font-mono font-bold tracking-widest break-all" dir="ltr">{item.barcode || '—'}</p>
                             </div>
 
-                            <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
-                                className="flex-1 flex items-center justify-center py-1.5 rounded-md border border-slate-200 text-slate-600 text-[11px] font-medium hover:bg-slate-50 transition-colors"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }}
-                                className="p-1.5 rounded-md border border-slate-200 text-rose-600 hover:bg-rose-50 transition-colors"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
+                            {userRole === 'admin' && (
+                              <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
+                                  className="flex-1 flex items-center justify-center py-1.5 rounded-md border border-slate-200 text-slate-600 text-[11px] font-medium hover:bg-slate-50 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }}
+                                  className="p-1.5 rounded-md border border-slate-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1473,7 +1495,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <p className="text-slate-600 font-mono text-xs break-all">Barcode: <span dir="ltr" className="font-bold text-slate-800">{selectedItem.barcode || '—'}</span></p>
               </div>
               <div className="flex gap-2 mt-5">
-                <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Edit</button>
+                {userRole === 'admin' && (
+                  <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Edit</button>
+                )}
                 {mode === 'catalog' ? (
                   <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`flex-1 py-3 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-rose-200 text-rose-700 hover:bg-rose-50'}`}>
                     {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove from Catalog' : 'Add to Catalog'}
