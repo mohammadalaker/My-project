@@ -353,7 +353,7 @@ function App() {
       }
       return [
         ...prev,
-        { id: item.id, qty: qtyFromBox, unitPrice, box, item },
+        { id: item.id, qty: qty, unitPrice, box, item },
       ];
     });
   }, []);
@@ -1457,8 +1457,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 onChange={(e) => setQuantityValue(Math.max(1, parseInt(e.target.value) || 1))}
                 className="w-full text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                 autoFocus
+                onFocus={(e) => e.target.select()}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleConfirmQuantity();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirmQuantity();
+                  }
                 }}
               />
               {quantityItem.box && (
