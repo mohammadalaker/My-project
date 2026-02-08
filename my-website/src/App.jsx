@@ -133,7 +133,39 @@ function normalizeItemFromSupabase(row) {
   };
 }
 
+import Login from './components/Login';
+
 function App() {
+
+
+  /* Login State */
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
+  useEffect(() => {
+    const auth = localStorage.getItem('sales_auth');
+    if (auth === 'true') {
+      setIsAuthenticated(true);
+    }
+    setHasCheckedAuth(true);
+  }, []);
+
+  const handleLogin = (username, password, setError) => {
+    if (username === 'admin' && password === '123456') {
+      localStorage.setItem('sales_auth', 'true');
+      setIsAuthenticated(true);
+    } else {
+      setError('Invalid username or password');
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      localStorage.removeItem('sales_auth');
+      setIsAuthenticated(false);
+    }
+  };
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -915,6 +947,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  if (!hasCheckedAuth) return null;
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <div
       className={`font-sans flex h-screen overflow-hidden ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
@@ -959,6 +997,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     Catalog
                   </button>
                 )}
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 transition-colors"
+                  title="Logout"
+                >
+                  <Power size={20} />
+                </button>
               </div>
             </div>
           </header>
