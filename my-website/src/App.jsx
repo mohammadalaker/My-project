@@ -1141,6 +1141,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             </div>
 
                             <div className="shrink-0 px-3 py-2 bg-slate-50/80 border-t border-slate-100 space-y-1">
+                              <p className="text-slate-600 text-sm font-medium"><span className="text-slate-500">Box:</span> <span className="text-slate-800 font-semibold">{item.box || '—'}</span></p>
                               <p className="text-slate-600 text-sm font-medium"><span className="text-slate-500">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
                               <p className="text-slate-700 text-base sm:text-lg font-mono font-bold tracking-widest break-all" dir="ltr">{item.barcode || '—'}</p>
                             </div>
@@ -1399,6 +1400,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div className="space-y-2 text-sm">
                 <p className="text-slate-600">Price: <span dir="ltr" className="font-bold text-slate-800 text-base">₪{selectedItem.price ?? 0}</span></p>
                 <p className="text-slate-600">Discounted: <span dir="ltr" className="font-bold text-emerald-600 text-lg">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
+                <p className="text-slate-600">Box: <span className="font-bold text-slate-800 text-base">{selectedItem.box || '—'}</span></p>
                 <p className="text-slate-600">Stock: <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(selectedItem)}</span></p>
                 <p className="text-slate-600 font-mono text-xs break-all">Barcode: <span dir="ltr" className="font-bold text-slate-800">{selectedItem.barcode || '—'}</span></p>
               </div>
