@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Package, ShieldCheck, Truck, Lock } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function Login({ onLogin }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
     const [error, setError] = useState('');
 
     const handleSubmit = (e) => {
@@ -12,63 +14,82 @@ export default function Login({ onLogin }) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
-                <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-8 text-center text-white">
-                    <div className="mx-auto w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-4 border border-white/30 shadow-inner">
-                        <ShieldCheck size={32} />
-                    </div>
-                    <h1 className="text-2xl font-bold mb-1">Welcome Back</h1>
-                    <p className="text-indigo-100 text-sm">Sign in to access the Sales System</p>
+        <div className="min-h-screen bg-white bg-opacity-95 flex items-center justify-center p-4" dir="rtl">
+            <div className="w-full max-w-md bg-white rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.1)] border border-slate-100 p-8 pt-10 text-center">
+
+                {/* Top User Icon */}
+                <div className="mx-auto w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
+                    <User size={40} className="text-slate-800" strokeWidth={1.5} />
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 pt-10 space-y-5">
+                <h1 className="text-2xl font-bold text-slate-800 mb-2 font-sans">تسجيل الدخول</h1>
+                <p className="text-slate-500 text-sm mb-8 font-sans">أدخل اسم المستخدم وكلمة المرور للمتابعة</p>
+
+                <form onSubmit={handleSubmit} className="text-right space-y-6">
                     {error && (
-                        <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 text-sm rounded-xl text-center font-medium animate-pulse">
+                        <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 text-sm rounded-lg text-center font-medium animate-pulse">
                             {error}
                         </div>
                     )}
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Username</label>
+                    {/* Username */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-bold text-slate-800 mr-1 font-sans">اسم المستخدم</label>
                         <div className="relative group">
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-700 placeholder:text-slate-400"
-                                placeholder="Enter username"
+                                className="w-full pr-10 pl-4 py-3 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-slate-700 placeholder:text-slate-400 font-sans"
+                                placeholder="اسم المستخدم"
                             />
-                            <Package className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                            <User className="absolute right-3 top-3.5 text-slate-400" size={20} />
                         </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Password</label>
+                    {/* Password */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-bold text-slate-800 mr-1 font-sans">كلمة المرور</label>
                         <div className="relative group">
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-700 placeholder:text-slate-400"
-                                placeholder="••••••••"
+                                className="w-full pr-10 pl-10 py-3 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all text-slate-700 placeholder:text-slate-400 font-sans"
+                                placeholder="كلمة المرور"
                             />
-                            <Lock className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                            <Lock className="absolute right-3 top-3.5 text-slate-400" size={20} />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute left-3 top-3.5 text-slate-400 hover:text-slate-600 transition-colors"
+                                tabIndex="-1"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                         </div>
                     </div>
 
+                    {/* Remember Me */}
+                    <div className="flex items-center justify-start gap-2 mt-6">
+                        <input
+                            id="remember"
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer accent-slate-900"
+                        />
+                        <label htmlFor="remember" className="text-sm text-slate-600 select-none cursor-pointer font-sans">تذكرني (البقاء مسجل الدخول)</label>
+                    </div>
+
+                    {/* Submit Button */}
                     <button
                         type="submit"
-                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4"
+                        className="w-full py-3.5 rounded-lg bg-slate-900 hover:bg-black text-white font-bold text-base transition-colors mt-6 font-sans shadow-lg shadow-slate-900/10"
                     >
-                        <span>Sign In</span>
-                        <Truck size={18} className="opacity-80" />
+                        تسجيل الدخول
                     </button>
                 </form>
-
-                <div className="bg-slate-50 p-4 text-center border-t border-slate-100">
-                    <p className="text-xs text-slate-400">Restricted Access • Authorized Personnel Only</p>
-                </div>
             </div>
         </div>
     );
