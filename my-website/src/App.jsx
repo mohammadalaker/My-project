@@ -796,6 +796,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       setShowQuantityModal(false);
       setQuantityItem(null);
       setQuantityValue(1);
+      setShowOrderPanel(true);
     }
   };
 
