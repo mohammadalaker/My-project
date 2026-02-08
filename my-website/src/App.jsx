@@ -173,6 +173,11 @@ function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
 
+  // Quantity Modal State
+  const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [quantityItem, setQuantityItem] = useState(null);
+  const [quantityValue, setQuantityValue] = useState(1);
+
   const setOrderInfoField = (key, value) =>
     setOrderInfo((prev) => ({ ...prev, [key]: value }));
 
@@ -777,6 +782,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     cardUploadRef.current?.click?.();
   };
 
+  const handleOpenQuantityModal = (item) => {
+    setQuantityItem(item);
+    // Default to box count if available and valid number, otherwise 1
+    const boxCount = item.box ? parseInt(item.box) : 1;
+    setQuantityValue(boxCount > 0 ? boxCount : 1);
+    setShowQuantityModal(true);
+  };
+
+  const handleConfirmQuantity = () => {
+    if (quantityItem && quantityValue > 0) {
+      addToOrder(quantityItem, quantityValue);
+      setShowQuantityModal(false);
+      setQuantityItem(null);
+      setQuantityValue(1);
+    }
+  };
+
   const getCatalogHtml = useCallback((items) => {
     const cards = items.map(item => {
       const imgUrl = getPublicImageUrl(item.image);
@@ -1128,7 +1150,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    addToOrder(item, 1);
+                                    handleOpenQuantityModal(item);
                                   }}
                                   className="w-full py-3 rounded-xl border-2 border-indigo-200 text-indigo-700 text-sm font-bold hover:bg-indigo-50 hover:border-indigo-300 shrink-0 transition-all duration-200 shadow-sm"
                                 >
@@ -1411,13 +1433,58 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove from Catalog' : 'Add to Catalog'}
                   </button>
                 ) : (
-                  <button onClick={() => { addToOrder(selectedItem, 1); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">إضافة إلى السلة</button>
+                  <button onClick={() => { handleOpenQuantityModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">إضافة إلى السلة</button>
                 )}
               </div>
             </div>
           </div>
         )
       }
+
+      {/* Quantity Modal */}
+      {showQuantityModal && quantityItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
+            <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity</label>
+              <input
+                type="number"
+                min="1"
+                value={quantityValue}
+                onChange={(e) => setQuantityValue(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmQuantity();
+                }}
+              />
+              {quantityItem.box && (
+                <p className="text-xs text-slate-500 mt-2 text-center">
+                  Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowQuantityModal(false)}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmQuantity}
+                className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
+              >
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {
         modalOpen && (
