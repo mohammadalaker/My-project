@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition, lazy, Suspense } from 'react';
 import {
   Search,
   Plus,
@@ -133,8 +133,8 @@ function normalizeItemFromSupabase(row) {
   };
 }
 
-import Login from './components/Login';
-import SkeletonGrid from './components/SkeletonLoader';
+const Login = lazy(() => import('./components/Login'));
+const SkeletonGrid = lazy(() => import('./components/SkeletonLoader'));
 import BottomNav from './components/BottomNav';
 
 function App() {
@@ -302,12 +302,12 @@ function App() {
   );
 
   useEffect(() => {
-    if (!search.trim()) {
-      fetchItems(true);
-      return;
+    if (search.trim()) {
+      const debounce = setTimeout(() => fetchItems(true), 200);
+      return () => clearTimeout(debounce);
     }
-    const debounce = setTimeout(() => fetchItems(true), 200);
-    return () => clearTimeout(debounce);
+    const id = setTimeout(() => fetchItems(true), 0);
+    return () => clearTimeout(id);
   }, [search]);
 
   // Removed redundant initial fetch useEffect since the search effect runs on mount with empty search string
@@ -362,28 +362,33 @@ function App() {
     [filteredByGroup, search]
   );
 
-  const allGroups = [...new Set(items.map((i) => i.group).filter(Boolean))].sort((a, b) =>
-    String(a).localeCompare(String(b))
+  const allGroups = useMemo(
+    () => [...new Set(items.map((i) => i.group).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))),
+    [items]
   );
-  const electricalGroups = allGroups.filter(isElectricalGroup);
-  const electricalGroupsSorted = [...electricalGroups].sort((a, b) => {
-    const ia = ELECTRICAL_GROUPS.indexOf(String(a).trim().toLowerCase());
-    const ib = ELECTRICAL_GROUPS.indexOf(String(b).trim().toLowerCase());
-    if (ia >= 0 && ib >= 0) return ia - ib;
-    if (ia >= 0) return -1;
-    if (ib >= 0) return 1;
-    return String(a).localeCompare(String(b));
-  });
+  const electricalGroupsSorted = useMemo(() => {
+    const electrical = allGroups.filter(isElectricalGroup);
+    return [...electrical].sort((a, b) => {
+      const ia = ELECTRICAL_GROUPS.indexOf(String(a).trim().toLowerCase());
+      const ib = ELECTRICAL_GROUPS.indexOf(String(b).trim().toLowerCase());
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return String(a).localeCompare(String(b));
+    });
+  }, [allGroups]);
   const electricalIcons = [Zap, Plug, Power, Cable, Battery, BatteryCharging, PlugZap, Cpu];
-  const kitchenwareGroups = allGroups.filter((g) => !isElectricalGroup(g));
-  const kitchenwareGroupsSorted = [...kitchenwareGroups].sort((a, b) => {
-    const ia = HOUSEHOLD_GROUPS.indexOf(String(a).trim().toLowerCase());
-    const ib = HOUSEHOLD_GROUPS.indexOf(String(b).trim().toLowerCase());
-    if (ia >= 0 && ib >= 0) return ia - ib;
-    if (ia >= 0) return -1;
-    if (ib >= 0) return 1;
-    return String(a).localeCompare(String(b));
-  });
+  const kitchenwareGroupsSorted = useMemo(() => {
+    const kitchenware = allGroups.filter((g) => !isElectricalGroup(g));
+    return [...kitchenware].sort((a, b) => {
+      const ia = HOUSEHOLD_GROUPS.indexOf(String(a).trim().toLowerCase());
+      const ib = HOUSEHOLD_GROUPS.indexOf(String(b).trim().toLowerCase());
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return String(a).localeCompare(String(b));
+    });
+  }, [allGroups]);
   const kitchenwareIcons = [Home, Utensils, UtensilsCrossed, ChefHat, Wine, Flame, Cookie, Package];
 
   /** In stock if qty > 0, else Out of Stock */
@@ -1018,10 +1023,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
-  if (!hasCheckedAuth) return null;
+  if (!hasCheckedAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-pulse text-slate-400 text-sm font-medium">Loading…</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="animate-pulse text-slate-400 text-sm font-medium">Loading…</div>
+        </div>
+      }>
+        <Login onLogin={handleLogin} />
+      </Suspense>
+    );
   }
 
   return (
@@ -1188,7 +1207,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               <div className="px-4 sm:px-6 mt-6">
                 {loading ? (
-                  <SkeletonGrid />
+                  <Suspense fallback={<div className="min-h-[40vh] animate-pulse bg-slate-100/50 rounded-2xl" />}>
+                    <SkeletonGrid />
+                  </Suspense>
                 ) : (
                   <div className="space-y-12">
                     {[
@@ -1253,18 +1274,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                 <div className="p-5 flex-1 flex flex-col">
                                   <h3 className="font-bold text-slate-800 leading-tight mb-1 line-clamp-2 min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
-                                  <p className="text-xs font-mono text-slate-400 mb-4">{item.barcode}</p>
+                                  <p className="text-sm font-mono text-slate-500 mb-4">{item.barcode}</p>
 
                                   <div className="mt-auto space-y-3">
                                     <div className="flex items-end justify-between">
                                       <div>
                                         <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Price</p>
-                                        <p className="text-xl font-black text-slate-800">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
+                                        <p className="text-3xl font-black text-slate-800">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
                                       </div>
                                       {item.priceAfterDiscount && item.priceAfterDiscount < item.price && (
                                         <div className="text-right">
-                                          <p className="text-xs text-slate-400 line-through">₪{item.price}</p>
-                                          <p className="text-xs font-bold text-emerald-500">
+                                          <p className="text-sm text-slate-400">₪{item.price}</p>
+                                          <p className="text-sm font-bold text-emerald-500">
                                             -{Math.round(((item.price - item.priceAfterDiscount) / item.price) * 100)}%
                                           </p>
                                         </div>
