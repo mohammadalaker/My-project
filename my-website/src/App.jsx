@@ -1495,18 +1495,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     >+</button>
                                   </div>
 
-                                  <div className="text-right">
-                                    {getLineDiscountPercent(o) > 0 && (
-                                      <div className="flex items-center justify-end gap-1.5 mb-0.5">
-                                        <span className="text-[10px] text-slate-400 line-through decoration-slate-400">₪{getLineOriginalPrice(o)}</span>
-                                        <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded font-bold">-{getLineDiscountPercent(o)}%</span>
-                                      </div>
-                                    )}
-                                    <div className="flex items-baseline justify-end gap-0.5">
-                                      <span className="text-xs text-orange-600/70 font-bold">₪</span>
-                                      <span className="text-orange-600 font-black text-lg tracking-tight">
-                                        {getLineTotal(o).toFixed(2)}
+                                  <div className="text-right flex flex-col items-end gap-1">
+                                    {getLineOriginalPrice(o) > getLineUnitPrice(o) && (
+                                      <span className="text-xs text-slate-400 font-bold mb-0.5">
+                                        ₪{getLineOriginalPrice(o)}
                                       </span>
+                                    )}
+
+                                    <div className="flex items-center gap-2 justify-end">
+                                      <div className="relative group/price">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-600/60 font-bold text-sm">₪</span>
+                                        <input
+                                          type="number"
+                                          className="w-24 bg-slate-50 border border-slate-200 rounded-lg py-1 pl-6 pr-1 text-right font-black text-xl text-slate-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all shadow-sm"
+                                          value={getLineUnitPrice(o)}
+                                          onChange={(e) => setOrderLinePrice(o.id, e.target.value)}
+                                          onFocus={(e) => e.target.select()}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                      Total: ₪{getLineTotal(o).toFixed(2)}
                                     </div>
                                   </div>
                                 </div>
