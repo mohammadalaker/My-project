@@ -29,7 +29,7 @@ import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 
 const BUCKET = 'Pic_of_items';
-const PAGE_SIZE = 80;
+const PAGE_SIZE = 12;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /** Safe date format so changing browser language never crashes the app. */
@@ -1214,7 +1214,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               >
                                 {item.group && (
                                   <div className="absolute top-3 left-3 z-10">
-                                    <span className="px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
+                                    <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
                                       {item.group}
                                     </span>
                                   </div>
