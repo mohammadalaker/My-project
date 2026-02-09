@@ -16,6 +16,7 @@ import {
   BatteryCharging,
   PlugZap,
   Cpu,
+  Lock,
   Utensils,
   UtensilsCrossed,
   ChefHat,
@@ -1262,12 +1263,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   </div>
 
                                   {getStockStatus(item) === 'Out of Stock' && (
-                                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/10 backdrop-blur-[1px] rounded-2xl overflow-hidden">
-                                      <div className="absolute inset-0 bg-white/30" />
-                                      <div className="relative -rotate-12 transform">
-                                        <div className="bg-rose-500 text-white text-[10px] font-black py-1.5 px-4 shadow-xl uppercase tracking-[0.2em] border-y-2 border-white/20">
-                                          Out of Stock
-                                        </div>
+                                    <div className="absolute top-2 right-2 z-10">
+                                      <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
+                                        Out of Stock
                                       </div>
                                     </div>
                                   )}
