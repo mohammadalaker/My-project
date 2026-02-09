@@ -738,10 +738,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       const { error } = await supabase.from('orders').insert([orderData]);
       if (error) throw error;
       alert('Order submitted successfully to supervisor!');
+      return true;
     } catch (err) {
       console.error('Error saving order:', err);
       alert('Note: Invoice saved locally, but failed to submit to supervisor (Database error: ' + err.message + ')');
+      return false;
     }
+  };
+
+  const clearOrderAndInfo = () => {
+    setOrderItems([]);
+    setOrderInfo({
+      companyName: '',
+      merchantName: '',
+      phone: '',
+      address: '',
+      orderDate: new Date().toISOString().slice(0, 10),
+      customerNumber: '',
+      paymentMethod: '',
+      checksCount: '',
+    });
   };
 
   const handleSaveInvoice = async () => {
@@ -752,7 +768,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       return;
     }
 
-    await saveOrderToSupabase();
+    const saved = await saveOrderToSupabase();
 
     const html = getPrintHtml();
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -771,6 +787,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
       URL.revokeObjectURL(url);
     }, 150);
+
+    if (saved) clearOrderAndInfo();
   };
 
   const handleExportExcel = useCallback(async () => {
@@ -780,7 +798,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       setActiveTab('customer');
       return;
     }
-    await saveOrderToSupabase();
+    const saved = await saveOrderToSupabase();
 
     const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
@@ -896,6 +914,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     a.download = `Order-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
+    if (saved) clearOrderAndInfo();
   }, [orderLines, orderTotal, orderInfo]);
 
   const handleOpenInventory = () => {
