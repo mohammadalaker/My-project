@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search,
   Plus,
@@ -25,6 +26,7 @@ import {
   Cookie,
   FileText,
   Grid,
+  Clock,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -167,6 +169,13 @@ function App() {
       localStorage.setItem('sales_role', 'customer');
       setIsAuthenticated(true);
       setUserRole('customer');
+      setIsAuthenticated(true);
+      setUserRole('customer');
+    } else if (username === 'supervisor' && password === '123') {
+      localStorage.setItem('sales_auth', 'true');
+      localStorage.setItem('sales_role', 'supervisor');
+      setIsAuthenticated(true);
+      setUserRole('supervisor');
     } else {
       setError('Invalid username or password');
     }
@@ -204,6 +213,77 @@ function App() {
     paymentMethod: '',
     checksCount: '',
   }));
+  const [submittedOrders, setSubmittedOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderActionLoading, setOrderActionLoading] = useState(false);
+  const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted'
+
+  const fetchSubmittedOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    setOrdersError(null);
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setOrdersLoading(false);
+    if (error) {
+      console.error('Orders fetch error:', error);
+      setSubmittedOrders([]);
+      const msg = error.message || '';
+      const tableNotFound = /schema cache|could not find.*table.*orders/i.test(msg);
+      setOrdersError(tableNotFound
+        ? "جدول الطلبات غير موجود في Supabase. أنشئ الجدول أولاً: SQL Editor → شغّل الـ SQL الموجود في ملف ORDERS_SUPABASE.md في المشروع."
+        : (msg || 'Could not load orders. Check Supabase: table "orders" must exist and allow SELECT (see ORDERS_SUPABASE.md).'));
+      return;
+    }
+    setSubmittedOrders(data ?? []);
+  }, []);
+
+  useEffect(() => {
+    if (mode === 'submitted' && userRole === 'supervisor') fetchSubmittedOrders();
+    else setOrdersError(null);
+  }, [mode, userRole, fetchSubmittedOrders]);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [selectedOrder]);
+
+  const markOrderToPrepareLater = useCallback(async (order) => {
+    if (!order?.id) return;
+    setOrderActionLoading(true);
+    try {
+      const { error } = await supabase.from('orders').update({ status: 'to_prepare' }).eq('id', order.id);
+      if (error) throw error;
+      setSelectedOrder(null);
+      fetchSubmittedOrders();
+    } catch (e) {
+      console.error(e);
+      alert('تعذر تحديث الطلب: ' + (e.message || e));
+    } finally {
+      setOrderActionLoading(false);
+    }
+  }, [fetchSubmittedOrders]);
+
+  const deleteOrder = useCallback(async (order) => {
+    if (!order?.id || !confirm('حذف الطلب #' + order.id + '؟ لا يمكن التراجع.')) return;
+    setOrderActionLoading(true);
+    try {
+      const { error } = await supabase.from('orders').delete().eq('id', order.id);
+      if (error) throw error;
+      setSelectedOrder(null);
+      setSubmittedOrders((prev) => prev.filter((o) => o.id !== order.id));
+    } catch (e) {
+      console.error(e);
+      alert('تعذر حذف الطلب: ' + (e.message || e));
+    } finally {
+      setOrderActionLoading(false);
+    }
+  }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -494,10 +574,6 @@ function App() {
     })
   );
 
-  /* Catalog State */
-  const [mode, setMode] = useState('order'); // 'order' or 'catalog'
-
-
   const getPrintHtml = useCallback(() => {
     const rows = orderLines
       .map((o) => {
@@ -604,7 +680,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 .inv-total-card{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:2px solid #ea580c;border-radius:16px;padding:20px 24px;margin-top:24px;display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:1.25rem;color:#c2410c;box-shadow:0 4px 12px rgba(234,88,12,.15)}
 .btn-print{padding:14px 32px;background:linear-gradient(135deg,#ea580c,#f97316);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;margin-top:20px;display:block;margin-left:auto;margin-right:auto;box-shadow:0 4px 14px rgba(234,88,12,.35);transition:transform .15s,box-shadow .15s}
 .btn-print:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(234,88,12,.4)}
-@media print{body{background:#fff;padding:16px}.inv-wrap{box-shadow:none;border:1px solid #e2e8f0}.btn-print{display:none}.inv-card:hover{box-shadow:none}}
+.btn-save-order{padding:14px 32px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;margin-top:20px;display:block;width:100%;box-shadow:0 4px 14px rgba(16,185,129,.35);transition:transform .15s,box-shadow .15s}
+.btn-save-order:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(16,185,129,.4)}
+@media print{body{background:#fff;padding:16px}.inv-wrap{box-shadow:none;border:1px solid #e2e8f0}.btn-print,.btn-save-order{display:none}.inv-card:hover{box-shadow:none}}
 </style></head><body>
 <div class="inv-wrap">
   <div class="inv-header"><h1 class="inv-title">Selected Items</h1><p class="inv-sub">Selected Products</p></div>
@@ -627,20 +705,83 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }, 300);
   };
 
-  const handleSaveInvoice = () => {
+  const validateOrder = () => {
+    if (userRole === 'customer') { // user 123
+      if (!orderInfo.companyName?.trim()) return 'Customer Name is required.';
+      if (!orderInfo.phone?.trim()) return 'Phone Number is required.';
+      if (!orderInfo.address?.trim()) return 'Address is required.';
+      if (!orderInfo.orderDate) return 'Date is required.';
+    }
+    return null;
+  };
+
+  const saveOrderToSupabase = async () => {
+    try {
+      const orderData = {
+        prepared_by: userRole === 'customer' ? '123' : userRole,
+        customer_name: orderInfo.companyName,
+        customer_phone: orderInfo.phone,
+        customer_address: orderInfo.address,
+        customer_number: orderInfo.customerNumber,
+        order_date: orderInfo.orderDate,
+        total_amount: orderTotal,
+        items: orderLines.map(line => ({
+          barcode: line.item.barcode,
+          name: line.item.name,
+          qty: line.qty,
+          price: getLineUnitPrice(line),
+          total: getLineTotal(line)
+        })),
+        details: orderInfo
+      };
+
+      const { error } = await supabase.from('orders').insert([orderData]);
+      if (error) throw error;
+      alert('Order submitted successfully to supervisor!');
+    } catch (err) {
+      console.error('Error saving order:', err);
+      alert('Note: Invoice saved locally, but failed to submit to supervisor (Database error: ' + err.message + ')');
+    }
+  };
+
+  const handleSaveInvoice = async () => {
+    const error = validateOrder();
+    if (error) {
+      alert(error + '\nPlease fill in all required customer details.');
+      setActiveTab('customer');
+      return;
+    }
+
+    await saveOrderToSupabase();
+
     const html = getPrintHtml();
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `Invoice-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.html`;
+
+    // Safer download trigger
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    }, 150);
   };
 
   const handleExportExcel = useCallback(async () => {
+    const error = validateOrder();
+    if (error) {
+      alert(error + '\nPlease fill in all required customer details.');
+      setActiveTab('customer');
+      return;
+    }
+    await saveOrderToSupabase();
+
     const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Sales Order', { views: [{ rightToLeft: false }] });
@@ -1070,6 +1211,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               <div className="flex items-center gap-3 ml-auto shrink-0">
                 <div className="hidden sm:flex bg-slate-100/50 p-1 rounded-xl border border-white/50 backdrop-blur-sm">
+                  {userRole === 'supervisor' && (
+                    <button
+                      onClick={() => setMode('submitted')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'submitted' ? 'bg-white shadow-md text-emerald-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Orders
+                    </button>
+                  )}
                   <button
                     onClick={() => setMode('order')}
                     className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'order' ? 'bg-white shadow-md text-indigo-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
@@ -1098,7 +1247,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section */}
-              {!loading && !showOrderPanel && (
+              {!loading && !showOrderPanel && mode !== 'submitted' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
 
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
@@ -1130,8 +1279,143 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               )}
 
+              {/* Submitted Orders View */}
+              {!loading && mode === 'submitted' && (
+                <div className="p-6 max-w-5xl mx-auto animate-fade-in">
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <h2 className="text-3xl font-bold text-slate-800">Submitted Orders</h2>
+                    <button
+                      type="button"
+                      onClick={fetchSubmittedOrders}
+                      disabled={ordersLoading}
+                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {ordersLoading ? <Loader2 size={18} className="animate-spin" /> : null}
+                      {ordersLoading ? 'Loading…' : 'Refresh'}
+                    </button>
+                  </div>
+                  {ordersError && (
+                    <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+                      <p className="font-medium">{ordersError}</p>
+                      <p className="mt-2 text-amber-700 text-xs">إذا ظهر &quot;table not found&quot;: أنشئ جدول orders من Supabase → SQL Editor ثم شغّل الـ SQL في ملف ORDERS_SUPABASE.md. إذا الجدول موجود ولا تظهر الطلبات: Table Editor → orders → RLS وأضف سياسة SELECT لـ anon.</p>
+                      <button type="button" onClick={fetchSubmittedOrders} className="mt-3 px-4 py-2 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 font-medium text-sm">Retry</button>
+                    </div>
+                  )}
+                  {ordersLoading && submittedOrders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <Loader2 size={48} className="animate-spin text-indigo-500 mb-4" />
+                      <p className="text-slate-500 font-medium">Loading orders…</p>
+                    </div>
+                  ) : (
+                  <div className="grid gap-4">
+                    {submittedOrders.map((order, i) => (
+                      <div
+                        key={order.id || i}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedOrder(order)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
+                        className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-md hover:border-slate-200 transition-all gap-4 cursor-pointer"
+                      >
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">#{order.id || i + 1}</span>
+                            <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                              {new Date(order.created_at || order.order_date || Date.now()).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-lg text-slate-800">{order.customer_name || 'Unknown Client'}</h3>
+                          <p className="text-sm text-slate-500 mt-1">
+                            Prepared by: <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{order.prepared_by}</span>
+                          </p>
+                          {order.customer_phone && <p className="text-xs text-slate-400 mt-1">{order.customer_phone}</p>}
+                          {order.customer_address && <p className="text-xs text-slate-400">{order.customer_address}</p>}
+                        </div>
+                        <div className="text-left sm:text-right w-full sm:w-auto">
+                          <p className="text-2xl font-black text-slate-800">₪{Number(order.total_amount).toLocaleString()}</p>
+                          <p className="text-xs text-slate-400 font-medium">{order.items?.length || 0} items</p>
+                        </div>
+                      </div>
+                    ))}
+                    {!ordersLoading && submittedOrders.length === 0 && !ordersError && (
+                      <div className="text-center py-20 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                        <Package size={48} className="mx-auto text-slate-300 mb-4" />
+                        <p className="text-slate-400 font-medium">No submitted orders found.</p>
+                      </div>
+                    )}
+                  </div>
+                  )}
+
+                  {/* Order detail modal — rendered in document.body so it always covers full viewport */}
+                  {selectedOrder && createPortal(
+                    <div
+                      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+                      onClick={() => !orderActionLoading && setSelectedOrder(null)}
+                    >
+                      <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                          <h2 className="text-xl font-bold text-slate-800">تفاصيل الطلب #{selectedOrder.id}</h2>
+                          <button type="button" onClick={() => setSelectedOrder(null)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Close"><X size={20} /></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1 min-h-0 space-y-4">
+                          <div className="grid grid-cols-1 gap-2 text-sm">
+                            <p><span className="text-slate-400 font-medium">العميل:</span> <span className="font-semibold text-slate-800">{selectedOrder.customer_name || '—'}</span></p>
+                            {selectedOrder.customer_phone && <p><span className="text-slate-400 font-medium">الهاتف:</span> {selectedOrder.customer_phone}</p>}
+                            {selectedOrder.customer_address && <p><span className="text-slate-400 font-medium">العنوان:</span> {selectedOrder.customer_address}</p>}
+                            {selectedOrder.customer_number && <p><span className="text-slate-400 font-medium">رقم العميل:</span> {selectedOrder.customer_number}</p>}
+                            <p><span className="text-slate-400 font-medium">أعدّه:</span> <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium">{selectedOrder.prepared_by || '—'}</span></p>
+                            <p><span className="text-slate-400 font-medium">التاريخ:</span> {selectedOrder.order_date || (selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleDateString() : '—')}</p>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">الأصناف ({selectedOrder.items?.length || 0})</h3>
+                            <div className="border border-slate-200 rounded-xl overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead className="bg-slate-50">
+                                  <tr>
+                                    <th className="text-right py-2 px-3 font-medium text-slate-600">الصنف</th>
+                                    <th className="text-center py-2 px-2 font-medium text-slate-600">الكمية</th>
+                                    <th className="text-left py-2 px-3 font-medium text-slate-600">السعر</th>
+                                    <th className="text-left py-2 px-3 font-medium text-slate-600">الإجمالي</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(selectedOrder.items || []).map((row, idx) => (
+                                    <tr key={idx} className="border-t border-slate-100">
+                                      <td className="py-2 px-3 text-slate-800">{row.name || row.barcode || '—'}</td>
+                                      <td className="py-2 px-2 text-center text-slate-600">{row.qty ?? '—'}</td>
+                                      <td className="py-2 px-3 text-slate-600">₪{Number(row.price ?? 0).toLocaleString()}</td>
+                                      <td className="py-2 px-3 font-medium text-slate-800">₪{Number(row.total ?? 0).toLocaleString()}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                          <p className="text-lg font-black text-slate-800 pt-2">المجموع: ₪{Number(selectedOrder.total_amount ?? 0).toLocaleString()}</p>
+                        </div>
+                        <div className="p-6 border-t border-slate-100 flex flex-wrap gap-3 shrink-0">
+                          <button type="button" onClick={() => markOrderToPrepareLater(selectedOrder)} disabled={orderActionLoading} className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                            {orderActionLoading ? <Loader2 size={18} className="animate-spin" /> : <Clock size={18} />}
+                            إعداد لاحقاً
+                          </button>
+                          <button type="button" onClick={() => deleteOrder(selectedOrder)} disabled={orderActionLoading} className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                            {orderActionLoading ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                            حذف الطلب
+                          </button>
+                        </div>
+                      </div>
+                    </div>,
+                    document.body
+                  )}
+                </div>
+              )}
+
               {/* Categories */}
-              {!loading && (
+              {!loading && mode !== 'submitted' && (
                 <div className={`sticky ${showOrderPanel ? 'top-0' : 'top-[88px]'} z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
