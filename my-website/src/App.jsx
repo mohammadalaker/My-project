@@ -273,8 +273,12 @@ function App() {
     if (!order?.id || !confirm('حذف الطلب #' + order.id + '؟ لا يمكن التراجع.')) return;
     setOrderActionLoading(true);
     try {
-      const { error } = await supabase.from('orders').delete().eq('id', order.id);
+      const { data, error } = await supabase.from('orders').delete().eq('id', order.id).select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        alert('لم يتم الحذف من قاعدة البيانات. تأكد من إضافة سياسة DELETE لجدول orders في Supabase (انظر ORDERS_SUPABASE.md).');
+        return;
+      }
       setSelectedOrder(null);
       setSubmittedOrders((prev) => prev.filter((o) => o.id !== order.id));
     } catch (e) {

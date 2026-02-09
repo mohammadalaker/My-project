@@ -53,6 +53,14 @@ CREATE POLICY "Allow delete orders" ON public.orders FOR DELETE TO anon USING (t
 
 تأكد من سياسات RLS كما في القسم السابق: يجب وجود سياسة **SELECT** للدور `anon` على جدول `orders`.
 
+## 3. إذا حذف المشرف الطلب ثم تحديث الصفحة يعود الطلب
+
+هذا يعني أن الحذف لم يُنفَّذ في قاعدة البيانات بسبب عدم وجود سياسة **DELETE**. شغّل في SQL Editor:
+
+```sql
+CREATE POLICY "Allow delete orders" ON public.orders FOR DELETE TO anon USING (true);
+```
+
 ---
 
 ## ملاحظات
