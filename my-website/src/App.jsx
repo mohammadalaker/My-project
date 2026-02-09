@@ -181,6 +181,7 @@ function App() {
   };
 
   const [items, setItems] = useState([]);
+  const [activeTab, setActiveTab] = useState('items'); // 'items' | 'customer'
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -443,6 +444,7 @@ function App() {
   const getLineTotal = (o) =>
     Math.max(0, getLineUnitPrice(o) * (o.qty || 0));
   const orderTotal = orderLines.reduce((s, o) => s + getLineTotal(o), 0);
+  const itemTotalWithTax = (lines) => (lines || orderLines).reduce((s, o) => s + getLineTotal(o), 0);
 
   const orderLinesByBox = [...orderLines].sort((a, b) =>
     String(getLineBox(a)).localeCompare(String(getLineBox(b)), undefined, {
@@ -1255,8 +1257,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           else addToCatalog(item);
                                         }}
                                         className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all btn-modern ${catalogItems.some((i) => i.id === item.id)
-                                            ? 'bg-rose-100 text-rose-600 border border-rose-200'
-                                            : 'bg-slate-50 text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
+                                          ? 'bg-rose-100 text-rose-600 border border-rose-200'
+                                          : 'bg-slate-50 text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
                                           }`}
                                       >
                                         {catalogItems.some((i) => i.id === item.id) ? (
@@ -1328,154 +1330,245 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {
         showOrderPanel && (
-          <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[480px] flex flex-col overflow-hidden bg-white/80 backdrop-blur-xl border-l border-white/50 shadow-2xl z-50 transition-all duration-500">
-            <div className="flex-shrink-0 px-6 py-5 flex justify-between items-center bg-white/50 border-b border-slate-100">
-              <div>
-                <h2 className="text-xl font-black text-slate-800">Current Order</h2>
-                <p className="text-sm text-slate-500 font-medium">{orderLines.length} Items in cart</p>
+          <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-slate-900/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl z-50 transition-all duration-500 text-slate-100">
+            {/* Header / Tabs */}
+            <div className="flex-shrink-0 z-20">
+              <div className="flex items-center justify-between px-8 py-6">
+                <div>
+                  <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                    <span>POS</span>
+                    <span className="text-orange-500">.</span>
+                  </h2>
+                  <div className="text-xs text-slate-400 font-bold tracking-widest uppercase mt-1 opacity-60">
+                    <span>Order #</span><span>NEW-001</span>
+                  </div>
+                </div>
+                <button onClick={() => setShowOrderPanel(false)} className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all hover:rotate-90">
+                  <X size={24} />
+                </button>
               </div>
-              <button onClick={() => setShowOrderPanel(false)} className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-all hover:rotate-90">
-                <X size={20} />
-              </button>
+
+              {/* Tabs - Modern Pills */}
+              <div className="flex px-8 space-x-4 mb-4">
+                <button
+                  onClick={() => setActiveTab('items')}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'items' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                >
+                  <span>Items</span>
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] ${activeTab === 'items' ? 'bg-white/20 text-white' : 'bg-black/20 text-slate-500'}`}>
+                    {orderLines.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('customer')}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'customer' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                >
+                  <span>Customer</span>
+                  {orderInfo.companyName && <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-400 rounded-full" />}
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="p-3 space-y-2.5">
-                {orderLines.length === 0 ? (
-                  <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-                    <Package className="mx-auto text-slate-400 mb-2" size={40} />
-                    <p className="text-sm font-medium">Added items will appear here</p>
-                  </div>
-                ) : (
-                  orderLinesByBox.map((o, idx) => {
-                    const prevBox = idx > 0 ? getLineBox(orderLinesByBox[idx - 1]) : null;
-                    const box = getLineBox(o);
-                    const showBox = prevBox !== box;
-                    return (
-                      <div key={o.id} className="space-y-1.5">
-                        {showBox && (
-                          <div className="text-[11px] font-semibold text-orange-600 bg-gradient-to-r from-orange-100 to-amber-100 text-center py-1.5 rounded-full px-4 w-fit shadow-[0_1px_3px_rgba(249,115,22,0.2)]">Box {box}</div>
-                        )}
-                        <div className="group relative rounded-3xl p-3.5 bg-gradient-to-br from-white via-white to-orange-50/20 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_-4px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.02)] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300 border border-slate-100/80">
-                          <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-orange-300 to-amber-300 opacity-60 group-hover:opacity-100 transition-opacity" />
-                          <div className="flex gap-3 items-start pr-1">
-                            <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center justify-center">
-                              {getImage(o.item) && <img src={getImage(o.item)} alt="" className="w-full h-full object-contain" loading="lazy" decoding="async" onError={(e) => (e.target.style.display = 'none')} />}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar-dark bg-gradient-to-b from-transparent to-black/30">
+
+              {/* TAB: ITEMS */}
+              {activeTab === 'items' && (
+                <div className="p-4 space-y-3">
+                  {orderLines.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 opacity-60">
+                      <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-dashed border-white/10">
+                        <Package className="text-slate-500" size={40} strokeWidth={1.5} />
+                      </div>
+                      <span className="text-lg font-bold text-slate-300 mb-2">Cart is Empty</span>
+                      <span className="text-sm text-slate-500 max-w-[200px] leading-relaxed block">Start scanning or select items from the catalog.</span>
+                      <button onClick={() => setMode('catalog')} className="mt-8 px-8 py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20">
+                        Open Catalog
+                      </button>
+                    </div>
+                  ) : (
+                    orderLinesByBox.map((o, idx) => {
+                      const prevBox = idx > 0 ? getLineBox(orderLinesByBox[idx - 1]) : null;
+                      const box = getLineBox(o);
+                      const showBox = prevBox !== box;
+                      return (
+                        <div key={`order-${o.id}-${idx}`} className="animate-fade-in-right" style={{ animationDelay: `${idx * 40}ms` }}>
+                          {showBox && box && (
+                            <div className="flex items-center gap-3 my-6 px-1">
+                              <div className="h-px flex-1 bg-white/10"></div>
+                              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Box {box}</span>
+                              <div className="h-px flex-1 bg-white/10"></div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-medium text-slate-400 tracking-wide mb-0.5">Product & Model</p>
-                              <p className="text-sm font-bold text-slate-800 line-clamp-2">{o.item?.name || '—'} {o.item?.group ? ` / ${o.item.group}` : ''}</p>
-                              <p className="text-[10px] font-medium text-slate-400 tracking-wide mt-1.5 mb-0.5">Barcode</p>
-                              <span className="text-xs font-mono font-semibold text-slate-600 break-all" dir="ltr">{o.item?.barcode || '—'}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3">
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Qty</span>
-                              <div className="flex items-center gap-1">
-                                <input type="number" min={1} value={o.qty} onChange={(e) => setOrderQty(o.id, e.target.value)} dir="ltr" className="w-14 rounded-xl border border-slate-200/80 px-1.5 py-1.5 text-center text-sm font-semibold bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:ring-2 focus:ring-orange-200 outline-none transition-all" />
-                                <span className="text-[10px] text-slate-400">Unit</span>
+                          )}
+                          <div className="group relative bg-[#1e293b]/50 hover:bg-[#1e293b] border border-white/5 hover:border-white/10 rounded-3xl p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-black/20 hover:scale-[1.02]">
+                            <div className="flex gap-4">
+                              <div className="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center shrink-0 overflow-hidden border border-white/5 relative">
+                                {getImage(o.item) ? (
+                                  <img src={getImage(o.item)} alt="" className="w-full h-full object-contain p-2" />
+                                ) : (
+                                  <Package size={24} className="text-slate-700" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start gap-3">
+                                  <h4 className="text-base font-bold text-slate-100 line-clamp-2 leading-snug">{o.item?.name}</h4>
+                                  <button onClick={() => removeFromOrder(o.id)} className="text-slate-500 hover:text-rose-400 transition-colors bg-white/5 p-2.5 rounded-xl hover:bg-rose-500/20 -mt-2 -mr-2">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                                <p className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2">
+                                  <span className="bg-white/5 px-1.5 py-0.5 rounded text-slate-400">{o.item?.barcode}</span>
+                                  {o.item?.group && <span className="text-slate-600">• {o.item?.group}</span>}
+                                </p>
+
+                                <div className="flex items-center justify-between mt-4">
+                                  {/* Dark Qty Control */}
+                                  <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-white/5 shadow-inner">
+                                    <button
+                                      onClick={() => setOrderQty(o.id, Math.max(1, o.qty - 1))}
+                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                                    >-</button>
+                                    <input
+                                      className="w-12 bg-transparent text-center text-sm font-bold text-white outline-none"
+                                      value={o.qty}
+                                      onChange={(e) => setOrderQty(o.id, e.target.value)}
+                                    />
+                                    <button
+                                      onClick={() => setOrderQty(o.id, parseInt(o.qty) + 1)}
+                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                                    >+</button>
+                                  </div>
+
+                                  <div className="text-right">
+                                    {getLineDiscountPercent(o) > 0 && (
+                                      <div className="flex items-center justify-end gap-1.5 mb-0.5">
+                                        <span className="text-[10px] text-slate-500 line-through decoration-slate-600">₪{getLineOriginalPrice(o)}</span>
+                                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold">-{getLineDiscountPercent(o)}%</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-baseline justify-end gap-0.5">
+                                      <span className="text-xs text-orange-500/70 font-bold">₪</span>
+                                      <span className="text-orange-400 font-black text-lg tracking-tight shadow-orange-500/50 drop-shadow-[0_0_8px_rgba(249,115,22,0.3)]">
+                                        {getLineTotal(o).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Original Price</span>
-                              <span className="text-sm font-bold text-slate-700" dir="ltr">₪{getLineOriginalPrice(o)}</span>
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Discount %</span>
-                              <span className="text-sm font-bold text-emerald-600" dir="ltr">{getLineDiscountPercent(o)}%</span>
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Final Price</span>
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm font-bold text-slate-700">₪</span>
-                                <input type="number" value={getLineUnitPrice(o)} onChange={(e) => setOrderLinePrice(o.id, e.target.value)} dir="ltr" className="w-16 rounded-xl border border-slate-200/80 px-1.5 py-1 text-sm font-bold bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:ring-2 focus:ring-orange-200 outline-none transition-all" />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-100">
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Total Amount (Inc. Tax)</span>
-                              <span className="font-bold text-orange-500 text-lg" dir="ltr">₪{getLineTotal(o).toFixed(2)}</span>
-                            </div>
-                            <button onClick={() => removeFromOrder(o.id)} className="text-[10px] text-rose-500 hover:bg-rose-50 py-1.5 px-2.5 rounded-xl transition-colors self-end">Delete</button>
                           </div>
                         </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* TAB: CUSTOMER */}
+              {activeTab === 'customer' && (
+                <div className="p-6 animate-fade-in space-y-8">
+                  <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/10 rounded-3xl p-6 flex items-start gap-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center shrink-0 border border-orange-500/20 text-orange-400">
+                      <span className="text-xl">👤</span>
+                    </div>
+                    <div className="relative z-10">
+                      <p className="text-base font-bold text-orange-100">Customer Details</p>
+                      <p className="text-xs text-orange-200/50 mt-1 leading-relaxed">Details entered here will appear on the final invoice/receipt.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Company / Name</label>
+                      <input
+                        value={orderInfo.companyName}
+                        onChange={(e) => setOrderInfoField('companyName', e.target.value)}
+                        className="w-full bg-[#1e293b]/50 hover:bg-[#1e293b] focus:bg-[#1e293b] border border-white/5 hover:border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-slate-500 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all shadow-inner"
+                        placeholder="Enter Name..."
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Phone Number</label>
+                      <input
+                        value={orderInfo.phone}
+                        onChange={(e) => setOrderInfoField('phone', e.target.value)}
+                        className="w-full bg-[#1e293b]/50 hover:bg-[#1e293b] focus:bg-[#1e293b] border border-white/5 hover:border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-slate-500 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all font-mono shadow-inner"
+                        placeholder="050..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-5">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Date</label>
+                        <input
+                          type="date"
+                          value={orderInfo.orderDate}
+                          onChange={(e) => setOrderInfoField('orderDate', e.target.value)}
+                          className="w-full bg-white/[0.03] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all"
+                        />
                       </div>
-                    );
-                  })
-                )}
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Cust No.</label>
+                        <input
+                          value={orderInfo.customerNumber}
+                          onChange={(e) => setOrderInfoField('customerNumber', e.target.value)}
+                          className="w-full bg-white/[0.03] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all"
+                          placeholder="#"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Address</label>
+                      <input
+                        value={orderInfo.address}
+                        onChange={(e) => setOrderInfoField('address', e.target.value)}
+                        className="w-full bg-white/[0.03] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all"
+                        placeholder="City, Street..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Order Totals */}
+            <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/5 p-8 shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-20">
+              <div className="flex justify-between items-end mb-5">
+                <div>
+                  <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mb-1"><span>Total Amount</span></p>
+                  <p className="text-4xl font-black text-white tracking-tighter drop-shadow-lg">
+                    <span className="text-2xl text-slate-500 mr-1">₪</span>
+                    <span>{itemTotalWithTax(orderLines).toFixed(2)}</span>
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-slate-500 text-[10px] font-medium uppercase tracking-widest mb-1">Items Included</p>
+                  <div className="inline-flex items-center px-3 py-1 bg-white/10 rounded-lg border border-white/5">
+                    <span className="text-lg font-bold text-slate-200">{orderLines.length}</span>
+                  </div>
+                </div>
               </div>
 
-              {!showCustomerForm ? (
-                <div className="mx-3 mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomerForm(true)}
-                    className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-dashed border-orange-200 text-orange-700 font-semibold text-sm hover:from-orange-100 hover:to-amber-100 hover:border-orange-300 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-orange-400" />
-                    Fill Customer Details
-                  </button>
-                </div>
-              ) : (
-                <div className="relative p-4 mx-3 mt-3 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/30 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
-                  <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400 opacity-80" />
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-2 pt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" /> Customer Details
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomerForm(false)}
-                      className="text-xs font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2.5 py-1.5 rounded-xl transition-colors"
-                    >
-                      Done — Close
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Company Name</span><input type="text" value={orderInfo.companyName} onChange={(e) => setOrderInfoField('companyName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Merchant Name</span><input type="text" value={orderInfo.merchantName} onChange={(e) => setOrderInfoField('merchantName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Phone</span><input type="tel" value={orderInfo.phone} onChange={(e) => setOrderInfoField('phone', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Date</span><input type="date" value={orderInfo.orderDate} onChange={(e) => setOrderInfoField('orderDate', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Address</span><input type="text" value={orderInfo.address} onChange={(e) => setOrderInfoField('address', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Customer Number</span><input type="text" value={orderInfo.customerNumber} onChange={(e) => setOrderInfoField('customerNumber', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Payment Method</span><select value={orderInfo.paymentMethod} onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none"><option value="">—</option><option value="Cash">Cash</option><option value="Checks">Checks</option></select></label>
-                    {orderInfo.paymentMethod === 'Checks' && (
-                      <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Checks Count</span><input type="number" min="1" value={orderInfo.checksCount} onChange={(e) => setOrderInfoField('checksCount', e.target.value)} placeholder="3" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomerForm(false)}
-                    className="w-full py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
-                  >
-                    Done — Close
-                  </button>
-                </div>
-              )}
+              <div className="grid grid-cols-4 gap-3">
+                <button onClick={handlePrintOrder} className="col-span-2 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold rounded-2xl shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-3">
+                  <span className="text-xl">🖨️</span> <span>Print Order</span>
+                </button>
+                <button onClick={handleSaveInvoice} className="col-span-1 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/10 transition-all hover:border-white/20">
+                  <span>Save</span>
+                </button>
+                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="col-span-1 py-4 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold rounded-2xl border border-white/10 transition-all hover:border-white/20">
+                  <span>{activeTab === 'items' ? 'Next >' : '< Back'}</span>
+                </button>
+              </div>
 
-              {orderLines.length > 0 && (
-                <div className="relative mx-3 mb-3 p-4 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/40 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
-                  <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 opacity-90" />
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200/70">
-                    <span className="text-xs font-medium text-slate-400 tracking-wide">Total Amount (Inc. Tax)</span>
-                    <span className="font-bold text-lg text-orange-500" dir="ltr" lang="en">₪{orderTotal.toFixed(2)}</span>
-                  </div>
-                  <p className="text-sm text-slate-500 py-2 border-b border-slate-200/70">
-                    <span className="text-[10px] font-medium text-slate-400 tracking-wide">Total Amount in Words</span>
-                    <span className="block mt-1 text-slate-700 font-medium">{amountToEnglishWords(orderTotal)}</span>
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={handleOpenInventory} className="flex-1 min-w-[120px] py-2.5 rounded-2xl bg-gradient-to-b from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-bold shadow-[0_2px_8px_rgba(245,158,11,0.35)] hover:shadow-[0_4px_14px_rgba(245,158,11,0.4)] hover:-translate-y-0.5 transition-all">Selected Items</button>
-                    <button onClick={handlePrintOrder} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-sm font-bold shadow-[0_2px_8px_rgba(249,115,22,0.35)] hover:shadow-[0_4px_14px_rgba(249,115,22,0.4)] hover:-translate-y-0.5 transition-all">Print</button>
-                    <button onClick={handleExportExcel} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(5,150,105,0.35)] hover:shadow-[0_4px_14px_rgba(5,150,105,0.4)] hover:-translate-y-0.5 transition-all">Excel</button>
-                    <button onClick={handleSaveInvoice} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(37,99,235,0.35)] hover:shadow-[0_4px_14px_rgba(37,99,235,0.4)] hover:-translate-y-0.5 transition-all">Save Invoice</button>
-                    <button onClick={() => handlePrintOrder()} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(71,85,105,0.3)] hover:shadow-[0_4px_14px_rgba(71,85,105,0.35)] hover:-translate-y-0.5 transition-all">PDF</button>
-                  </div>
-                  <button onClick={clearOrder} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all hover:shadow-inner">Clear Order</button>
-                </div>
-              )}
+              <div className="flex justify-between mt-4 px-1 opacity-70 hover:opacity-100 transition-opacity">
+                <button onClick={clearOrder} className="text-[10px] font-bold text-rose-500 hover:text-rose-400 uppercase tracking-widest transition-colors flex items-center gap-2">
+                  <Trash2 size={12} /> <span>Clear Order</span>
+                </button>
+                <button onClick={handleExportExcel} className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-colors"><span>Export Excel</span></button>
+              </div>
             </div>
           </aside>
         )
