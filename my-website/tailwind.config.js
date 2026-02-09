@@ -19,15 +19,6 @@ export default {
           'rose-light': '#ffe4e6',
         },
       },
-      animation: {
-        aurora: 'aurora 20s linear infinite',
-      },
-      keyframes: {
-        aurora: {
-          '0%': { backgroundPosition: '50% 50%, 50% 50%' },
-          '100%': { backgroundPosition: '350% 50%, 350% 50%' },
-        },
-      },
     },
   },
   plugins: [],

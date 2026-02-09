@@ -3,80 +3,135 @@
 @tailwind utilities;
 
 :root {
-  /* Deep, rich background mesh */
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-surface: rgba(255, 255, 255, 0.65);
-  --glass-surface-hover: rgba(255, 255, 255, 0.85);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --app-bg: #f8fafc;
+  --header-bg: rgba(255, 255, 255, 0.7);
+  --card-radius: 24px;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
 @layer base {
   body {
     @apply antialiased text-slate-800;
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
-    background-color: #0f172a;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.3) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.3) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.3) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.3) 0px, transparent 50%);
+    background-color: var(--app-bg);
+    background-image:
+      radial-gradient(at 0% 0%, rgba(224, 231, 255, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(255, 228, 230, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(224, 242, 254, 0.3) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(254, 243, 199, 0.3) 0px, transparent 50%);
     background-attachment: fixed;
-    background-size: cover;
+    background-size: 100% 100%;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 @layer components {
-  /* Glassmorphism Utilities */
   .glass-panel {
-    @apply backdrop-blur-xl border border-white/20 shadow-2xl;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
   }
-  
+
   .glass-card {
-    @apply backdrop-blur-md border border-white/40 shadow-lg transition-all duration-300;
-    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
-  }
-  
-  .glass-card:hover {
-    @apply -translate-y-1 shadow-xl border-white/60;
-    background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
-  }
-
-  .nav-glass {
-    @apply backdrop-blur-xl border-r border-white/20 shadow-xl;
+    @apply relative overflow-hidden transition-all duration-300;
     background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border-radius: var(--card-radius);
   }
 
+  .glass-card:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+    border-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .btn-modern {
+    @apply relative overflow-hidden transition-all duration-300 active:scale-95;
+  }
+
+  .btn-modern::after {
+    content: '';
+    @apply absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300;
+  }
+
+  .btn-modern:hover::after {
+    @apply opacity-100;
+  }
+
+  /* Product grid: larger cards to fit products */
   .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
     gap: 1.5rem;
-    padding: 0.5rem;
   }
-  
-  /* Aurora Animation Background */
-  .bg-aurora {
-    background: linear-gradient(
-      -45deg, 
-      #0f172a 0%, 
-      #1e1b4b 25%, 
-      #312e81 50%, 
-      #4c1d95 75%, 
-      #0f172a 100%
-    );
-    background-size: 400% 400%;
-    animation: aurora 20s ease infinite;
+
+  /* Custom Scrollbar for hidden scroll areas */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-300/50 rounded-full hover:bg-slate-400/70;
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
 }
