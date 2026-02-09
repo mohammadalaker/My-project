@@ -711,10 +711,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   const validateOrder = () => {
     if (userRole === 'customer') { // user 123
-      if (!orderInfo.companyName?.trim()) return 'Customer Name is required.';
-      if (!orderInfo.phone?.trim()) return 'Phone Number is required.';
-      if (!orderInfo.address?.trim()) return 'Address is required.';
-      if (!orderInfo.orderDate) return 'Date is required.';
+      if (!orderInfo.companyName?.trim()) return 'يرجى إدخال اسم الشركة (المشتري).';
+      if (!orderInfo.merchantName?.trim()) return 'يرجى إدخال اسم التاجر (المشتري).';
+      if (!orderInfo.phone?.trim()) return 'يرجى إدخال رقم الهاتف.';
+      if (!orderInfo.address?.trim()) return 'يرجى إدخال العنوان.';
+      if (!orderInfo.orderDate) return 'يرجى إدخال التاريخ.';
     }
     return null;
   };
@@ -1330,43 +1331,43 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <p className="text-slate-500 font-medium">Loading orders…</p>
                     </div>
                   ) : (
-                  <div className="grid gap-4">
-                    {submittedOrders.map((order, i) => (
-                      <div
-                        key={order.id || i}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setSelectedOrder(order)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
-                        className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-md hover:border-slate-200 transition-all gap-4 cursor-pointer"
-                      >
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">#{order.id || i + 1}</span>
-                            <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">
-                              {new Date(order.created_at || order.order_date || Date.now()).toLocaleDateString()}
-                            </span>
+                    <div className="grid gap-4">
+                      {submittedOrders.map((order, i) => (
+                        <div
+                          key={order.id || i}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedOrder(order)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
+                          className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-md hover:border-slate-200 transition-all gap-4 cursor-pointer"
+                        >
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">#{order.id || i + 1}</span>
+                              <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                                {new Date(order.created_at || order.order_date || Date.now()).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-lg text-slate-800">{order.customer_name || 'Unknown Client'}</h3>
+                            <p className="text-sm text-slate-500 mt-1">
+                              Prepared by: <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{order.prepared_by}</span>
+                            </p>
+                            {order.customer_phone && <p className="text-xs text-slate-400 mt-1">{order.customer_phone}</p>}
+                            {order.customer_address && <p className="text-xs text-slate-400">{order.customer_address}</p>}
                           </div>
-                          <h3 className="font-bold text-lg text-slate-800">{order.customer_name || 'Unknown Client'}</h3>
-                          <p className="text-sm text-slate-500 mt-1">
-                            Prepared by: <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{order.prepared_by}</span>
-                          </p>
-                          {order.customer_phone && <p className="text-xs text-slate-400 mt-1">{order.customer_phone}</p>}
-                          {order.customer_address && <p className="text-xs text-slate-400">{order.customer_address}</p>}
+                          <div className="text-left sm:text-right w-full sm:w-auto">
+                            <p className="text-2xl font-black text-slate-800">₪{Number(order.total_amount).toLocaleString()}</p>
+                            <p className="text-xs text-slate-400 font-medium">{order.items?.length || 0} items</p>
+                          </div>
                         </div>
-                        <div className="text-left sm:text-right w-full sm:w-auto">
-                          <p className="text-2xl font-black text-slate-800">₪{Number(order.total_amount).toLocaleString()}</p>
-                          <p className="text-xs text-slate-400 font-medium">{order.items?.length || 0} items</p>
+                      ))}
+                      {!ordersLoading && submittedOrders.length === 0 && !ordersError && (
+                        <div className="text-center py-20 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                          <Package size={48} className="mx-auto text-slate-300 mb-4" />
+                          <p className="text-slate-400 font-medium">No submitted orders found.</p>
                         </div>
-                      </div>
-                    ))}
-                    {!ordersLoading && submittedOrders.length === 0 && !ordersError && (
-                      <div className="text-center py-20 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
-                        <Package size={48} className="mx-auto text-slate-300 mb-4" />
-                        <p className="text-slate-400 font-medium">No submitted orders found.</p>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
                   )}
 
                   {/* Order detail modal — rendered in document.body so it always covers full viewport */}
@@ -1864,56 +1865,77 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     </div>
                   </div>
 
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Company / Name</label>
+                  <div className="space-y-4">
+                    {/* 1. اسم الشركة ( المشتري ) */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم الشركة ( المشتري ) <span className="text-rose-500">*</span></label>
                       <input
                         value={orderInfo.companyName}
                         onChange={(e) => setOrderInfoField('companyName', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-2xl px-5 py-4 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
-                        placeholder="Enter Name..."
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        placeholder="أدخل اسم الشركة..."
+                        dir="rtl"
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Phone Number</label>
+                    {/* 2. اسم التاجر ( المشتري ) */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم التاجر ( المشتري ) <span className="text-rose-500">*</span></label>
+                      <input
+                        value={orderInfo.merchantName}
+                        onChange={(e) => setOrderInfoField('merchantName', e.target.value)}
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        placeholder="أدخل اسم التاجر..."
+                        dir="rtl"
+                      />
+                    </div>
+
+                    {/* 3. التلفون */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1">التلفون <span className="text-rose-500">*</span></label>
                       <input
                         value={orderInfo.phone}
                         onChange={(e) => setOrderInfoField('phone', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-2xl px-5 py-4 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono shadow-sm"
-                        placeholder="050..."
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono shadow-sm"
+                        placeholder="05..."
+                        dir="rtl"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-5">
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Date</label>
+                    {/* 4. العنوان */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1">العنوان <span className="text-rose-500">*</span></label>
+                      <input
+                        value={orderInfo.address}
+                        onChange={(e) => setOrderInfoField('address', e.target.value)}
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        placeholder="المدينة، الشارع..."
+                        dir="rtl"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* 5. التاريخ */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">التاريخ <span className="text-rose-500">*</span></label>
                         <input
                           type="date"
                           value={orderInfo.orderDate}
                           onChange={(e) => setOrderInfoField('orderDate', e.target.value)}
-                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3.5 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Cust No.</label>
+
+                      {/* 6. رقم الزبون ( في الشركة ) */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">رقم الزبون ( في الشركة )</label>
                         <input
                           value={orderInfo.customerNumber}
                           onChange={(e) => setOrderInfoField('customerNumber', e.target.value)}
-                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
                           placeholder="#"
                         />
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 ml-1">Address</label>
-                      <input
-                        value={orderInfo.address}
-                        onChange={(e) => setOrderInfoField('address', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
-                        placeholder="City, Street..."
-                      />
                     </div>
                   </div>
                 </div>
