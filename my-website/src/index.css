@@ -3,63 +3,80 @@
 @tailwind utilities;
 
 :root {
-  --app-bg: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 35%, #eef2ff 70%, #f0f9ff 100%);
-  --header-bg: rgba(255, 255, 255, 0.85);
-  --card-radius: 24px;
-  --card-shadow: 0 4px 24px -4px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02);
-  --card-shadow-hover: 0 20px 40px -12px rgba(99, 102, 241, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.03);
-  --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Deep, rich background mesh */
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-surface: rgba(255, 255, 255, 0.65);
+  --glass-surface-hover: rgba(255, 255, 255, 0.85);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
 @layer base {
   body {
-    @apply antialiased;
-    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    @apply antialiased text-slate-800;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
-    background: var(--app-bg);
-    /* no fixed to avoid heavy repaint on scroll */
-  }
-
-  #root {
-    min-height: 100vh;
-  }
-
-  html {
-    scroll-behavior: smooth;
+    background-color: #0f172a;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.3) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.3) 0px, transparent 50%);
+    background-attachment: fixed;
+    background-size: cover;
   }
 }
 
 @layer components {
-  .card-soft {
-    @apply rounded-[32px] bg-white shadow-sm;
+  /* Glassmorphism Utilities */
+  .glass-panel {
+    @apply backdrop-blur-xl border border-white/20 shadow-2xl;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+  }
+  
+  .glass-card {
+    @apply backdrop-blur-md border border-white/40 shadow-lg transition-all duration-300;
+    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+  }
+  
+  .glass-card:hover {
+    @apply -translate-y-1 shadow-xl border-white/60;
+    background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
   }
 
-  .card-modern {
-    border-radius: var(--card-radius);
-    box-shadow: var(--card-shadow);
-    transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+  .nav-glass {
+    @apply backdrop-blur-xl border-r border-white/20 shadow-xl;
+    background: rgba(255, 255, 255, 0.75);
   }
 
-  .card-modern:hover {
-    box-shadow: var(--card-shadow-hover);
-    transform: translateY(-2px);
-  }
-
-  /* Product grid: larger cards to fit products */
   .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 1.5rem;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0.5rem;
   }
-  @media (min-width: 640px) {
-    .product-grid {
-      gap: 1.25rem;
-    }
+  
+  /* Aurora Animation Background */
+  .bg-aurora {
+    background: linear-gradient(
+      -45deg, 
+      #0f172a 0%, 
+      #1e1b4b 25%, 
+      #312e81 50%, 
+      #4c1d95 75%, 
+      #0f172a 100%
+    );
+    background-size: 400% 400%;
+    animation: aurora 20s ease infinite;
   }
-  @media (min-width: 1024px) {
-    .product-grid {
-      gap: 1.5rem;
-    }
-  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300/50 rounded-full hover:bg-slate-400/70;
 }

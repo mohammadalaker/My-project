@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Plus,
@@ -987,141 +988,136 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   }
 
   return (
-    <div
-      className={`font-sans flex h-screen overflow-hidden ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
-    >
-      <div
-        className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden ${showOrderPanel ? 'p-3 sm:p-4' : 'p-4 sm:p-6 lg:p-8'}`}
-      >
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <header className="flex-shrink-0 py-4 px-4 sm:px-6 lg:px-8 -mx-4 sm:-mx-6 lg:-mx-8 bg-[var(--header-bg)] backdrop-blur-xl border-b border-slate-200/60 z-20 shadow-[0_1px_0_0_rgba(255,255,255,0.8)_inset]">
-            <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-3 shrink-0">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-colors ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/25' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/25'}`}>
-                  {mode === 'catalog' ? <Grid className="text-white" size={22} /> : <Package className="text-white" size={22} />}
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-slate-800 tracking-tight">Sales System</h1>
-                  <p className="text-slate-500 text-xs mt-0.5 hidden sm:block">
-                    {safeLocaleDate({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                  </p>
-                </div>
-              </div>
+    <div className="font-sans flex h-screen overflow-hidden bg-slate-900 relative selection:bg-indigo-500/30">
+      <div className="absolute inset-0 bg-aurora opacity-70 pointer-events-none" />
 
-              <span className="w-px h-8 bg-slate-200/80 shrink-0 hidden sm:block" aria-hidden />
+      {/* Desktop Glass Sidebar */}
+      <div className="hidden md:flex flex-col w-20 lg:w-64 m-4 mr-0 rounded-3xl glass-panel z-30 p-4 gap-6 shrink-0 transition-all duration-300">
+        <div className="flex items-center gap-3 px-2">
+          <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-lg transition-colors ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/25' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/25'}`}>
+            {mode === 'catalog' ? <Grid className="text-white" size={22} /> : <Package className="text-white" size={22} />}
+          </div>
+          <div className="hidden lg:block overflow-hidden">
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight leading-none whitespace-nowrap">Sales System</h1>
+            <p className="text-slate-500 text-[11px] font-medium mt-1 truncate">Glass OS v2.0</p>
+          </div>
+        </div>
 
-              <div className="flex items-center gap-2 ml-auto shrink-0">
-                {mode === 'catalog' ? (
-                  <button
-                    type="button"
-                    onClick={() => setMode('order')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-semibold text-sm transition-all"
-                  >
-                    <Package size={18} />
-                    Sales
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setMode('catalog')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-semibold text-sm shadow-lg shadow-rose-500/25 transition-all"
-                  >
-                    <Grid size={18} />
-                    Catalog
-                  </button>
-                )}
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 transition-colors"
-                  title="Logout"
-                >
-                  <Power size={20} />
-                </button>
+        <div className="flex-1 flex flex-col gap-2">
+          <button
+            onClick={() => setMode('order')}
+            className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all group ${mode === 'order' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-600 hover:bg-white/40'}`}
+          >
+            <Package size={22} className={mode === 'order' ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'} />
+            <span className={`hidden lg:block font-semibold ${mode === 'order' ? 'text-white' : ''}`}>Sales Terminal</span>
+          </button>
+          <button
+            onClick={() => setMode('catalog')}
+            className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all group ${mode === 'catalog' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25' : 'text-slate-600 hover:bg-white/40'}`}
+          >
+            <Grid size={22} className={mode === 'catalog' ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'} />
+            <span className={`hidden lg:block font-semibold ${mode === 'catalog' ? 'text-white' : ''}`}>Catalog</span>
+          </button>
+        </div>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50/50 transition-all mt-auto group"
+        >
+          <Power size={22} className="group-hover:text-rose-600" />
+          <span className="hidden lg:block font-medium">Logout</span>
+        </button>
+      </div>
+
+      <div className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative transition-all duration-300 ${showOrderPanel ? 'mr-[440px]' : ''}`}>
+
+        {/* Mobile Header */}
+        <header className="md:hidden flex items-center justify-between p-4 glass-panel m-4 mb-0 rounded-2xl z-20 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${mode === 'catalog' ? 'bg-rose-500' : 'bg-indigo-500'}`}>
+              {mode === 'catalog' ? <Grid className="text-white" size={20} /> : <Package className="text-white" size={20} />}
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-800">Sales System</h1>
+              <p className="text-slate-500 text-xs">{safeLocaleDate({ dateStyle: 'medium' })}</p>
+            </div>
+          </div>
+          <button onClick={handleLogout} className="p-2 rounded-xl bg-slate-100/50 text-slate-500"><Power size={18} /></button>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden m-0 md:m-4 rounded-3xl glass-panel md:bg-white/40">
+
+          {/* Desktop Dashboard Header */}
+          <div className="hidden md:flex items-center justify-between px-6 py-6 pb-2 shrink-0">
+            <div>
+              <motion.h2
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-2xl font-bold text-slate-800"
+              >
+                {mode === 'catalog' ? 'Product Catalog' : 'Sales Dashboard'}
+              </motion.h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 text-xs font-bold border border-indigo-200/20">
+                  {safeLocaleDate({ weekday: 'long' })}
+                </span>
+                <span className="text-slate-500 text-sm">
+                  {items.length} Products Loaded
+                </span>
               </div>
             </div>
-          </header>
 
-          {!loading && (
-            <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-slate-500 text-sm font-medium mr-1 hidden sm:inline">Group:</span>
-                {[
-                  { key: null, label: 'All', count: items.length, icon: null, type: 'all' },
-                  { key: '__electrical__', label: 'Electrical Appliances', count: items.filter((i) => isElectricalGroup(i.group)).length, icon: Zap, type: 'electrical' },
-                  { key: '__home__', label: 'Household / Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed, type: 'household' },
-                ].map(({ key, label, count, icon: Icon, type }) => {
-                  const isSelected = selectedGroup === key || (key === '__electrical__' && selectedGroup && isElectricalGroup(selectedGroup)) || (key === '__home__' && selectedGroup && !isElectricalGroup(selectedGroup));
-                  const btnClass = isSelected
-                    ? type === 'electrical'
-                      ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
-                      : type === 'household'
-                        ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/25'
-                        : 'bg-slate-700 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800';
-                  return (
-                    <button
-                      key={key ?? 'all'}
-                      type="button"
-                      onClick={() => setSelectedGroup(key)}
-                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${btnClass}`}
-                    >
-                      {Icon && <Icon size={18} className="shrink-0" />}
-                      <span>{label}</span>
-                      <span className="opacity-80 font-normal">({count})</span>
-                    </button>
-                  );
-                })}
+            <div className="flex gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/60 rounded-lg border border-white/40 shadow-sm backdrop-blur-md">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">System Online</span>
               </div>
-              {(selectedGroup === '__electrical__' || (selectedGroup && isElectricalGroup(selectedGroup))) && electricalGroupsSorted.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-12 border-l-0 sm:border-l-2 border-indigo-200 sm:ml-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedGroup('__electrical__')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedGroup === '__electrical__' ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
-                  >
-                    All
-                  </button>
-                  {electricalGroupsSorted.map((g) => {
-                    const count = items.filter((i) => (i.group || '').trim().toLowerCase() === g.trim().toLowerCase()).length;
-                    const sel = selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase();
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          {!loading && (
+            <div className="flex-shrink-0 px-4 md:px-6 py-3 space-y-3 z-10">
+              <div className="glass-card rounded-2xl p-2 flex flex-col sm:flex-row gap-3 items-center">
+                <div className="relative flex-1 w-full sm:w-auto">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search products by name or barcode..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/50 hover:bg-white/80 focus:bg-white rounded-xl border-2 border-transparent focus:border-indigo-300/50 outline-none text-slate-700 placeholder:text-slate-400 font-medium transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 sm:pb-0 px-1 hide-scrollbar">
+                  {/* ... (Existing Group Logic) ... */}
+                  {[
+                    { key: null, label: 'All', count: items.length, icon: null },
+                    { key: '__electrical__', label: 'Electrical', count: items.filter((i) => isElectricalGroup(i.group)).length, icon: Zap },
+                    { key: '__home__', label: 'Household', count: items.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed },
+                  ].map(({ key, label, count, icon: Icon }) => {
+                    const isSelected = selectedGroup === key || (key === '__electrical__' && selectedGroup && isElectricalGroup(selectedGroup)) || (key === '__home__' && selectedGroup && !isElectricalGroup(selectedGroup));
                     return (
                       <button
-                        key={g}
-                        type="button"
-                        onClick={() => setSelectedGroup(g)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sel ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
+                        key={key ?? 'all'}
+                        onClick={() => setSelectedGroup(key)}
+                        className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${isSelected ? 'bg-slate-800 text-white shadow-lg' : 'bg-white/50 text-slate-600 hover:bg-white'}`}
                       >
-                        {g} ({count})
+                        {Icon && <Icon size={16} />}
+                        <span>{label}</span>
+                        <span className="opacity-60 text-xs">({count})</span>
                       </button>
                     );
                   })}
                 </div>
-              )}
-              {(selectedGroup === '__home__' || (selectedGroup && selectedGroup !== '__electrical__' && !isElectricalGroup(selectedGroup))) && kitchenwareGroupsSorted.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-12 border-l-0 sm:border-l-2 border-sky-200 sm:ml-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedGroup('__home__')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedGroup === '__home__' ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100'}`}
-                  >
-                    All
+
+                {userRole === 'admin' && (
+                  <button onClick={openAddModal} className="shrink-0 p-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-500/25 transition-all">
+                    <Plus size={20} />
                   </button>
-                  {kitchenwareGroupsSorted.map((g) => {
-                    const count = items.filter((i) => (i.group || '').trim().toLowerCase() === g.trim().toLowerCase()).length;
-                    const sel = selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase();
-                    return (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setSelectedGroup(g)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${sel ? 'bg-sky-500 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100'}`}
-                      >
-                        {g} ({count})
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
@@ -1135,11 +1131,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               if (it) handleImageUpload(e, it);
             }}
           />
-          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto pt-6 scroll-smooth">
+
+          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 pb-24 scroll-smooth">
             {loading ? (
               <SkeletonGrid />
             ) : (
-              <div className="pb-8 space-y-12">
+              <div className="pb-8 space-y-8 pt-2">
                 {[
                   { title: 'Electrical Appliances', items: filteredItems.filter((i) => isElectricalGroup(i.group)), color: 'indigo' },
                   { title: 'Kitchenware', items: filteredItems.filter((i) => !isElectricalGroup(i.group)), color: 'sky' },
@@ -1148,132 +1145,125 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   if (sorted.length === 0) return null;
                   return (
                     <section key={title}>
-                      <h2 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3 px-1">
-                        <span className={`w-1.5 h-7 rounded-full ${color === 'indigo' ? 'bg-indigo-500' : 'bg-sky-500'}`} />
-                        <span>{title}</span>
-                        <span className="text-slate-400 font-normal text-sm">({sorted.length})</span>
-                      </h2>
-                      <div className="product-grid px-1">
-                        {sorted.map((item) => (
-                          <div key={item.id} className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden flex flex-col min-h-0">
-                            {item.group && (
-                              <div className="shrink-0 px-3 py-1.5 bg-slate-100/90 border-b border-slate-200/60 text-slate-600 text-xs font-semibold truncate">
-                                {item.group}
+                      <div className="flex items-center gap-3 mb-4 px-2">
+                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${color === 'indigo' ? 'bg-indigo-100 text-indigo-600' : 'bg-sky-100 text-sky-600'}`}>
+                          {color === 'indigo' ? <Zap size={18} /> : <UtensilsCrossed size={18} />}
+                        </span>
+                        <h2 className="text-lg font-bold text-slate-800">{title}</h2>
+                        <span className="px-2 py-0.5 rounded-full bg-white/50 text-xs font-bold text-slate-500 border border-white/40">{sorted.length}</span>
+                      </div>
+
+                      <div className="product-grid">
+                        <AnimatePresence>
+                          {sorted.map((item, index) => (
+                            <motion.div
+                              layout
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.2, delay: index * 0.03 }}
+                              key={item.id}
+                              className="glass-card group relative rounded-[20px] overflow-hidden flex flex-col"
+                            >
+                              {/* ... Content of Card Copied ... */}
+                              <div className="shrink-0 flex items-center justify-between px-3 py-2 bg-white/40 border-b border-white/40 backdrop-blur-sm z-10">
+                                {item.group ? (
+                                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate max-w-[70%]">{item.group}</span>
+                                ) : <span />}
+                                {getStockStatus(item) === 'In Stock'
+                                  ? <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]" />
+                                  : <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.4)]" />
+                                }
                               </div>
-                            )}
-                            <div className="aspect-[4/3] min-h-[200px] bg-slate-50 relative overflow-hidden flex-shrink-0">
-                              <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors z-10" />
-                              {getImage(item) ? (
-                                <img
-                                  src={getImage(item)}
-                                  alt={item.name}
-                                  className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105 mix-blend-multiply"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.nextSibling.style.display = 'flex';
-                                  }}
-                                />
-                              ) : null}
-                              <div className={`absolute inset-0 flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
-                                <Package size={32} className="text-slate-300/80" />
+
+                              <div className="aspect-[4/3] bg-white/20 relative overflow-hidden flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                                {getImage(item) ? (
+                                  <img
+                                    src={getImage(item)}
+                                    alt={item.name}
+                                    className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110 mix-blend-multiply drop-shadow-lg"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <div className={`absolute inset-0 flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
+                                  <Package size={32} className="text-slate-400/50" />
+                                </div>
+
+                                {/* Admin Upload Button */}
+                                {userRole === 'admin' && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
+                                    className="absolute top-2 right-2 p-2 rounded-xl bg-white/80 backdrop-blur-md shadow-lg hover:bg-indigo-500 hover:text-white text-slate-600 transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    {uploading && cardUploadItemRef.current?.id === item.id ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                  </button>
+                                )}
                               </div>
+
+                              <div className="p-3 flex-1 flex flex-col relative">
+                                <h3 className="font-bold text-slate-800 text-sm leading-tight mb-1 line-clamp-2" title={item.name}>{item.name || '—'}</h3>
+                                <p className="text-[10px] font-mono text-slate-500 mb-2">{item.barcode}</p>
+
+                                <div className="mt-auto pt-2 border-t border-slate-200/30 flex items-end justify-between">
+                                  <div>
+                                    <p className="text-[10px] text-slate-500 line-through">₪{item.price ?? 0}</p>
+                                    <p className="text-lg font-bold text-indigo-600 leading-none">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-[10px] text-slate-500">Box: {item.box || '—'}</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Actions Overlay */}
+                              <div className="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-full group-hover:translate-y-0 z-20">
+                                {mode === 'catalog' ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (catalogItems.some((i) => i.id === item.id)) removeFromCatalog(item.id);
+                                      else addToCatalog(item);
+                                    }}
+                                    className={`w-full py-2.5 rounded-xl text-xs font-bold shadow-lg transition-all ${catalogItems.some((i) => i.id === item.id) ? 'bg-rose-500 text-white' : 'bg-white text-slate-800 hover:bg-rose-50'}`}
+                                  >
+                                    {catalogItems.some((i) => i.id === item.id) ? 'Remove' : 'Add to Catalog'}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenQuantityModal(item);
+                                    }}
+                                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-lg transition-all"
+                                  >
+                                    Add to Cart
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Admin Edit Overlay */}
                               {userRole === 'admin' && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
-                                  disabled={uploading}
-                                  className="absolute bottom-2 right-2 z-20 p-2 rounded-xl bg-white/90 shadow-md hover:bg-indigo-500 hover:text-white text-slate-600 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                                  title="Change image (saves to Supabase)"
-                                >
-                                  {uploading && cardUploadItemRef.current?.id === item.id ? (
-                                    <Loader2 size={18} className="animate-spin" />
-                                  ) : (
-                                    <Upload size={18} />
-                                  )}
-                                </button>
+                                <div className="absolute top-2 left-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-1.5 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600"><FileText size={14} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-1.5 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600"><Trash2 size={14} /></button>
+                                </div>
                               )}
-                            </div>
 
-                            <div className="p-3 flex-1 flex flex-col min-h-0">
-                              {mode === 'catalog' ? (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (catalogItems.some((i) => i.id === item.id)) {
-                                      removeFromCatalog(item.id);
-                                    } else {
-                                      addToCatalog(item);
-                                    }
-                                  }}
-                                  className={`w-full py-2 rounded-lg border-2 text-xs font-semibold shrink-0 transition-all duration-200 flex items-center justify-center gap-2 ${catalogItems.some((i) => i.id === item.id)
-                                    ? 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
-                                    : 'border-rose-200 text-rose-700 hover:bg-rose-50'
-                                    }`}
-                                >
-                                  {catalogItems.some((i) => i.id === item.id) ? (
-                                    <>
-                                      <Trash2 size={16} />
-                                      Remove from Catalog
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileText size={16} />
-                                      Add to Catalog
-                                    </>
-                                  )}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenQuantityModal(item);
-                                  }}
-                                  className="w-full py-3 rounded-xl border-2 border-indigo-200 text-indigo-700 text-sm font-bold hover:bg-indigo-50 hover:border-indigo-300 shrink-0 transition-all duration-200 shadow-sm"
-                                >
-                                  إضافة إلى السلة
-                                </button>
-                              )}
-                              <p className="mt-2 font-bold text-slate-800 line-clamp-2 text-base leading-tight">{item.name || '—'}</p>
-                              <p className="mt-2 shrink-0 text-base"><span className="text-slate-500">Price:</span> <span className="font-bold text-slate-800 text-lg">₪{item.price ?? 0}</span></p>
-                              <p className="shrink-0 text-base"><span className="text-slate-500">Discounted:</span> <span className="font-bold text-emerald-600 text-xl">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</span></p>
-                            </div>
-
-                            <div className="shrink-0 px-3 py-2 bg-slate-50/80 border-t border-slate-100 space-y-1">
-                              <p className="text-slate-600 text-sm font-medium"><span className="text-slate-500">Box:</span> <span className="text-slate-800 font-semibold">{item.box || '—'}</span></p>
-                              <p className="text-slate-600 text-sm font-medium"><span className="text-slate-500">Stock:</span> <span className={getStockStatus(item) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(item)}</span></p>
-                              <p className="text-slate-700 text-base sm:text-lg font-mono font-bold tracking-widest break-all" dir="ltr">{item.barcode || '—'}</p>
-                            </div>
-
-                            {userRole === 'admin' && (
-                              <div className="p-2 flex gap-1.5 border-t border-slate-100 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
-                                  className="flex-1 flex items-center justify-center py-1.5 rounded-md border border-slate-200 text-slate-600 text-[11px] font-medium hover:bg-slate-50 transition-colors"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }}
-                                  className="p-1.5 rounded-md border border-slate-200 text-rose-600 hover:bg-rose-50 transition-colors"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
                       </div>
                     </section>
                   );
                 })}
               </div>
             )}
-
             {hasMore && items.length > 0 && (
               <div ref={loadMoreRef} className="flex justify-center py-8 min-h-[60px]">
-                {loadingMore && <Loader2 className="animate-spin text-indigo-500" size={32} />}
+                {loadingMore && <Loader2 className="animate-spin text-white" size={32} />}
               </div>
             )}
           </div>
@@ -1281,383 +1271,387 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       </div>
 
       {!showOrderPanel && mode === 'order' && (
-        <button
+        <motion.button
+          initial={{ x: 100 }} animate={{ x: 0 }}
           onClick={() => setShowOrderPanel(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-4 rounded-l-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white text-lg font-bold shadow-[0_0_32px_-8px_rgba(249,115,22,0.45)] hover:shadow-[0_0_40px_-4px_rgba(249,115,22,0.5)] hover:from-orange-600 hover:to-amber-700 transition-all duration-300 border-l-4 border-amber-400/80"
-          style={{ writingMode: 'vertical-rl' }}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-6 px-3 rounded-l-2xl glass-panel border-r-0 text-slate-800 text-sm font-bold shadow-2xl hover:bg-white/90 transition-all border-l-4 border-l-orange-500 hidden md:flex flex-col gap-2 items-center"
         >
-          Sales Order
-        </button>
+          <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+          <span style={{ writingMode: 'vertical-rl' }}>Sales Order</span>
+          <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs">{orderLines.length}</span>
+        </motion.button>
       )}
 
-      {!showCatalogPanel && mode === 'catalog' && (
-        <button
-          onClick={() => setShowCatalogPanel(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-4 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-[0_0_32px_-8px_rgba(244,63,94,0.45)] hover:shadow-[0_0_40px_-4px_rgba(244,63,94,0.5)] hover:from-rose-600 hover:to-pink-700 transition-all duration-300 border-l-4 border-pink-400/80"
-          style={{ writingMode: 'vertical-rl' }}
-        >
-          Product Catalog
-        </button>
-      )}
-
-      {
-        showOrderPanel && (
-          <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60">
-            <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
-              <h2 className="text-base font-bold text-slate-800">Order Cart <span className="text-orange-500" dir="ltr">({orderLines.length})</span></h2>
-              <button onClick={() => setShowOrderPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
+      {/* Glass Order Panel (Desktop Floating) */}
+      <AnimatePresence>
+        {showOrderPanel && (
+          <motion.aside
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 w-full md:w-[440px] z-50 glass-panel border-l border-white/30 m-0 md:m-4 md:rounded-3xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-2xl bg-white/80"
+          >
+            <div className="flex-shrink-0 px-5 py-4 flex justify-between items-center border-b border-slate-200/50 bg-white/50">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                Sales Order
+                <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 text-xs font-bold">{orderLines.length}</span>
+              </h2>
+              <button onClick={() => setShowOrderPanel(false)} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors">✕</button>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="p-3 space-y-2.5">
-                {orderLines.length === 0 ? (
-                  <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-                    <Package className="mx-auto text-slate-400 mb-2" size={40} />
-                    <p className="text-sm font-medium">Added items will appear here</p>
-                  </div>
-                ) : (
-                  orderLinesByBox.map((o, idx) => {
-                    const prevBox = idx > 0 ? getLineBox(orderLinesByBox[idx - 1]) : null;
-                    const box = getLineBox(o);
-                    const showBox = prevBox !== box;
-                    return (
-                      <div key={o.id} className="space-y-1.5">
-                        {showBox && (
-                          <div className="text-[11px] font-semibold text-orange-600 bg-gradient-to-r from-orange-100 to-amber-100 text-center py-1.5 rounded-full px-4 w-fit shadow-[0_1px_3px_rgba(249,115,22,0.2)]">Box {box}</div>
-                        )}
-                        <div className="group relative rounded-3xl p-3.5 bg-gradient-to-br from-white via-white to-orange-50/20 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_-4px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.02)] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300 border border-slate-100/80">
-                          <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-orange-300 to-amber-300 opacity-60 group-hover:opacity-100 transition-opacity" />
-                          <div className="flex gap-3 items-start pr-1">
-                            <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center justify-center">
-                              {getImage(o.item) && <img src={getImage(o.item)} alt="" className="w-full h-full object-contain" loading="lazy" decoding="async" onError={(e) => (e.target.style.display = 'none')} />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-medium text-slate-400 tracking-wide mb-0.5">Product & Model</p>
-                              <p className="text-sm font-bold text-slate-800 line-clamp-2">{o.item?.name || '—'} {o.item?.group ? ` / ${o.item.group}` : ''}</p>
-                              <p className="text-[10px] font-medium text-slate-400 tracking-wide mt-1.5 mb-0.5">Barcode</p>
-                              <span className="text-xs font-mono font-semibold text-slate-600 break-all" dir="ltr">{o.item?.barcode || '—'}</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3">
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Qty</span>
-                              <div className="flex items-center gap-1">
-                                <input type="number" min={1} value={o.qty} onChange={(e) => setOrderQty(o.id, e.target.value)} dir="ltr" className="w-14 rounded-xl border border-slate-200/80 px-1.5 py-1.5 text-center text-sm font-semibold bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:ring-2 focus:ring-orange-200 outline-none transition-all" />
-                                <span className="text-[10px] text-slate-400">Unit</span>
-                              </div>
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Original Price</span>
-                              <span className="text-sm font-bold text-slate-700" dir="ltr">₪{getLineOriginalPrice(o)}</span>
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Discount %</span>
-                              <span className="text-sm font-bold text-emerald-600" dir="ltr">{getLineDiscountPercent(o)}%</span>
-                            </div>
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Final Price</span>
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm font-bold text-slate-700">₪</span>
-                                <input type="number" value={getLineUnitPrice(o)} onChange={(e) => setOrderLinePrice(o.id, e.target.value)} dir="ltr" className="w-16 rounded-xl border border-slate-200/80 px-1.5 py-1 text-sm font-bold bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:ring-2 focus:ring-orange-200 outline-none transition-all" />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-100">
-                            <div>
-                              <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Total Amount (Inc. Tax)</span>
-                              <span className="font-bold text-orange-500 text-lg" dir="ltr">₪{getLineTotal(o).toFixed(2)}</span>
-                            </div>
-                            <button onClick={() => removeFromOrder(o.id)} className="text-[10px] text-rose-500 hover:bg-rose-50 py-1.5 px-2.5 rounded-xl transition-colors self-end">Delete</button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
 
-              {!showCustomerForm ? (
-                <div className="mx-3 mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomerForm(true)}
-                    className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-dashed border-orange-200 text-orange-700 font-semibold text-sm hover:from-orange-100 hover:to-amber-100 hover:border-orange-300 transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-orange-400" />
-                    Fill Customer Details
-                  </button>
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+              {orderLines.length === 0 ? (
+                <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+                  <Package className="mx-auto text-slate-400 mb-2" size={40} />
+                  <p className="text-sm font-medium">Added items will appear here</p>
                 </div>
               ) : (
-                <div className="relative p-4 mx-3 mt-3 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/30 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
-                  <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400 opacity-80" />
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-2 pt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" /> Customer Details
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomerForm(false)}
-                      className="text-xs font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2.5 py-1.5 rounded-xl transition-colors"
-                    >
-                      Done — Close
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Company Name</span><input type="text" value={orderInfo.companyName} onChange={(e) => setOrderInfoField('companyName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Merchant Name</span><input type="text" value={orderInfo.merchantName} onChange={(e) => setOrderInfoField('merchantName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Phone</span><input type="tel" value={orderInfo.phone} onChange={(e) => setOrderInfoField('phone', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Date</span><input type="date" value={orderInfo.orderDate} onChange={(e) => setOrderInfoField('orderDate', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Address</span><input type="text" value={orderInfo.address} onChange={(e) => setOrderInfoField('address', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Customer Number</span><input type="text" value={orderInfo.customerNumber} onChange={(e) => setOrderInfoField('customerNumber', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Payment Method</span><select value={orderInfo.paymentMethod} onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none"><option value="">—</option><option value="Cash">Cash</option><option value="Checks">Checks</option></select></label>
-                    {orderInfo.paymentMethod === 'Checks' && (
-                      <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Checks Count</span><input type="number" min="1" value={orderInfo.checksCount} onChange={(e) => setOrderInfoField('checksCount', e.target.value)} placeholder="3" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
-                    )}
-                  </div>
+                orderLinesByBox.map((o, idx) => {
+                  const prevBox = idx > 0 ? getLineBox(orderLinesByBox[idx - 1]) : null;
+                  const box = getLineBox(o);
+                  const showBox = prevBox !== box;
+                  return (
+                    <div key={o.id} className="space-y-1.5">
+                      {showBox && (
+                        <div className="text-[11px] font-semibold text-orange-600 bg-gradient-to-r from-orange-100 to-amber-100 text-center py-1.5 rounded-full px-4 w-fit shadow-[0_1px_3px_rgba(249,115,22,0.2)]">Box {box}</div>
+                      )}
+                      <div className="group relative rounded-3xl p-3.5 bg-gradient-to-br from-white via-white to-orange-50/20 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_-4px_rgba(0,0,0,0.06),0_0_0_1px_rgba(0,0,0,0.02)] hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300 border border-slate-100/80">
+                        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-orange-300 to-amber-300 opacity-60 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex gap-3 items-start pr-1">
+                          <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center justify-center">
+                            {getImage(o.item) && <img src={getImage(o.item)} alt="" className="w-full h-full object-contain" loading="lazy" decoding="async" onError={(e) => (e.target.style.display = 'none')} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-medium text-slate-400 tracking-wide mb-0.5">Product & Model</p>
+                            <p className="text-sm font-bold text-slate-800 line-clamp-2">{o.item?.name || '—'} {o.item?.group ? ` / ${o.item.group}` : ''}</p>
+                            <p className="text-[10px] font-medium text-slate-400 tracking-wide mt-1.5 mb-0.5">Barcode</p>
+                            <span className="text-xs font-mono font-semibold text-slate-600 break-all" dir="ltr">{o.item?.barcode || '—'}</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3">
+                          <div>
+                            <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Qty</span>
+                            <div className="flex items-center gap-1">
+                              <input type="number" min={1} value={o.qty} onChange={(e) => setOrderQty(o.id, e.target.value)} dir="ltr" className="w-14 rounded-xl border border-slate-200/80 px-1.5 py-1.5 text-center text-sm font-semibold bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:ring-2 focus:ring-orange-200 outline-none transition-all" />
+                              <span className="text-[10px] text-slate-400">Unit</span>
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Original Price</span>
+                            <span className="text-sm font-bold text-slate-700" dir="ltr">₪{getLineOriginalPrice(o)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Discount %</span>
+                            <span className="text-sm font-bold text-emerald-600" dir="ltr">{getLineDiscountPercent(o)}%</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Final Price</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-bold text-slate-700">₪</span>
+                              <input type="number" value={getLineUnitPrice(o)} onChange={(e) => setOrderLinePrice(o.id, e.target.value)} dir="ltr" className="w-16 rounded-xl border border-slate-200/80 px-1.5 py-1 text-sm font-bold bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:ring-2 focus:ring-orange-200 outline-none transition-all" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2 border-t border-slate-100">
+                          <div>
+                            <span className="text-[10px] font-medium text-slate-400 tracking-wide block mb-0.5">Total Amount (Inc. Tax)</span>
+                            <span className="font-bold text-orange-500 text-lg" dir="ltr">₪{getLineTotal(o).toFixed(2)}</span>
+                          </div>
+                          <button onClick={() => removeFromOrder(o.id)} className="text-[10px] text-rose-500 hover:bg-rose-50 py-1.5 px-2.5 rounded-xl transition-colors self-end">Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {!showCustomerForm ? (
+              <div className="mx-3 mt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerForm(true)}
+                  className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-dashed border-orange-200 text-orange-700 font-semibold text-sm hover:from-orange-100 hover:to-amber-100 hover:border-orange-300 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="w-2 h-2 rounded-full bg-orange-400" />
+                  Fill Customer Details
+                </button>
+              </div>
+            ) : (
+              <div className="relative p-4 mx-3 mt-3 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/30 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
+                <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400 opacity-80" />
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-semibold text-slate-700 flex items-center gap-2 pt-0.5">
+                    <span className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]" /> Customer Details
+                  </p>
                   <button
                     type="button"
                     onClick={() => setShowCustomerForm(false)}
-                    className="w-full py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
+                    className="text-xs font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2.5 py-1.5 rounded-xl transition-colors"
                   >
                     Done — Close
                   </button>
                 </div>
-              )}
-
-              {orderLines.length > 0 && (
-                <div className="relative mx-3 mb-3 p-4 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/40 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
-                  <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 opacity-90" />
-                  <div className="flex justify-between items-center py-2 border-b border-slate-200/70">
-                    <span className="text-xs font-medium text-slate-400 tracking-wide">Total Amount (Inc. Tax)</span>
-                    <span className="font-bold text-lg text-orange-500" dir="ltr" lang="en">₪{orderTotal.toFixed(2)}</span>
-                  </div>
-                  <p className="text-sm text-slate-500 py-2 border-b border-slate-200/70">
-                    <span className="text-[10px] font-medium text-slate-400 tracking-wide">Total Amount in Words</span>
-                    <span className="block mt-1 text-slate-700 font-medium">{amountToEnglishWords(orderTotal)}</span>
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={handleOpenInventory} className="flex-1 min-w-[120px] py-2.5 rounded-2xl bg-gradient-to-b from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-bold shadow-[0_2px_8px_rgba(245,158,11,0.35)] hover:shadow-[0_4px_14px_rgba(245,158,11,0.4)] hover:-translate-y-0.5 transition-all">Selected Items</button>
-                    <button onClick={handlePrintOrder} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-sm font-bold shadow-[0_2px_8px_rgba(249,115,22,0.35)] hover:shadow-[0_4px_14px_rgba(249,115,22,0.4)] hover:-translate-y-0.5 transition-all">Print</button>
-                    <button onClick={handleExportExcel} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(5,150,105,0.35)] hover:shadow-[0_4px_14px_rgba(5,150,105,0.4)] hover:-translate-y-0.5 transition-all">Excel</button>
-                    <button onClick={handleSaveInvoice} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(37,99,235,0.35)] hover:shadow-[0_4px_14px_rgba(37,99,235,0.4)] hover:-translate-y-0.5 transition-all">Save Invoice</button>
-                    <button onClick={() => handlePrintOrder()} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(71,85,105,0.3)] hover:shadow-[0_4px_14px_rgba(71,85,105,0.35)] hover:-translate-y-0.5 transition-all">PDF</button>
-                  </div>
-                  <button onClick={clearOrder} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all hover:shadow-inner">Clear Order</button>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Company Name</span><input type="text" value={orderInfo.companyName} onChange={(e) => setOrderInfoField('companyName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                  <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Merchant Name</span><input type="text" value={orderInfo.merchantName} onChange={(e) => setOrderInfoField('merchantName', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                  <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Phone</span><input type="tel" value={orderInfo.phone} onChange={(e) => setOrderInfoField('phone', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                  <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Date</span><input type="date" value={orderInfo.orderDate} onChange={(e) => setOrderInfoField('orderDate', e.target.value)} dir="ltr" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                  <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Address</span><input type="text" value={orderInfo.address} onChange={(e) => setOrderInfoField('address', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                  <label className="block col-span-2"><span className="text-[10px] text-slate-500 block mb-0.5">Customer Number</span><input type="text" value={orderInfo.customerNumber} onChange={(e) => setOrderInfoField('customerNumber', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                  <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Payment Method</span><select value={orderInfo.paymentMethod} onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)} className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none"><option value="">—</option><option value="Cash">Cash</option><option value="Checks">Checks</option></select></label>
+                  {orderInfo.paymentMethod === 'Checks' && (
+                    <label className="block"><span className="text-[10px] text-slate-500 block mb-0.5">Checks Count</span><input type="number" min="1" value={orderInfo.checksCount} onChange={(e) => setOrderInfoField('checksCount', e.target.value)} placeholder="3" className="w-full text-xs rounded-2xl border border-slate-200/90 px-2.5 py-1.5 bg-white/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-2 focus:ring-orange-200/80 focus:border-orange-300 transition-all outline-none" /></label>
+                  )}
                 </div>
-              )}
-            </div>
-          </aside>
-        )
-      }
-
-      {
-        showCatalogPanel && (
-          <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60 transition-all duration-300">
-            <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
-              <h2 className="text-base font-bold text-slate-800">Catalog <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
-              <button onClick={() => setShowCatalogPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5">
-              {catalogItems.length === 0 ? (
-                <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-                  <FileText className="mx-auto text-slate-400 mb-2" size={40} />
-                  <p className="text-sm font-medium">Selected items will appear here</p>
-                </div>
-              ) : (
-                catalogItems.map(item => (
-                  <div key={item.id} className="group relative rounded-3xl p-3.5 bg-gradient-to-br from-white via-white to-rose-50/20 shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-slate-100/80 flex gap-3 items-center">
-                    <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-slate-100 flex items-center justify-center">
-                      {getImage(item) && <img src={getImage(item)} alt="" className="w-full h-full object-contain" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</p>
-                      <p className="text-xs text-slate-500">{item.barcode}</p>
-                    </div>
-                    <button onClick={() => removeFromCatalog(item.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-xl transition-colors">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-            {catalogItems.length > 0 && (
-              <div className="p-3 border-t border-slate-200/60 bg-white/50 backdrop-blur-sm space-y-2">
-                <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">Print / View Catalog</button>
-                <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">Clear Catalog</button>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerForm(false)}
+                  className="w-full py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors"
+                >
+                  Done — Close
+                </button>
               </div>
             )}
-          </aside>
-        )
-      }
+
+            {orderLines.length > 0 && (
+              <div className="relative mx-3 mb-3 p-4 rounded-3xl bg-gradient-to-br from-white via-white to-orange-50/40 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.02)] overflow-hidden space-y-3">
+                <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 opacity-90" />
+                <div className="flex justify-between items-center py-2 border-b border-slate-200/70">
+                  <span className="text-xs font-medium text-slate-400 tracking-wide">Total Amount (Inc. Tax)</span>
+                  <span className="font-bold text-lg text-orange-500" dir="ltr" lang="en">₪{orderTotal.toFixed(2)}</span>
+                </div>
+                <p className="text-sm text-slate-500 py-2 border-b border-slate-200/70">
+                  <span className="text-[10px] font-medium text-slate-400 tracking-wide">Total Amount in Words</span>
+                  <span className="block mt-1 text-slate-700 font-medium">{amountToEnglishWords(orderTotal)}</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={handleOpenInventory} className="flex-1 min-w-[120px] py-2.5 rounded-2xl bg-gradient-to-b from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-bold shadow-[0_2px_8px_rgba(245,158,11,0.35)] hover:shadow-[0_4px_14px_rgba(245,158,11,0.4)] hover:-translate-y-0.5 transition-all">Selected Items</button>
+                  <button onClick={handlePrintOrder} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-sm font-bold shadow-[0_2px_8px_rgba(249,115,22,0.35)] hover:shadow-[0_4px_14px_rgba(249,115,22,0.4)] hover:-translate-y-0.5 transition-all">Print</button>
+                  <button onClick={handleExportExcel} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(5,150,105,0.35)] hover:shadow-[0_4px_14px_rgba(5,150,105,0.4)] hover:-translate-y-0.5 transition-all">Excel</button>
+                  <button onClick={handleSaveInvoice} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(37,99,235,0.35)] hover:shadow-[0_4px_14px_rgba(37,99,235,0.4)] hover:-translate-y-0.5 transition-all">Save Invoice</button>
+                  <button onClick={() => handlePrintOrder()} className="flex-1 min-w-[80px] py-2.5 rounded-2xl bg-gradient-to-b from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white text-sm font-bold shadow-[0_2px_8px_rgba(71,85,105,0.3)] hover:shadow-[0_4px_14px_rgba(71,85,105,0.35)] hover:-translate-y-0.5 transition-all">PDF</button>
+                </div>
+                <button onClick={clearOrder} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all hover:shadow-inner">Clear Order</button>
+              </div>
+            )}
+          </div>
+        </motion.aside>
+      )}
+    </AnimatePresence>
 
       {
-        selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Product Details</h3>
-                <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">✕</button>
-              </div>
-              <div className="aspect-square max-h-64 rounded-xl bg-slate-50 flex items-center justify-center mb-4 overflow-hidden">
-                {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-6" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={80} className="text-slate-300" />}
-              </div>
-              {selectedItem.group && <p className="text-xs font-semibold text-indigo-600 mb-1">Group: {selectedItem.group}</p>}
-              <p className="text-slate-800 font-bold text-base mb-3 leading-snug">{selectedItem.name}</p>
-              <div className="space-y-2 text-sm">
-                <p className="text-slate-600">Price: <span dir="ltr" className="font-bold text-slate-800 text-base">₪{selectedItem.price ?? 0}</span></p>
-                <p className="text-slate-600">Discounted: <span dir="ltr" className="font-bold text-emerald-600 text-lg">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
-                <p className="text-slate-600">Box: <span className="font-bold text-slate-800 text-base">{selectedItem.box || '—'}</span></p>
-                <p className="text-slate-600">Stock: <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(selectedItem)}</span></p>
-                <p className="text-slate-600 font-mono text-xs break-all">Barcode: <span dir="ltr" className="font-bold text-slate-800">{selectedItem.barcode || '—'}</span></p>
-              </div>
-              <div className="flex gap-2 mt-5">
-                {userRole === 'admin' && (
-                  <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Edit</button>
-                )}
-                {mode === 'catalog' ? (
-                  <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`flex-1 py-3 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-rose-200 text-rose-700 hover:bg-rose-50'}`}>
-                    {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove from Catalog' : 'Add to Catalog'}
-                  </button>
-                ) : (
-                  <button onClick={() => { handleOpenQuantityModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">إضافة إلى السلة</button>
-                )}
-              </div>
+    showCatalogPanel && (
+      <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60 transition-all duration-300">
+        <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
+          <h2 className="text-base font-bold text-slate-800">Catalog <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
+          <button onClick={() => setShowCatalogPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5">
+          {catalogItems.length === 0 ? (
+            <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+              <FileText className="mx-auto text-slate-400 mb-2" size={40} />
+              <p className="text-sm font-medium">Selected items will appear here</p>
             </div>
+          ) : (
+            catalogItems.map(item => (
+              <div key={item.id} className="group relative rounded-3xl p-3.5 bg-gradient-to-br from-white via-white to-rose-50/20 shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-slate-100/80 flex gap-3 items-center">
+                <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+                  {getImage(item) && <img src={getImage(item)} alt="" className="w-full h-full object-contain" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</p>
+                  <p className="text-xs text-slate-500">{item.barcode}</p>
+                </div>
+                <button onClick={() => removeFromCatalog(item.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-xl transition-colors">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+        {catalogItems.length > 0 && (
+          <div className="p-3 border-t border-slate-200/60 bg-white/50 backdrop-blur-sm space-y-2">
+            <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">Print / View Catalog</button>
+            <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">Clear Catalog</button>
           </div>
-        )
-      }
+        )}
+      </aside>
+    )
+  }
 
-      {/* Quantity Modal */}
-      {showQuantityModal && quantityItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
-            <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity</label>
-              <input
-                type="number"
-                min="1"
-                value={quantityValue}
-                onChange={(e) => setQuantityValue(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-                autoFocus
-                onFocus={(e) => e.target.select()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleConfirmQuantity();
-                  }
-                }}
-              />
-              {quantityItem.box && (
-                <p className="text-xs text-slate-500 mt-2 text-center">
-                  Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span>
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowQuantityModal(false)}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
-              >
-                Cancel
+  {
+    selectedItem && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-slate-800">Product Details</h3>
+            <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">✕</button>
+          </div>
+          <div className="aspect-square max-h-64 rounded-xl bg-slate-50 flex items-center justify-center mb-4 overflow-hidden">
+            {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-6" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={80} className="text-slate-300" />}
+          </div>
+          {selectedItem.group && <p className="text-xs font-semibold text-indigo-600 mb-1">Group: {selectedItem.group}</p>}
+          <p className="text-slate-800 font-bold text-base mb-3 leading-snug">{selectedItem.name}</p>
+          <div className="space-y-2 text-sm">
+            <p className="text-slate-600">Price: <span dir="ltr" className="font-bold text-slate-800 text-base">₪{selectedItem.price ?? 0}</span></p>
+            <p className="text-slate-600">Discounted: <span dir="ltr" className="font-bold text-emerald-600 text-lg">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
+            <p className="text-slate-600">Box: <span className="font-bold text-slate-800 text-base">{selectedItem.box || '—'}</span></p>
+            <p className="text-slate-600">Stock: <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(selectedItem)}</span></p>
+            <p className="text-slate-600 font-mono text-xs break-all">Barcode: <span dir="ltr" className="font-bold text-slate-800">{selectedItem.barcode || '—'}</span></p>
+          </div>
+          <div className="flex gap-2 mt-5">
+            {userRole === 'admin' && (
+              <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Edit</button>
+            )}
+            {mode === 'catalog' ? (
+              <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`flex-1 py-3 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-rose-200 text-rose-700 hover:bg-rose-50'}`}>
+                {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove from Catalog' : 'Add to Catalog'}
               </button>
-              <button
-                onClick={handleConfirmQuantity}
-                className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
-              >
-                Add to Cart
-              </button>
-            </div>
+            ) : (
+              <button onClick={() => { handleOpenQuantityModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">إضافة إلى السلة</button>
+            )}
           </div>
         </div>
-      )}
+      </div>
+    )
+  }
 
-      {
-        modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setModalOpen(false)}>
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-slate-800">{editingItem ? 'Edit Price & Qty' : 'Add Item'}</h2>
-                <button onClick={() => setModalOpen(false)} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">✕</button>
-              </div>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <label><span className="text-xs block text-slate-600 font-medium mb-1">Barcode</span><input required value={formData.barcode} onChange={(e) => setFormData((p) => ({ ...p, barcode: e.target.value }))} disabled={!!editingItem} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-shadow" /></label>
-                <label><span className="text-xs block text-slate-600 font-medium mb-1">Name</span><input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                <label><span className="text-xs block text-slate-600 font-medium mb-1">Group</span><input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Qty (Stock)</span><input type="number" value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Box</span><input type="number" value={formData.box_count} onChange={(e) => setFormData((p) => ({ ...p, box_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Price</span><input type="number" step="0.01" value={formData.full_price} onChange={(e) => setFormData((p) => ({ ...p, full_price: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Discounted</span><input type="number" step="0.01" value={formData.price_after_disc} onChange={(e) => setFormData((p) => ({ ...p, price_after_disc: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs block text-slate-600 font-medium">Image</span>
-                  <div className="flex gap-3 items-start">
-                    <div className="relative w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
-                      {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
-                        <img
-                          key={formData.image_url}
-                          src={getPublicImageUrl(formData.image_url)}
-                          alt=""
-                          className="w-full h-full object-contain"
-                          onError={(e) => (e.target.style.display = 'none')}
-                        />
-                      ) : (
-                        <Package size={28} className="text-slate-300" />
-                      )}
-                      {formData.image_url ? (
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          className="absolute bottom-1 right-1 w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow"
-                          title="Delete Image"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <input
-                        type="text"
-                        placeholder="Image path or URL (Optional)"
-                        value={formData.image_url || ''}
-                        onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value.trim() }))}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none"
-                        dir="ltr"
-                      />
-                      <label className={`block cursor-pointer ${uploading ? 'opacity-70' : ''}`}>
-                        <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={(e) => handleImageUpload(e, editingItem || { barcode: formData.barcode })} className="sr-only" />
-                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
-                          {uploading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Upload size={14} className="shrink-0" />}
-                          {uploading ? 'Uploading...' : 'Upload'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                  {!formData.barcode && <p className="text-[11px] text-amber-600">Enter barcode first to enable upload</p>}
-                  <p className="text-[11px] text-slate-500">Paste an image URL above or upload from your device.</p>
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-lg shadow-indigo-500/25 transition-all">Save</button>
-                </div>
-              </form>
-            </div>
+  {/* Quantity Modal */ }
+  {
+    showQuantityModal && quantityItem && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
+        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
+          <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity</label>
+            <input
+              type="number"
+              min="1"
+              value={quantityValue}
+              onChange={(e) => setQuantityValue(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+              autoFocus
+              onFocus={(e) => e.target.select()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleConfirmQuantity();
+                }
+              }}
+            />
+            {quantityItem.box && (
+              <p className="text-xs text-slate-500 mt-2 text-center">
+                Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span>
+              </p>
+            )}
           </div>
-        )
-      }
-      {/* Mobile Bottom Nav */}
-      <BottomNav
-        mode={mode}
-        setMode={setMode}
-        cartCount={orderLines.length}
-        onOpenCart={() => setShowOrderPanel(true)}
-      />
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowQuantityModal(false)}
+              className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmQuantity}
+              className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {
+    modalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setModalOpen(false)}>
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-slate-800">{editingItem ? 'Edit Price & Qty' : 'Add Item'}</h2>
+            <button onClick={() => setModalOpen(false)} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">✕</button>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <label><span className="text-xs block text-slate-600 font-medium mb-1">Barcode</span><input required value={formData.barcode} onChange={(e) => setFormData((p) => ({ ...p, barcode: e.target.value }))} disabled={!!editingItem} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-shadow" /></label>
+            <label><span className="text-xs block text-slate-600 font-medium mb-1">Name</span><input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+            <label><span className="text-xs block text-slate-600 font-medium mb-1">Group</span><input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+            <div className="grid grid-cols-2 gap-2">
+              <label><span className="text-xs block text-slate-600 font-medium mb-1">Qty (Stock)</span><input type="number" value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+              <label><span className="text-xs block text-slate-600 font-medium mb-1">Box</span><input type="number" value={formData.box_count} onChange={(e) => setFormData((p) => ({ ...p, box_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label><span className="text-xs block text-slate-600 font-medium mb-1">Price</span><input type="number" step="0.01" value={formData.full_price} onChange={(e) => setFormData((p) => ({ ...p, full_price: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+              <label><span className="text-xs block text-slate-600 font-medium mb-1">Discounted</span><input type="number" step="0.01" value={formData.price_after_disc} onChange={(e) => setFormData((p) => ({ ...p, price_after_disc: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+            </div>
+            <div className="space-y-2">
+              <span className="text-xs block text-slate-600 font-medium">Image</span>
+              <div className="flex gap-3 items-start">
+                <div className="relative w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
+                  {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
+                    <img
+                      key={formData.image_url}
+                      src={getPublicImageUrl(formData.image_url)}
+                      alt=""
+                      className="w-full h-full object-contain"
+                      onError={(e) => (e.target.style.display = 'none')}
+                    />
+                  ) : (
+                    <Package size={28} className="text-slate-300" />
+                  )}
+                  {formData.image_url ? (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute bottom-1 right-1 w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow"
+                      title="Delete Image"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  ) : null}
+                </div>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Image path or URL (Optional)"
+                    value={formData.image_url || ''}
+                    onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value.trim() }))}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none"
+                    dir="ltr"
+                  />
+                  <label className={`block cursor-pointer ${uploading ? 'opacity-70' : ''}`}>
+                    <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={(e) => handleImageUpload(e, editingItem || { barcode: formData.barcode })} className="sr-only" />
+                    <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                      {uploading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Upload size={14} className="shrink-0" />}
+                      {uploading ? 'Uploading...' : 'Upload'}
+                    </span>
+                  </label>
+                </div>
+              </div>
+              {!formData.barcode && <p className="text-[11px] text-amber-600">Enter barcode first to enable upload</p>}
+              <p className="text-[11px] text-slate-500">Paste an image URL above or upload from your device.</p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">Cancel</button>
+              <button type="submit" className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-lg shadow-indigo-500/25 transition-all">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+  {/* Mobile Bottom Nav */ }
+  <BottomNav
+    mode={mode}
+    setMode={setMode}
+    cartCount={orderLines.length}
+    onOpenCart={() => setShowOrderPanel(true)}
+  />
     </div >
   );
 }
