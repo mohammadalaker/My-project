@@ -1364,20 +1364,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {
         showOrderPanel && (
-          <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-slate-900/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl z-50 transition-all duration-500 text-slate-100">
+          <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-white/95 backdrop-blur-2xl border-l border-slate-200 shadow-2xl z-50 transition-all duration-500 text-slate-800">
             {/* Header / Tabs */}
             <div className="flex-shrink-0 z-20">
               <div className="flex items-center justify-between px-8 py-6">
                 <div>
-                  <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                  <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                     <span>POS</span>
                     <span className="text-orange-500">.</span>
                   </h2>
-                  <div className="text-xs text-slate-400 font-bold tracking-widest uppercase mt-1 opacity-60">
+                  <div className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1 opacity-60">
                     <span>Order #</span><span>NEW-001</span>
                   </div>
                 </div>
-                <button onClick={() => setShowOrderPanel(false)} className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all hover:rotate-90">
+                <button onClick={() => setShowOrderPanel(false)} className="w-12 h-12 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all hover:rotate-90">
                   <X size={24} />
                 </button>
               </div>
@@ -1386,16 +1386,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div className="flex px-8 space-x-4 mb-4">
                 <button
                   onClick={() => setActiveTab('items')}
-                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'items' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'items' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'}`}
                 >
                   <span>Items</span>
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] ${activeTab === 'items' ? 'bg-white/20 text-white' : 'bg-black/20 text-slate-500'}`}>
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] ${activeTab === 'items' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
                     {orderLines.length}
                   </span>
                 </button>
                 <button
                   onClick={() => setActiveTab('customer')}
-                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'customer' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'customer' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'}`}
                 >
                   <span>Customer</span>
                   {orderInfo.companyName && <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-400 rounded-full" />}
@@ -1403,17 +1403,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar-dark bg-gradient-to-b from-transparent to-black/30">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-slate-50/50">
 
               {/* TAB: ITEMS */}
               {activeTab === 'items' && (
                 <div className="p-4 space-y-3">
                   {orderLines.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 opacity-60">
-                      <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-dashed border-white/10">
-                        <Package className="text-slate-500" size={40} strokeWidth={1.5} />
+                      <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-dashed border-slate-200">
+                        <Package className="text-slate-400" size={40} strokeWidth={1.5} />
                       </div>
-                      <span className="text-lg font-bold text-slate-300 mb-2">Cart is Empty</span>
+                      <span className="text-lg font-bold text-slate-400 mb-2">Cart is Empty</span>
                       <span className="text-sm text-slate-500 max-w-[200px] leading-relaxed block">Start scanning or select items from the catalog.</span>
                       <button onClick={() => setMode('catalog')} className="mt-8 px-8 py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20">
                         Open Catalog
@@ -1428,60 +1428,60 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <div key={`order-${o.id}-${idx}`} className="animate-fade-in-right" style={{ animationDelay: `${idx * 40}ms` }}>
                           {showBox && box && (
                             <div className="flex items-center gap-3 my-6 px-1">
-                              <div className="h-px flex-1 bg-white/10"></div>
-                              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Box {box}</span>
-                              <div className="h-px flex-1 bg-white/10"></div>
+                              <div className="h-px flex-1 bg-slate-200"></div>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Box {box}</span>
+                              <div className="h-px flex-1 bg-slate-200"></div>
                             </div>
                           )}
-                          <div className="group relative bg-[#1e293b]/50 hover:bg-[#1e293b] border border-white/5 hover:border-white/10 rounded-3xl p-5 transition-all duration-300 hover:shadow-2xl hover:shadow-black/20 hover:scale-[1.02]">
+                          <div className="group relative bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:scale-[1.02]">
                             <div className="flex gap-4">
-                              <div className="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center shrink-0 overflow-hidden border border-white/5 relative">
+                              <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100 relative">
                                 {getImage(o.item) ? (
                                   <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
                                 ) : (
-                                  <Package size={24} className="text-slate-700" />
+                                  <Package size={24} className="text-slate-300" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start gap-3">
-                                  <h4 className="text-base font-bold text-slate-100 line-clamp-2 leading-snug">{o.item?.name}</h4>
-                                  <button onClick={() => removeFromOrder(o.id)} className="text-slate-500 hover:text-rose-400 transition-colors bg-white/5 p-2.5 rounded-xl hover:bg-rose-500/20 -mt-2 -mr-2">
+                                  <h4 className="text-base font-bold text-slate-800 line-clamp-2 leading-snug">{o.item?.name}</h4>
+                                  <button onClick={() => removeFromOrder(o.id)} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2">
                                     <Trash2 size={16} />
                                   </button>
                                 </div>
                                 <p className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2">
-                                  <span className="bg-white/5 px-1.5 py-0.5 rounded text-slate-400">{o.item?.barcode}</span>
-                                  {o.item?.group && <span className="text-slate-600">• {o.item?.group}</span>}
+                                  <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">{o.item?.barcode}</span>
+                                  {o.item?.group && <span className="text-slate-400">• {o.item?.group}</span>}
                                 </p>
 
                                 <div className="flex items-center justify-between mt-4">
-                                  {/* Dark Qty Control */}
-                                  <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-white/5 shadow-inner">
+                                  {/* Qty Control */}
+                                  <div className="flex items-center bg-slate-50 rounded-lg p-0.5 border border-slate-200 shadow-sm">
                                     <button
                                       onClick={() => setOrderQty(o.id, Math.max(1, o.qty - 1))}
-                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white rounded-md transition-colors"
                                     >-</button>
                                     <input
-                                      className="w-12 bg-transparent text-center text-sm font-bold text-white outline-none"
+                                      className="w-12 bg-transparent text-center text-sm font-bold text-slate-700 outline-none"
                                       value={o.qty}
                                       onChange={(e) => setOrderQty(o.id, e.target.value)}
                                     />
                                     <button
                                       onClick={() => setOrderQty(o.id, parseInt(o.qty) + 1)}
-                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white rounded-md transition-colors"
                                     >+</button>
                                   </div>
 
                                   <div className="text-right">
                                     {getLineDiscountPercent(o) > 0 && (
                                       <div className="flex items-center justify-end gap-1.5 mb-0.5">
-                                        <span className="text-[10px] text-slate-500 line-through decoration-slate-600">₪{getLineOriginalPrice(o)}</span>
-                                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1 rounded font-bold">-{getLineDiscountPercent(o)}%</span>
+                                        <span className="text-[10px] text-slate-400 line-through decoration-slate-400">₪{getLineOriginalPrice(o)}</span>
+                                        <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded font-bold">-{getLineDiscountPercent(o)}%</span>
                                       </div>
                                     )}
                                     <div className="flex items-baseline justify-end gap-0.5">
-                                      <span className="text-xs text-orange-500/70 font-bold">₪</span>
-                                      <span className="text-orange-400 font-black text-lg tracking-tight shadow-orange-500/50 drop-shadow-[0_0_8px_rgba(249,115,22,0.3)]">
+                                      <span className="text-xs text-orange-600/70 font-bold">₪</span>
+                                      <span className="text-orange-600 font-black text-lg tracking-tight">
                                         {getLineTotal(o).toFixed(2)}
                                       </span>
                                     </div>
@@ -1500,14 +1500,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {/* TAB: CUSTOMER */}
               {activeTab === 'customer' && (
                 <div className="p-6 animate-fade-in space-y-8">
-                  <div className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/10 rounded-3xl p-6 flex items-start gap-5 relative overflow-hidden">
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-100 rounded-3xl p-6 flex items-start gap-5 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                    <div className="w-12 h-12 rounded-2xl bg-orange-500/20 flex items-center justify-center shrink-0 border border-orange-500/20 text-orange-400">
+                    <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center shrink-0 border border-orange-200 text-orange-600">
                       <span className="text-xl">👤</span>
                     </div>
                     <div className="relative z-10">
-                      <p className="text-base font-bold text-orange-100">Customer Details</p>
-                      <p className="text-xs text-orange-200/50 mt-1 leading-relaxed">Details entered here will appear on the final invoice/receipt.</p>
+                      <p className="text-base font-bold text-orange-900">Customer Details</p>
+                      <p className="text-xs text-orange-800/60 mt-1 leading-relaxed">Details entered here will appear on the final invoice/receipt.</p>
                     </div>
                   </div>
 
@@ -1517,7 +1517,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <input
                         value={orderInfo.companyName}
                         onChange={(e) => setOrderInfoField('companyName', e.target.value)}
-                        className="w-full bg-[#1e293b]/50 hover:bg-[#1e293b] focus:bg-[#1e293b] border border-white/5 hover:border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-slate-500 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all shadow-inner"
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-2xl px-5 py-4 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
                         placeholder="Enter Name..."
                       />
                     </div>
@@ -1527,7 +1527,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <input
                         value={orderInfo.phone}
                         onChange={(e) => setOrderInfoField('phone', e.target.value)}
-                        className="w-full bg-[#1e293b]/50 hover:bg-[#1e293b] focus:bg-[#1e293b] border border-white/5 hover:border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-slate-500 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all font-mono shadow-inner"
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-2xl px-5 py-4 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono shadow-sm"
                         placeholder="050..."
                       />
                     </div>
@@ -1539,7 +1539,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           type="date"
                           value={orderInfo.orderDate}
                           onChange={(e) => setOrderInfoField('orderDate', e.target.value)}
-                          className="w-full bg-white/[0.03] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all"
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3.5 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1547,7 +1547,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <input
                           value={orderInfo.customerNumber}
                           onChange={(e) => setOrderInfoField('customerNumber', e.target.value)}
-                          className="w-full bg-white/[0.03] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all"
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
                           placeholder="#"
                         />
                       </div>
@@ -1558,7 +1558,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <input
                         value={orderInfo.address}
                         onChange={(e) => setOrderInfoField('address', e.target.value)}
-                        className="w-full bg-white/[0.03] hover:bg-white/[0.06] focus:bg-white/[0.08] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-600 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 outline-none transition-all"
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3.5 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
                         placeholder="City, Street..."
                       />
                     </div>
@@ -1568,40 +1568,40 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
 
             {/* Sticky Order Totals */}
-            <div className="flex-shrink-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/5 p-8 shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-20">
+            <div className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-8 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
               <div className="flex justify-between items-end mb-5">
                 <div>
                   <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mb-1"><span>Total Amount</span></p>
-                  <p className="text-4xl font-black text-white tracking-tighter drop-shadow-lg">
-                    <span className="text-2xl text-slate-500 mr-1">₪</span>
+                  <p className="text-4xl font-black text-slate-800 tracking-tighter drop-shadow-sm">
+                    <span className="text-2xl text-slate-400 mr-1">₪</span>
                     <span>{itemTotalWithTax(orderLines).toFixed(2)}</span>
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-slate-500 text-[10px] font-medium uppercase tracking-widest mb-1">Items Included</p>
-                  <div className="inline-flex items-center px-3 py-1 bg-white/10 rounded-lg border border-white/5">
-                    <span className="text-lg font-bold text-slate-200">{orderLines.length}</span>
+                  <div className="inline-flex items-center px-3 py-1 bg-slate-100 rounded-lg border border-slate-200">
+                    <span className="text-lg font-bold text-slate-700">{orderLines.length}</span>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-4 gap-3">
-                <button onClick={handlePrintOrder} className="col-span-2 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold rounded-2xl shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-3">
+                <button onClick={handlePrintOrder} className="col-span-2 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-3">
                   <span className="text-xl">🖨️</span> <span>Print Order</span>
                 </button>
-                <button onClick={handleSaveInvoice} className="col-span-1 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl border border-white/10 transition-all hover:border-white/20">
+                <button onClick={handleSaveInvoice} className="col-span-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
                   <span>Save</span>
                 </button>
-                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="col-span-1 py-4 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold rounded-2xl border border-white/10 transition-all hover:border-white/20">
+                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="col-span-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
                   <span>{activeTab === 'items' ? 'Next >' : '< Back'}</span>
                 </button>
               </div>
 
-              <div className="flex justify-between mt-4 px-1 opacity-70 hover:opacity-100 transition-opacity">
-                <button onClick={clearOrder} className="text-[10px] font-bold text-rose-500 hover:text-rose-400 uppercase tracking-widest transition-colors flex items-center gap-2">
+              <div className="flex justify-between mt-4 px-1 opacity-90 hover:opacity-100 transition-opacity">
+                <button onClick={clearOrder} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 uppercase tracking-widest transition-colors flex items-center gap-2">
                   <Trash2 size={12} /> <span>Clear Order</span>
                 </button>
-                <button onClick={handleExportExcel} className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-widest transition-colors"><span>Export Excel</span></button>
+                <button onClick={handleExportExcel} className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest transition-colors"><span>Export Excel</span></button>
               </div>
             </div>
           </aside>
