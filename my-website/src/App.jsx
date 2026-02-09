@@ -302,9 +302,11 @@ function App() {
   );
 
   useEffect(() => {
-    const debounce = setTimeout(() => {
+    if (!search.trim()) {
       fetchItems(true);
-    }, 300); // Increased debounce to 300ms for better performance
+      return;
+    }
+    const debounce = setTimeout(() => fetchItems(true), 200);
     return () => clearTimeout(debounce);
   }, [search]);
 
