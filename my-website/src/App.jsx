@@ -1261,6 +1261,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <Package size={48} className="text-slate-200" />
                                   </div>
 
+                                  {getStockStatus(item) === 'Out of Stock' && (
+                                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/10 backdrop-blur-[1px] rounded-2xl overflow-hidden">
+                                      <div className="absolute inset-0 bg-white/30" />
+                                      <div className="relative -rotate-12 transform">
+                                        <div className="bg-rose-500 text-white text-[10px] font-black py-1.5 px-4 shadow-xl uppercase tracking-[0.2em] border-y-2 border-white/20">
+                                          Out of Stock
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {userRole === 'admin' && (
                                     <button
                                       type="button"
@@ -1365,25 +1376,29 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         </div>
       </div>
 
-      {!showOrderPanel && mode === 'order' && (
-        <button
-          onClick={() => setShowOrderPanel(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
-          style={{ writingMode: 'vertical-rl' }}
-        >
-          Open Cart
-        </button>
-      )}
+      {
+        !showOrderPanel && mode === 'order' && (
+          <button
+            onClick={() => setShowOrderPanel(true)}
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
+            style={{ writingMode: 'vertical-rl' }}
+          >
+            Open Cart
+          </button>
+        )
+      }
 
-      {!showCatalogPanel && mode === 'catalog' && (
-        <button
-          onClick={() => setShowCatalogPanel(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
-          style={{ writingMode: 'vertical-rl' }}
-        >
-          View Catalog
-        </button>
-      )}
+      {
+        !showCatalogPanel && mode === 'catalog' && (
+          <button
+            onClick={() => setShowCatalogPanel(true)}
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
+            style={{ writingMode: 'vertical-rl' }}
+          >
+            View Catalog
+          </button>
+        )
+      }
 
       {
         showOrderPanel && (
@@ -1719,53 +1734,55 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
 
       {/* Quantity Modal */}
-      {showQuantityModal && quantityItem && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
-            <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
+      {
+        showQuantityModal && quantityItem && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
+            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
+              <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
 
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity</label>
-              <input
-                type="number"
-                min="1"
-                value={quantityValue}
-                onChange={(e) => setQuantityValue(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-                autoFocus
-                onFocus={(e) => e.target.select()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleConfirmQuantity();
-                  }
-                }}
-              />
-              {quantityItem.box && (
-                <p className="text-xs text-slate-500 mt-2 text-center">
-                  Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span>
-                </p>
-              )}
-            </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={quantityValue}
+                  onChange={(e) => setQuantityValue(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                  autoFocus
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleConfirmQuantity();
+                    }
+                  }}
+                />
+                {quantityItem.box && (
+                  <p className="text-xs text-slate-500 mt-2 text-center">
+                    Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span>
+                  </p>
+                )}
+              </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowQuantityModal(false)}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmQuantity}
-                className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
-              >
-                Add to Cart
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowQuantityModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmQuantity}
+                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
+                >
+                  Add to Cart
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {
         modalOpen && (
