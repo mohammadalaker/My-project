@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition } from 'react';
 import {
   Search,
   Plus,
@@ -29,7 +29,7 @@ import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 
 const BUCKET = 'Pic_of_items';
-const PAGE_SIZE = 250;
+const PAGE_SIZE = 80;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /** Safe date format so changing browser language never crashes the app. */
@@ -225,19 +225,31 @@ function App() {
   const [quantityItem, setQuantityItem] = useState(null);
   const [quantityValue, setQuantityValue] = useState(1);
 
+  const [isPending, startTransition] = useTransition();
+
   const setOrderInfoField = (key, value) =>
     setOrderInfo((prev) => ({ ...prev, [key]: value }));
+
+  const abortControllerRef = useRef(null);
 
   const fetchItems = useCallback(
     async (reset = false) => {
       const from = reset ? 0 : page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
+      // Cancel previous request if it's still running
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       if (!reset && fetchingFromRef.current === from) return;
       fetchingFromRef.current = from;
 
       if (reset) setLoading(true);
       else setLoadingMore(true);
+
       try {
         let query = supabase
           .from('items')
@@ -245,13 +257,20 @@ function App() {
           .order('brand_group', { ascending: true })
           .order('eng_name', { ascending: true })
           .range(from, to);
+
         if (search.trim()) {
           query = query.or(
             `eng_name.ilike.%${search.trim()}%,barcode.ilike.%${search.trim()}%`
           );
         }
+
+        // Supabase v2 doesn't always support abortSignal in all builds nicely, 
+        // but checking signal after await is safe.
         const { data, error } = await query;
+
+        if (controller.signal.aborted) return;
         if (error) throw error;
+
         const normalized = (data || []).map(normalizeItemFromSupabase).filter(Boolean);
         if (reset) {
           setItems(normalized);
@@ -268,25 +287,28 @@ function App() {
         setHasMore(more);
         if (more) setPage((p) => p + 1);
       } catch (err) {
+        if (err.name === 'AbortError') return;
         console.error('Supabase fetch error:', err);
-        setItems([]);
+        if (reset && !controller.signal.aborted) setItems([]);
       } finally {
-        fetchingFromRef.current = null;
-        setLoading(false);
-        setLoadingMore(false);
+        if (!controller.signal.aborted) {
+          fetchingFromRef.current = null;
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [page, search]
   );
 
   useEffect(() => {
-    const debounce = setTimeout(() => fetchItems(true), 80);
+    const debounce = setTimeout(() => {
+      fetchItems(true);
+    }, 300); // Increased debounce to 300ms for better performance
     return () => clearTimeout(debounce);
   }, [search]);
 
-  useEffect(() => {
-    if (!search && page === 0) fetchItems(true);
-  }, []);
+  // Removed redundant initial fetch useEffect since the search effect runs on mount with empty search string
 
   useEffect(() => {
     if (page > 0) fetchItems(false);
@@ -308,28 +330,35 @@ function App() {
       (entries) => {
         if (entries[0]?.isIntersecting) loadMore();
       },
-      { root: root || null, rootMargin: '200px', threshold: 0.1 }
+      { root: root || null, rootMargin: '400px', threshold: 0.05 }
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, [hasMore, loadingMore, items.length]);
 
-  const filteredByGroup =
-    selectedGroup == null
-      ? items
-      : selectedGroup === '__electrical__'
-        ? items.filter((i) => isElectricalGroup(i.group))
-        : selectedGroup === '__home__'
-          ? items.filter((i) => !isElectricalGroup(i.group))
-          : items.filter((i) => i.group === selectedGroup);
+  const filteredByGroup = useMemo(
+    () =>
+      selectedGroup == null
+        ? items
+        : selectedGroup === '__electrical__'
+          ? items.filter((i) => isElectricalGroup(i.group))
+          : selectedGroup === '__home__'
+            ? items.filter((i) => !isElectricalGroup(i.group))
+            : items.filter((i) => i.group === selectedGroup),
+    [items, selectedGroup]
+  );
 
-  const filteredItems = search.trim()
-    ? filteredByGroup.filter(
-      (i) =>
-        (i.name || '').toLowerCase().includes(search.trim().toLowerCase()) ||
-        (i.barcode || '').toString().includes(search.trim())
-    )
-    : filteredByGroup;
+  const filteredItems = useMemo(
+    () =>
+      search.trim()
+        ? filteredByGroup.filter(
+          (i) =>
+            (i.name || '').toLowerCase().includes(search.trim().toLowerCase()) ||
+            (i.barcode || '').toString().includes(search.trim())
+        )
+        : filteredByGroup,
+    [filteredByGroup, search]
+  );
 
   const allGroups = [...new Set(items.map((i) => i.group).filter(Boolean))].sort((a, b) =>
     String(a).localeCompare(String(b))
@@ -387,32 +416,37 @@ function App() {
 
 
   const addToOrder = useCallback((item, qty = 1) => {
-    setOrderItems((prev) => {
-      const unitPrice = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
-      const box = item.box != null && String(item.box).trim() ? String(item.box).trim() : null;
-      const qtyFromBox =
-        box && !isNaN(Number(box)) ? Math.max(1, Math.round(Number(box))) : 1;
-      const i = prev.findIndex((x) => x.id === item.id);
-      if (i >= 0) {
-        const next = [...prev];
-        next[i] = { ...next[i], qty: next[i].qty + qty };
-        return next;
-      }
-      return [
-        ...prev,
-        { id: item.id, qty: qty, unitPrice, box, item },
-      ];
+    startTransition(() => {
+      setOrderItems((prev) => {
+        const unitPrice = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
+        const box = item.box != null && String(item.box).trim() ? String(item.box).trim() : null;
+        const qtyFromBox =
+          box && !isNaN(Number(box)) ? Math.max(1, Math.round(Number(box))) : 1;
+        const i = prev.findIndex((x) => x.id === item.id);
+        if (i >= 0) {
+          const next = [...prev];
+          next[i] = { ...next[i], qty: next[i].qty + qty };
+          return next;
+        }
+        return [
+          ...prev,
+          { id: item.id, qty: qty, unitPrice, box, item },
+        ];
+      });
     });
-  }, []);
+  }, [startTransition]);
 
-  const removeFromOrder = (itemId) =>
-    setOrderItems((prev) => prev.filter((x) => x.id !== itemId));
+  const removeFromOrder = useCallback((itemId) => {
+    startTransition(() => setOrderItems((prev) => prev.filter((x) => x.id !== itemId)));
+  }, [startTransition]);
 
-  const setOrderQty = (itemId, qty) => {
+  const setOrderQty = useCallback((itemId, qty) => {
     const n = Math.max(0, parseInt(qty, 10) || 0);
-    if (n === 0) setOrderItems((prev) => prev.filter((x) => x.id !== itemId));
-    else setOrderItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, qty: n } : x)));
-  };
+    startTransition(() => {
+      if (n === 0) setOrderItems((prev) => prev.filter((x) => x.id !== itemId));
+      else setOrderItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, qty: n } : x)));
+    });
+  }, [startTransition]);
 
   const setOrderLinePrice = (itemId, value) => {
     const n = parseFloat(String(value).replace(',', '.')) || 0;
@@ -1044,9 +1078,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {/* Hero Section */}
               {!loading && !showOrderPanel && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
-                  <h2 className="text-4xl sm:text-5xl font-black text-slate-800 mb-4 tracking-tight">
-                    Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-violet-600">{userRole === 'admin' ? 'Admin' : 'Partner'}</span>
-                  </h2>
+
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
                     Select items to create a new order or manage your catalog.
@@ -1193,6 +1225,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <img
                                       src={getImage(item)}
                                       alt={item.name}
+                                      loading="lazy"
+                                      decoding="async"
                                       className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
                                       onError={(e) => {
                                         e.target.style.display = 'none';
@@ -1403,7 +1437,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             <div className="flex gap-4">
                               <div className="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center shrink-0 overflow-hidden border border-white/5 relative">
                                 {getImage(o.item) ? (
-                                  <img src={getImage(o.item)} alt="" className="w-full h-full object-contain p-2" />
+                                  <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
                                 ) : (
                                   <Package size={24} className="text-slate-700" />
                                 )}
@@ -1591,7 +1625,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 catalogItems.map(item => (
                   <div key={item.id} className="group relative rounded-3xl p-3.5 bg-gradient-to-br from-white via-white to-rose-50/20 shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-slate-100/80 flex gap-3 items-center">
                     <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-sm border border-slate-100 flex items-center justify-center">
-                      {getImage(item) && <img src={getImage(item)} alt="" className="w-full h-full object-contain" />}
+                      {getImage(item) && <img src={getImage(item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</p>
