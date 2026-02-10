@@ -522,7 +522,7 @@ function App() {
         }
         return [
           ...prev,
-          { id: item.id, qty: qty, unitPrice, box, item },
+          { id: item.id, qty: qty, unitPrice, box, item, customName: item.name },
         ];
       });
     });
@@ -545,6 +545,14 @@ function App() {
     setOrderItems((prev) =>
       prev.map((x) =>
         x.id === itemId ? { ...x, unitPrice: Math.max(0, Math.round(n)) } : x
+      )
+    );
+  };
+
+  const setOrderLineName = (itemId, value) => {
+    setOrderItems((prev) =>
+      prev.map((x) =>
+        x.id === itemId ? { ...x, customName: value } : x
       )
     );
   };
@@ -589,7 +597,8 @@ function App() {
         const imgHtml = imgSrc
           ? `<img src="${String(imgSrc).replace(/"/g, '&quot;')}" alt="" style="width:40px;height:40px;object-fit:contain;" />`
           : '';
-        return `<tr><td>${imgHtml}</td><td dir="ltr" lang="en">${(o.item?.barcode || '').replace(/</g, '&lt;')}</td><td dir="ltr" lang="en">${o.qty}</td><td dir="ltr" lang="en">₪${price}</td><td dir="ltr" lang="en">₪${unitPrice}</td><td dir="ltr" lang="en">${discPercent}%</td><td dir="ltr" lang="en">₪${total.toFixed(2)}</td></tr>`;
+        const displayName = (o.customName || o.item?.name || '').replace(/</g, '&lt;');
+        return `<tr><td>${imgHtml}</td><td dir="ltr" lang="en">${(o.item?.barcode || '').replace(/</g, '&lt;')}</td><td>${displayName}</td><td dir="ltr" lang="en">${o.qty}</td><td dir="ltr" lang="en">₪${price}</td><td dir="ltr" lang="en">₪${unitPrice}</td><td dir="ltr" lang="en">${discPercent}%</td><td dir="ltr" lang="en">₪${total.toFixed(2)}</td></tr>`;
       })
       .join('');
     const infoRows = [
@@ -612,7 +621,7 @@ function App() {
 <div class="section-title">Customer Information</div>
 <table class="info-table"><tbody>${infoRows}</tbody></table>
 <div class="section-title">Item Details</div>
-<table class="data-table"><thead><tr><th>Image</th><th>Barcode</th><th>Qty</th><th>Price</th><th>Discounted</th><th>Discount %</th><th>Total</th></tr></thead><tbody>${rows}<tr class="total-row"><td colspan="5"></td><td>Total</td><td dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</td></tr></tbody></table></body></html>`;
+<table class="data-table"><thead><tr><th>Image</th><th>Barcode</th><th>Name</th><th>Qty</th><th>Price</th><th>Discounted</th><th>Discount %</th><th>Total</th></tr></thead><tbody>${rows}<tr class="total-row"><td colspan="6"></td><td>Total</td><td dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</td></tr></tbody></table></body></html>`;
   }, [orderLines, orderTotal, orderInfo]);
 
   const getInventoryHtml = useCallback(() => {
@@ -732,7 +741,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         total_amount: orderTotal,
         items: orderLines.map(line => ({
           barcode: line.item.barcode,
-          name: line.item.name,
+          name: line.customName || line.item.name,
           qty: line.qty,
           price: getLineUnitPrice(line),
           total: getLineTotal(line)
@@ -872,7 +881,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const sortedLines = sortByBarcodeOrder(orderLines, BARCODE_ORDER);
     sortedLines.forEach((o, i) => {
       const discPct = getLineDiscountPercent(o);
-      ws.getCell(r, 1).value = (o.item?.name || '').slice(0, 50);
+      ws.getCell(r, 1).value = (o.customName || o.item?.name || '').slice(0, 50);
       ws.getCell(r, 2).value = o.item?.barcode || '';
       ws.getCell(r, 3).value = o.qty;
       ws.getCell(r, 4).value = Number(o.item?.price) ?? 0;
@@ -1788,8 +1797,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start gap-3">
-                                  <h4 className="text-base font-bold text-slate-800 line-clamp-2 leading-snug">{o.item?.name}</h4>
-                                  <button onClick={() => removeFromOrder(o.id)} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2">
+                                  <input
+                                    className="text-base font-bold text-slate-800 leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400"
+                                    value={o.customName || o.item?.name || ''}
+                                    onChange={(e) => setOrderLineName(o.id, e.target.value)}
+                                    placeholder="Product Name"
+                                  />
+                                  <button onClick={() => removeFromOrder(o.id)} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
                                     <Trash2 size={16} />
                                   </button>
                                 </div>
