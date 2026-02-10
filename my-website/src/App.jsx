@@ -310,6 +310,39 @@ function App() {
   const [quantityItem, setQuantityItem] = useState(null);
   const [quantityValue, setQuantityValue] = useState(1);
 
+  // Quick Name Edit State
+  const [editingNameItem, setEditingNameItem] = useState(null);
+  const [newName, setNewName] = useState('');
+
+  const openNameEditModal = (item) => {
+    setEditingNameItem(item);
+    setNewName(item.name || '');
+  };
+
+  const saveNameEdit = async () => {
+    if (!editingNameItem || !newName.trim()) return;
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({ eng_name: newName.trim() })
+        .eq('barcode', editingNameItem.barcode);
+
+      if (error) throw error;
+
+      // Update local state
+      setItems((prev) =>
+        prev.map((i) =>
+          i.barcode === editingNameItem.barcode ? { ...i, name: newName.trim() } : i
+        )
+      );
+      setEditingNameItem(null);
+      setNewName('');
+    } catch (err) {
+      alert('Failed to update name: ' + err.message);
+    }
+  };
+
+
   const [isPending, startTransition] = useTransition();
 
   const setOrderInfoField = (key, value) =>
@@ -1599,7 +1632,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 </div>
 
                                 <div className="p-5 flex-1 flex flex-col">
-                                  <h3 className="font-bold text-slate-800 leading-tight mb-1 line-clamp-2 min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
+                                  <div className="flex justify-between items-start gap-2 mb-1">
+                                    <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
+                                    {userRole === 'admin' && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0 -mt-1 -mr-1"
+                                        title="Quick Edit Name"
+                                      >
+                                        <FileText size={16} />
+                                      </button>
+                                    )}
+                                  </div>
                                   <p className="text-sm font-mono text-slate-500 mb-4">{item.barcode}</p>
 
                                   <div className="mt-auto space-y-3">
@@ -2197,6 +2241,39 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   <button type="submit" className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-lg shadow-indigo-500/25 transition-all">Save</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )
+      }
+      {
+        editingNameItem && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditingNameItem(null)}>
+            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-slate-800 mb-4">Edit Product Name</h3>
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all mb-6"
+                placeholder="Enter product name"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveNameEdit();
+                }}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditingNameItem(null)}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveNameEdit}
+                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         )
