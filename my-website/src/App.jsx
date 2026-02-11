@@ -28,6 +28,7 @@ import {
   FileText,
   Grid,
   Clock,
+  ArrowUpDown,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -220,6 +221,7 @@ function App() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderActionLoading, setOrderActionLoading] = useState(false);
   const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted'
+  const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
 
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -1333,26 +1335,36 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     Select items to create a new order or manage your catalog.
                   </p>
 
-                  {/* Search Bar */}
-                  <div className="w-full max-w-md mt-8 relative group z-20">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
+                  {/* Search Bar & Sort */}
+                  <div className="w-full max-w-2xl mt-8 flex flex-col sm:flex-row items-center gap-4 z-20">
+                    <div className="relative group w-full flex-1">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
+                      </div>
+                      <input
+                        type="text"
+                        className="block w-full pl-11 pr-4 py-4 bg-white/80 border-0 ring-1 ring-slate-200/60 rounded-2xl text-slate-900 placeholder:text-slate-400 shadow-lg shadow-indigo-500/5 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all duration-300 text-lg"
+                        placeholder="Search product name or barcode..."
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                      />
+                      {search && (
+                        <button
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-500 transition-colors"
+                          onClick={() => setSearch('')}
+                        >
+                          <X size={20} />
+                        </button>
+                      )}
                     </div>
-                    <input
-                      type="text"
-                      className="block w-full pl-11 pr-4 py-4 bg-white/80 border-0 ring-1 ring-slate-200/60 rounded-2xl text-slate-900 placeholder:text-slate-400 shadow-lg shadow-indigo-500/5 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all duration-300 text-lg"
-                      placeholder="Search products..."
-                      value={search}
-                      onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                    />
-                    {search && (
-                      <button
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-500 transition-colors"
-                        onClick={() => setSearch('')}
-                      >
-                        <X size={20} />
-                      </button>
-                    )}
+
+                    <button
+                      onClick={() => setSortMode(s => s === 'barcode' ? 'name' : 'barcode')}
+                      className="px-6 py-4 rounded-2xl bg-white/80 hover:bg-white text-slate-600 font-bold shadow-lg shadow-indigo-500/5 hover:shadow-indigo-500/10 transition-all flex items-center gap-3 shrink-0 ring-1 ring-slate-200/60 hover:ring-indigo-500/50"
+                    >
+                      <ArrowUpDown size={20} className={sortMode === 'name' ? 'text-indigo-600' : 'text-slate-400'} />
+                      <span>{sortMode === 'barcode' ? 'By Name' : 'By Barcode'}</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -1677,7 +1689,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       { title: 'Electrical Appliances', items: filteredItems.filter((i) => isElectricalGroup(i.group)), color: 'indigo', icon: Zap },
                       { title: 'Kitchenware', items: filteredItems.filter((i) => !isElectricalGroup(i.group)), color: 'sky', icon: UtensilsCrossed },
                     ].map(({ title, items: sectionItems, color, icon: Icon }) => {
-                      const sorted = sortByBarcodeOrder(sectionItems, BARCODE_ORDER);
+                      const sorted = sortMode === 'barcode'
+                        ? sortByBarcodeOrder(sectionItems, BARCODE_ORDER)
+                        : [...sectionItems].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' }));
                       if (sorted.length === 0) return null;
                       return (
                         <section key={title} className="animate-fade-in">
