@@ -29,6 +29,7 @@ import {
   Grid,
   Clock,
   ArrowUpDown,
+  Star,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -120,7 +121,7 @@ function amountToEnglishWords(amount) {
   return str + ' Only';
 }
 
-const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url';
+const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer';
 
 function normalizeItemFromSupabase(row) {
   if (!row) return null;
@@ -135,6 +136,7 @@ function normalizeItemFromSupabase(row) {
     priceAfterDiscount: Number(row.price_after_disc) || Number(row.full_price) || 0,
     stock: row.stock_count,
     image: (row.image_url ?? '').toString().trim() || null,
+    isOffer: !!row.is_offer,
   };
 }
 
@@ -368,6 +370,21 @@ function App() {
   const setOrderInfoField = (key, value) =>
     setOrderInfo((prev) => ({ ...prev, [key]: value }));
 
+
+
+  const toggleOffer = async (item) => {
+    const newVal = !item.isOffer;
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isOffer: newVal } : i)));
+    try {
+      const { error } = await supabase.from('items').update({ is_offer: newVal }).eq('barcode', item.barcode);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error toggling offer:', err);
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isOffer: !newVal } : i)));
+      alert('Failed to update offer status. Check if is_offer column exists.');
+    }
+  };
+
   const abortControllerRef = useRef(null);
 
   const fetchItems = useCallback(async () => {
@@ -413,15 +430,21 @@ function App() {
   );
 
   const filteredItems = useMemo(
-    () =>
-      search.trim()
-        ? filteredByGroup.filter(
+    () => {
+      let list = filteredByGroup;
+      // In offers mode, non-admins see only offers. Admins see all (to manage them).
+      if (mode === 'offers' && userRole !== 'admin') {
+        list = list.filter((i) => i.isOffer);
+      }
+      return search.trim()
+        ? list.filter(
           (i) =>
             (i.name || '').toLowerCase().includes(search.trim().toLowerCase()) ||
             (i.barcode || '').toString().includes(search.trim())
         )
-        : filteredByGroup,
-    [filteredByGroup, search]
+        : list;
+    },
+    [filteredByGroup, search, mode, userRole]
   );
 
   const allGroups = useMemo(
@@ -1303,6 +1326,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   >
                     Sales
                   </button>
+                  <button
+                    onClick={() => setMode('offers')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'offers' ? 'bg-white shadow-md text-amber-500 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Offers
+                  </button>
                   {userRole !== 'customer' && (
                     <button
                       onClick={() => setMode('catalog')}
@@ -1741,6 +1770,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
                                         Out of Stock
                                       </div>
+                                    </div>
+                                  )}
+
+                                  {/* Offer Toggle (Admin Only in Offers Mode) */}
+                                  {mode === 'offers' && userRole === 'admin' && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); toggleOffer(item); }}
+                                      className={`absolute top-2 right-2 z-20 p-1.5 rounded-full shadow-md transition-all ${item.isOffer ? 'bg-amber-500 text-white' : 'bg-white text-slate-300 hover:bg-slate-50'}`}
+                                      title="Toggle Offer"
+                                    >
+                                      <Star size={16} fill={item.isOffer ? 'currentColor' : 'none'} />
+                                    </button>
+                                  )}
+
+                                  {/* Offer Badge (Visible when not in Offers mode or for non-admins) */}
+                                  {item.isOffer && (mode !== 'offers' || userRole !== 'admin') && (
+                                    <div className={`absolute right-2 z-10 ${getStockStatus(item) === 'Out of Stock' ? 'top-10' : 'top-2'}`}>
+                                      <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                                        <Star size={10} fill="currentColor" /> Offer
+                                      </span>
                                     </div>
                                   )}
 

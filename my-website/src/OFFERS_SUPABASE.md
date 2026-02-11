@@ -1,0 +1,11 @@
+# SQL for Offers Feature
+
+Please run the following SQL in your Supabase SQL Editor to enable the "Offers" feature:
+
+```sql
+-- Add is_offer column to items table if it doesn't exist
+ALTER TABLE items ADD COLUMN IF NOT EXISTS is_offer BOOLEAN DEFAULT FALSE;
+
+-- Create an index for faster filtering (optional but recommended)
+CREATE INDEX IF NOT EXISTS idx_items_is_offer ON items(is_offer);
+```
