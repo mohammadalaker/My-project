@@ -4,6 +4,17 @@
 
 ---
 
+# 🚨 هام: إذا ظهر خطأ `column orders.status does not exist`
+
+هذا يعني أن قاعدة البيانات ينقصها عمود `status` الذي يستخدم للفلترة (الموافقة/الأرشفة).
+**لحل المشكلة، انسخ هذا الكود وشغله في Supabase SQL Editor:**
+
+```sql
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT NULL;
+```
+
+---
+
 ## 1. إنشاء جدول `orders`
 
 في Supabase: **SQL Editor** → New query → الصق التشغيل التالي ثم **Run**:

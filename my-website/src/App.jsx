@@ -227,12 +227,29 @@ function App() {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
+      .neq('status', 'completed')
       .order('created_at', { ascending: false });
+    setOrdersLoading(false);
     setOrdersLoading(false);
     if (error) {
       console.error('Orders fetch error:', error);
-      setSubmittedOrders([]);
       const msg = error.message || '';
+
+      // Fallback: If 'status' column missing, retry without filter
+      if (msg.includes('column orders.status does not exist')) {
+        console.warn('Status column missing, fetching all orders...');
+        const { data: retryData, error: retryError } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!retryError) {
+          setSubmittedOrders(retryData ?? []);
+          return;
+        }
+      }
+
+      setSubmittedOrders([]);
       const tableNotFound = /schema cache|could not find.*table.*orders/i.test(msg);
       setOrdersError(tableNotFound
         ? "جدول الطلبات غير موجود في Supabase. أنشئ الجدول أولاً: SQL Editor → شغّل الـ SQL الموجود في ملف ORDERS_SUPABASE.md في المشروع."
@@ -620,22 +637,39 @@ function App() {
     })
   );
 
-  const getPrintHtml = useCallback(() => {
-    const rows = orderLines
-      .map((o) => {
-        const unitPrice = getLineUnitPrice(o); // Price after discount
-        const total = getLineTotal(o);
-        const price = Number(o.item?.price) ?? 0; // Consumer Price
-        const discPercent = getLineDiscountPercent(o);
+  const getPrintHtml = useCallback((orderData) => {
+    const isSubmitted = !!orderData;
+    const lines = isSubmitted ? (orderData.items || []) : orderLines;
+    const currentInfo = isSubmitted ? {
+      companyName: orderData.customer_name || '',
+      customerNumber: orderData.customer_number || '',
+      merchantName: orderData.merchant_name || '', // Assuming merchant_name field or default
+      phone: orderData.customer_phone || '',
+      address: orderData.customer_address || '',
+      orderDate: orderData.order_date || (orderData.created_at ? new Date(orderData.created_at).toISOString().slice(0, 10) : ''),
+      paymentMethod: orderData.payment_method || '',
+    } : orderInfo;
+    const totalAmount = isSubmitted ? (orderData.total_amount || 0) : orderTotal;
 
-        const displayName = (o.customName || o.item?.name || '').replace(/</g, '&lt;');
-        const barcode = (o.item?.barcode || '').replace(/</g, '&lt;');
+    const rows = lines
+      .map((o) => {
+        const item = isSubmitted ? o : (o.item || {});
+        // For submitted items, properties are direct. For cart items, they might be nested in item or direct
+        const unitPrice = isSubmitted ? (o.unit_price || o.price || 0) : getLineUnitPrice(o);
+        const total = isSubmitted ? (o.total || 0) : getLineTotal(o);
+        const price = isSubmitted ? (o.consumer_price || 0) : (Number(intent?.item?.price) ?? 0);
+        // fallback for consumer price: for cart items it's o.item.price. For submitted, it's consumer_price
+        const consumerPrice = isSubmitted ? (o.consumer_price || 0) : (Number(o.item?.price) ?? 0);
+        const discPercent = isSubmitted ? (o.discount_percent || 0) : getLineDiscountPercent(o);
+
+        const displayName = (o.name || o.customName || item.name || '').replace(/</g, '&lt;');
+        const barcode = (o.barcode || item.barcode || '').replace(/</g, '&lt;');
 
         return `<tr>
           <td>${displayName}</td>
           <td dir="ltr" lang="en">${barcode}</td>
           <td dir="ltr" lang="en">${o.qty}</td>
-          <td dir="ltr" lang="en">₪${price}</td>
+          <td dir="ltr" lang="en">₪${consumerPrice}</td>
           <td dir="ltr" lang="en">${discPercent}%</td>
           <td dir="ltr" lang="en">₪${unitPrice}</td>
           <td dir="ltr" lang="en">₪${total.toFixed(2)}</td>
@@ -696,7 +730,7 @@ function App() {
     <tr class="total-row">
       <td colspan="5"></td>
       <td>المجموع</td>
-      <td dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</td>
+      <td dir="ltr" lang="en">₪${Number(totalAmount).toFixed(2)}</td>
     </tr>
   </tbody>
 </table>
@@ -1343,12 +1377,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   >
                     Sales
                   </button>
-                  <button
-                    onClick={() => setMode('catalog')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'catalog' ? 'bg-white shadow-md text-rose-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    Catalog
-                  </button>
+                  {userRole !== 'customer' && (
+                    <button
+                      onClick={() => setMode('catalog')}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'catalog' ? 'bg-white shadow-md text-rose-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Catalog
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={handleLogout}
@@ -1516,10 +1552,108 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <p className="text-lg font-black text-slate-800 pt-2">المجموع: ₪{Number(selectedOrder.total_amount ?? 0).toLocaleString()}</p>
                         </div>
                         <div className="p-6 border-t border-slate-100 flex flex-wrap gap-3 shrink-0">
-                          <button type="button" onClick={() => markOrderToPrepareLater(selectedOrder)} disabled={orderActionLoading} className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
-                            {orderActionLoading ? <Loader2 size={18} className="animate-spin" /> : <Clock size={18} />}
-                            إعداد لاحقاً
+
+                          {/* Approve (Agree) Button -> PDF + Complete */}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!selectedOrder) return;
+                              setOrderActionLoading(true);
+                              try {
+                                // 1. Generate HTML & Print
+                                const html = getPrintHtml(selectedOrder);
+                                const w = window.open('', '_blank');
+                                if (w) {
+                                  w.document.write(html);
+                                  w.document.close();
+                                  w.focus();
+                                  // Give time for images to load if any, though here it's mostly text
+                                  setTimeout(() => {
+                                    w.print();
+                                    // w.close(); // Optional: close after print
+                                  }, 500);
+                                }
+
+                                // 2. Mark as completed in Supabase
+                                const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
+                                if (error) {
+                                  if (error.message?.includes('column "status" of relation "orders" does not exist')) {
+                                    throw new Error('Missing "status" column. Please checking ORDERS_SUPABASE.md and run the SQL migration.');
+                                  }
+                                  throw error;
+                                }
+
+                                // 3. Remove from UI
+                                setSubmittedOrders((prev) => prev.filter((o) => o.id !== selectedOrder.id));
+                                setSelectedOrder(null);
+
+                              } catch (e) {
+                                console.error(e);
+                                alert('Error processing order: ' + e.message);
+                              } finally {
+                                setOrderActionLoading(false);
+                              }
+                            }}
+                            disabled={orderActionLoading}
+                            className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {orderActionLoading ? <Loader2 size={18} className="animate-spin" /> : <div className="flex items-center gap-2"><span className="text-lg">✓</span> موافق</div>}
                           </button>
+
+                          {/* Excel Export Button */}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!selectedOrder) return;
+                              setOrderActionLoading(true);
+                              try {
+                                const ExcelJS = (await import('exceljs')).default;
+                                const wb = new ExcelJS.Workbook();
+                                const ws = wb.addWorksheet('Order Details', { views: [{ rightToLeft: true }] });
+
+                                ws.columns = [
+                                  { header: 'Item', key: 'name', width: 30 },
+                                  { header: 'Barcode', key: 'barcode', width: 15 },
+                                  { header: 'Qty', key: 'qty', width: 10 },
+                                  { header: 'Price', key: 'price', width: 12 },
+                                  { header: 'Total', key: 'total', width: 12 },
+                                ];
+
+                                (selectedOrder.items || []).forEach(item => {
+                                  ws.addRow({
+                                    name: item.name || item.customName,
+                                    barcode: item.barcode,
+                                    qty: item.qty,
+                                    price: item.unit_price || item.price,
+                                    total: item.total
+                                  });
+                                });
+
+                                ws.addRow({});
+                                ws.addRow({ name: 'Total Amount', total: selectedOrder.total_amount });
+
+                                const buf = await wb.xlsx.writeBuffer();
+                                const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `Order_${selectedOrder.id}_${selectedOrder.customer_name || ''}.xlsx`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+
+                              } catch (e) {
+                                console.error(e);
+                                alert('Error exporting Excel: ' + e.message);
+                              } finally {
+                                setOrderActionLoading(false);
+                              }
+                            }}
+                            disabled={orderActionLoading}
+                            className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            <FileText size={18} /> Excel
+                          </button>
+
                           <button type="button" onClick={() => deleteOrder(selectedOrder)} disabled={orderActionLoading} className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                             {orderActionLoading ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                             حذف الطلب
@@ -1864,9 +1998,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                       <span className="text-lg font-bold text-slate-400 mb-2">Cart is Empty</span>
                       <span className="text-sm text-slate-500 max-w-[200px] leading-relaxed block">Start scanning or select items from the catalog.</span>
-                      <button onClick={() => setMode('catalog')} className="mt-8 px-8 py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20">
-                        Open Catalog
-                      </button>
+                      {userRole !== 'customer' && (
+                        <button onClick={() => setMode('catalog')} className="mt-8 px-8 py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20">
+                          Open Catalog
+                        </button>
+                      )}
                     </div>
                   ) : (
                     orderLinesByBox.map((o, idx) => {
