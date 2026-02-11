@@ -389,19 +389,42 @@ function App() {
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
+    let allItems = [];
+    let errorToThrow = null;
+
     try {
+      // First try with is_offer
       const { data, error } = await supabase
         .from('items')
         .select(ITEMS_SELECT);
 
-      if (error) throw error;
+      if (error) {
+        // If column missing, fallback to base query
+        if (error.message?.includes('column items.is_offer does not exist') || error.code === '42703') {
+          console.warn('is_offer column missing, falling back to base items query...');
+          const BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url';
+          const { data: retryData, error: retryError } = await supabase
+            .from('items')
+            .select(BASE_SELECT);
 
-      const normalized = (data || []).map(normalizeItemFromSupabase).filter(Boolean);
+          if (retryError) throw retryError;
+          allItems = retryData || [];
+        } else {
+          throw error;
+        }
+      } else {
+        allItems = data || [];
+      }
+
+      const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
       const sorted = sortByBarcodeOrder(normalized, BARCODE_ORDER);
       setItems(sorted);
       setHasMore(false);
     } catch (err) {
       console.error('Supabase fetch error:', err);
+      // Even on error, we don't want to crash. 
+      // If items were already loaded, keep them? Or maybe show empty
+      // But here we just log it.
     } finally {
       setLoading(false);
       setLoadingMore(false);
