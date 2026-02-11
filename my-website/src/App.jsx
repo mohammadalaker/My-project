@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Search,
   Plus,
+  Minus,
   Trash2,
   Upload,
   X,
@@ -622,18 +623,26 @@ function App() {
   const getPrintHtml = useCallback(() => {
     const rows = orderLines
       .map((o) => {
-        const unitPrice = getLineUnitPrice(o);
+        const unitPrice = getLineUnitPrice(o); // Price after discount
         const total = getLineTotal(o);
-        const price = Number(o.item?.price) ?? 0;
+        const price = Number(o.item?.price) ?? 0; // Consumer Price
         const discPercent = getLineDiscountPercent(o);
-        const imgSrc = getImage(o.item);
-        const imgHtml = imgSrc
-          ? `<img src="${String(imgSrc).replace(/"/g, '&quot;')}" alt="" style="width:40px;height:40px;object-fit:contain;" />`
-          : '';
+
         const displayName = (o.customName || o.item?.name || '').replace(/</g, '&lt;');
-        return `<tr><td>${imgHtml}</td><td dir="ltr" lang="en">${(o.item?.barcode || '').replace(/</g, '&lt;')}</td><td>${displayName}</td><td dir="ltr" lang="en">${o.qty}</td><td dir="ltr" lang="en">₪${price}</td><td dir="ltr" lang="en">₪${unitPrice}</td><td dir="ltr" lang="en">${discPercent}%</td><td dir="ltr" lang="en">₪${total.toFixed(2)}</td></tr>`;
+        const barcode = (o.item?.barcode || '').replace(/</g, '&lt;');
+
+        return `<tr>
+          <td>${displayName}</td>
+          <td dir="ltr" lang="en">${barcode}</td>
+          <td dir="ltr" lang="en">${o.qty}</td>
+          <td dir="ltr" lang="en">₪${price}</td>
+          <td dir="ltr" lang="en">${discPercent}%</td>
+          <td dir="ltr" lang="en">₪${unitPrice}</td>
+          <td dir="ltr" lang="en">₪${total.toFixed(2)}</td>
+        </tr>`;
       })
       .join('');
+
     const infoRows = [
       ['Company Name', orderInfo.companyName],
       ['Customer No.', orderInfo.customerNumber],
@@ -648,13 +657,50 @@ function App() {
           `<tr><td class="info-label">${l}</td><td class="info-value" dir="ltr" lang="en">${(v || '').replace(/</g, '&lt;')}</td></tr>`
       )
       .join('');
-    return `<!DOCTYPE html><html dir="ltr" lang="en"><head><meta charset="utf-8"><title>Sales Order Agreement</title>
-<style>body{font-family:system-ui;padding:24px;max-width:800px;margin:0 auto}.print-title{font-size:2rem;font-weight:800;text-align:center;color:#c2410c}.section-title{font-weight:700;padding:8px 12px;background:#fff7ed;border:1px solid #ea580c;border-radius:6px;color:#c2410c;margin:1rem 0 0.5rem}.info-table{width:100%;border-collapse:collapse}.info-table td{padding:8px 12px;border:1px solid #d1d5db}.info-label{font-weight:600;background:#fff7ed;width:40%}.info-value{background:#fff}table.data-table{width:100%;border-collapse:collapse;margin-top:1rem}table.data-table th,table.data-table td{padding:10px;border:1px solid #d1d5db;text-align:left}table.data-table th{background:#ea580c;color:#fff}.total-row{font-weight:700;background:#fff7ed}</style></head><body>
-<h1 class="print-title">Sales Order Agreement</h1>
-<div class="section-title">Customer Information</div>
+
+    return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>Sales Order Agreement</title>
+<style>
+  body { font-family: system-ui; padding: 24px; max-width: 800px; margin: 0 auto; direction: rtl; }
+  .print-title { font-size: 2rem; font-weight: 800; text-align: center; color: #c2410c; }
+  .section-title { font-weight: 700; padding: 8px 12px; background: #fff7ed; border: 1px solid #ea580c; border-radius: 6px; color: #c2410c; margin: 1rem 0 0.5rem; }
+  .info-table { width: 100%; border-collapse: collapse; }
+  .info-table td { padding: 8px 12px; border: 1px solid #d1d5db; }
+  .info-label { font-weight: 600; background: #fff7ed; width: 30%; } /* Adjusted width */
+  .info-value { background: #fff; }
+  table.data-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  table.data-table th, table.data-table td { padding: 10px; border: 1px solid #d1d5db; text-align: right; }
+  table.data-table th { background: #ea580c; color: #fff; font-size: 0.9rem; }
+  table.data-table td { font-size: 0.9rem; }
+  .total-row { font-weight: 700; background: #fff7ed; }
+</style></head><body>
+<h1 class="print-title">فاتورة مبيعات</h1>
+
+<div class="section-title">بيانات العميل</div>
 <table class="info-table"><tbody>${infoRows}</tbody></table>
-<div class="section-title">Item Details</div>
-<table class="data-table"><thead><tr><th>Image</th><th>Barcode</th><th>Name</th><th>Qty</th><th>Price</th><th>Discounted</th><th>Discount %</th><th>Total</th></tr></thead><tbody>${rows}<tr class="total-row"><td colspan="6"></td><td>Total</td><td dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</td></tr></tbody></table></body></html>`;
+
+<div class="section-title">تفاصيل المنتجات</div>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>وصف المنتج ورقم الموديل</th>
+      <th>الرقم التسلسلي ( الباركود )</th>
+      <th>العدد</th>
+      <th>سعر المستهلك</th>
+      <th>نسبة الخصم</th>
+      <th>السعر بعد الخصم</th>
+      <th>المبلغ الاجمالي ( شامل الضريبة )</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows}
+    <tr class="total-row">
+      <td colspan="5"></td>
+      <td>المجموع</td>
+      <td dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</td>
+    </tr>
+  </tbody>
+</table>
+</body></html>`;
   }, [orderLines, orderTotal, orderInfo]);
 
   const getInventoryHtml = useCallback(() => {
@@ -776,7 +822,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           barcode: line.item.barcode,
           name: line.customName || line.item.name,
           qty: line.qty,
-          price: getLineUnitPrice(line),
+          consumer_price: Number(line.item?.price) ?? 0,
+          discount_percent: getLineDiscountPercent(line),
+          unit_price: getLineUnitPrice(line),
+          price: getLineUnitPrice(line), // Keep for compatibility
           total: getLineTotal(line)
         })),
         details: orderInfo
@@ -792,6 +841,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       return false;
     }
   };
+
+
 
   const clearOrderAndInfo = () => {
     setOrderItems([]);
@@ -824,14 +875,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     a.href = url;
     a.download = `Invoice-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.html`;
 
-    // Safer download trigger
+    // Safer download trigger — avoid removeChild conflict with React portal on document.body
     a.style.display = 'none';
+    a.setAttribute('aria-hidden', 'true');
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
-      if (document.body.contains(a)) {
-        document.body.removeChild(a);
-      }
+      try {
+        if (a.parentNode === document.body) document.body.removeChild(a);
+      } catch (_) { /* ignore removeChild errors when React has updated body */ }
       URL.revokeObjectURL(url);
     }, 150);
 
@@ -1822,7 +1874,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       const box = getLineBox(o);
                       const showBox = prevBox !== box;
                       return (
-                        <div key={`order-${o.id}-${idx}`} className="animate-fade-in-right" style={{ animationDelay: `${idx * 40}ms` }}>
+                        <div key={`order-${o.id}-${idx}`} className="animate-fade-in-right notranslate" style={{ animationDelay: `${idx * 40}ms` }}>
                           {showBox && box && (
                             <div className="flex items-center gap-3 my-6 px-1">
                               <div className="h-px flex-1 bg-slate-200"></div>
@@ -1856,47 +1908,64 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   {o.item?.group && <span className="text-slate-400">• {o.item?.group}</span>}
                                 </p>
 
-                                <div className="flex items-center justify-between mt-4">
+                                <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate" dir="rtl">
                                   {/* Qty Control */}
-                                  <div className="flex items-center bg-slate-50 rounded-lg p-0.5 border border-slate-200 shadow-sm">
+                                  <div className="flex flex-col justify-center items-center bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm shrink-0 w-14" dir="ltr">
                                     <button
-                                      onClick={() => setOrderQty(o.id, Math.max(1, o.qty - 1))}
-                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white rounded-md transition-colors"
-                                    >-</button>
+                                      onClick={() => setOrderQty(o.id, parseInt(o.qty || 0) + 1)}
+                                      className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                    >
+                                      <Plus size={18} strokeWidth={3} />
+                                    </button>
                                     <input
-                                      className="w-12 bg-transparent text-center text-sm font-bold text-slate-700 outline-none"
-                                      value={o.qty}
+                                      className="w-full bg-transparent text-center text-lg font-black text-slate-700 outline-none my-1"
+                                      value={o.qty || ''}
                                       onChange={(e) => setOrderQty(o.id, e.target.value)}
                                     />
                                     <button
-                                      onClick={() => setOrderQty(o.id, parseInt(o.qty) + 1)}
-                                      className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-white rounded-md transition-colors"
-                                    >+</button>
+                                      onClick={() => setOrderQty(o.id, Math.max(1, (parseInt(o.qty || 0) - 1)))}
+                                      className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                    >
+                                      <Minus size={18} strokeWidth={3} />
+                                    </button>
                                   </div>
 
-                                  <div className="text-right flex flex-col items-end gap-1">
-                                    {getLineOriginalPrice(o) > getLineUnitPrice(o) && (
-                                      <span className="text-xs text-slate-400 font-bold mb-0.5">
-                                        ₪{getLineOriginalPrice(o)}
-                                      </span>
-                                    )}
+                                  {/* Pricing Squares Grid */}
+                                  <div className="flex-1 w-full grid grid-cols-2 gap-3">
 
-                                    <div className="flex items-center gap-2 justify-end">
-                                      <div className="relative group/price">
-                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-orange-600/60 font-bold text-sm">₪</span>
+                                    {/* Card 1: Consumer Price */}
+                                    <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-2xl p-3 border border-slate-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">سعر المستهلك</span>
+                                      <span className="font-bold text-slate-600 text-sm sm:text-base font-mono">₪{getLineOriginalPrice(o)}</span>
+                                    </div>
+
+                                    {/* Card 2: Discount */}
+                                    <div className={`rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all ${getLineDiscountPercent(o) > 0 ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                      <span className={`text-[10px] font-bold uppercase tracking-wider ${getLineDiscountPercent(o) > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>نسبة الخصم</span>
+                                      <span className={`font-bold text-sm sm:text-base font-mono ${getLineDiscountPercent(o) > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{getLineDiscountPercent(o)}%</span>
+                                    </div>
+
+                                    {/* Card 3: Price After Discount (Input) */}
+                                    <div className="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-1 text-center relative focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all hover:border-indigo-200">
+                                      <span className="text-[10px] font-bold text-indigo-500/80 uppercase tracking-wider">بعد الخصم</span>
+                                      <div className="flex items-center justify-center gap-0.5" dir="ltr">
+                                        <span className="text-slate-400 font-bold text-xs mb-0.5">₪</span>
                                         <input
                                           type="number"
-                                          className="w-24 bg-slate-50 border border-slate-200 rounded-lg py-1 pl-6 pr-1 text-right font-black text-xl text-slate-800 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all shadow-sm"
-                                          value={getLineUnitPrice(o)}
+                                          className="w-20 bg-transparent text-center font-black text-slate-800 outline-none text-lg sm:text-lg"
+                                          value={getLineUnitPrice(o) || ''}
                                           onChange={(e) => setOrderLinePrice(o.id, e.target.value)}
                                           onFocus={(e) => e.target.select()}
                                         />
                                       </div>
                                     </div>
 
-                                    <div className="text-[10px] font-bold text-slate-400 mt-0.5">
-                                      Total: ₪{getLineTotal(o).toFixed(2)}
+                                    {/* Card 4: Total */}
+                                    <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-2xl p-3 border border-orange-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
+                                      <span className="text-[10px] font-bold text-orange-600/70 uppercase tracking-wider">المجموع</span>
+                                      <span dir="ltr" className="font-black text-orange-600 text-lg sm:text-xl tracking-tight">₪{getLineTotal(o).toFixed(2)}</span>
                                     </div>
+
                                   </div>
                                 </div>
                               </div>

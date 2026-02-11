@@ -31,10 +31,11 @@
       <p class="text">Loading…</p>
     </div>
   </div>
+  <!-- Do not replace #root on error: that causes "removeChild" by nuking React's DOM. ErrorBoundary in main.jsx handles errors. -->
   <script>
     window.onerror = function (msg, url, line) {
-      var el = document.getElementById('root');
-      if (el) el.innerHTML = '<div style="font-family:system-ui;padding:2rem;max-width:480px;margin:0 auto;color:#dc2626;"><p><strong>Script error:</strong> ' + (msg || 'unknown') + '</p><p>Check console (F12) for details.</p></div>';
+      console.error('Script error:', msg, url, line);
+      return false; // let event propagate; ErrorBoundary can show UI without replacing root
     };
   </script>
   <script type="module" src="/src/main.jsx"></script>

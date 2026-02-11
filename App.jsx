@@ -26,7 +26,7 @@ import {
   Cookie,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
-import { BARCODE_ORDER, sortByBarcodeOrder } from './BARCODE_ORDER_NEW';
+import { BARCODE_ORDER, sortByBarcodeOrder } from './BARCODE_ORDER_NEW';image.png
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 80;
@@ -941,11 +941,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto pt-4">
           {loading ? (
-            <div className="flex justify-center py-24">
+            <div className="flex justify-center py-24" key="loading">
               <Loader2 className="animate-spin text-violet-500" size={40} />
             </div>
           ) : (
-            <div className="pb-6 space-y-10">
+            <div key={`products-${showOrderPanel}`} className="pb-6 space-y-10">
               {[
                 { title: 'Electrical Appliances', items: filteredItems.filter((i) => isElectricalGroup(i.group)), color: 'indigo' },
                 { title: 'Kitchenware', items: filteredItems.filter((i) => !isElectricalGroup(i.group)), color: 'amber' },
@@ -1134,7 +1134,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 const box = getLineBox(o);
                 const showBox = prevBox !== box;
                 return (
-                  <div key={o.id} className="space-y-1.5">
+                  <div key={`order-line-${String(o.id ?? idx)}-${idx}`} className="space-y-1.5">
                     {showBox && (
                       <div className="text-[11px] font-semibold text-orange-600 bg-gradient-to-r from-orange-100 to-amber-100 text-center py-1.5 rounded-full px-4 w-fit shadow-[0_1px_3px_rgba(249,115,22,0.2)]">صندوق {box}</div>
                     )}
