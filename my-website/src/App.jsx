@@ -368,111 +368,35 @@ function App() {
 
   const abortControllerRef = useRef(null);
 
-  const fetchItems = useCallback(
-    async (reset = false) => {
-      const from = reset ? 0 : page * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+  const fetchItems = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .select(ITEMS_SELECT);
 
-      // Cancel previous request if it's still running
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
+      if (error) throw error;
 
-      if (!reset && fetchingFromRef.current === from) return;
-      fetchingFromRef.current = from;
-
-      if (reset) setLoading(true);
-      else setLoadingMore(true);
-
-      try {
-        let query = supabase
-          .from('items')
-          .select(ITEMS_SELECT)
-          .order('brand_group', { ascending: true })
-          .order('eng_name', { ascending: true })
-          .range(from, to);
-
-        if (search.trim()) {
-          query = query.or(
-            `eng_name.ilike.%${search.trim()}%,barcode.ilike.%${search.trim()}%`
-          );
-        }
-
-        // Supabase v2 doesn't always support abortSignal in all builds nicely, 
-        // but checking signal after await is safe.
-        const { data, error } = await query;
-
-        if (controller.signal.aborted) return;
-        if (error) throw error;
-
-        const normalized = (data || []).map(normalizeItemFromSupabase).filter(Boolean);
-        if (reset) {
-          setItems(normalized);
-          setPage(0);
-          fetchingFromRef.current = null;
-        } else {
-          setItems((prev) => {
-            const existingIds = new Set((prev || []).map((i) => String(i.barcode || i.id || '').trim()));
-            const newItems = normalized.filter((n) => !existingIds.has(String(n.barcode || n.id || '').trim()));
-            return newItems.length ? [...prev, ...newItems] : prev;
-          });
-        }
-        const more = (data?.length || 0) === PAGE_SIZE;
-        setHasMore(more);
-        if (more) setPage((p) => p + 1);
-      } catch (err) {
-        if (err.name === 'AbortError') return;
-        console.error('Supabase fetch error:', err);
-        if (reset && !controller.signal.aborted) setItems([]);
-      } finally {
-        if (!controller.signal.aborted) {
-          fetchingFromRef.current = null;
-          setLoading(false);
-          setLoadingMore(false);
-        }
-      }
-    },
-    [page, search]
-  );
-
-  useEffect(() => {
-    if (search.trim()) {
-      const debounce = setTimeout(() => fetchItems(true), 200);
-      return () => clearTimeout(debounce);
+      const normalized = (data || []).map(normalizeItemFromSupabase).filter(Boolean);
+      const sorted = sortByBarcodeOrder(normalized, BARCODE_ORDER);
+      setItems(sorted);
+      setHasMore(false);
+    } catch (err) {
+      console.error('Supabase fetch error:', err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    const id = setTimeout(() => fetchItems(true), 0);
-    return () => clearTimeout(id);
-  }, [search]);
-
-  // Removed redundant initial fetch useEffect since the search effect runs on mount with empty search string
+  }, []);
 
   useEffect(() => {
-    if (page > 0) fetchItems(false);
-  }, [page]);
+    fetchItems();
+  }, [fetchItems]);
 
-  const loadMore = () => {
-    if (!loadingMore && hasMore) setPage((p) => p + 1);
-  };
-
+  // Removed pagination and server-side search effects
+  const loadMore = () => { };
   const loadMoreRef = useRef(null);
   const scrollContainerRef = useRef(null);
-  const fetchingFromRef = useRef(null);
-
-  useEffect(() => {
-    const el = loadMoreRef.current;
-    const root = scrollContainerRef.current;
-    if (!el || !hasMore || loadingMore) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
-      },
-      { root: root || null, rootMargin: '400px', threshold: 0.05 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMore, loadingMore, items.length]);
 
   const filteredByGroup = useMemo(
     () =>
