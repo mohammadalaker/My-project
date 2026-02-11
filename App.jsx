@@ -26,7 +26,7 @@ import {
   Cookie,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
-import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
+import { BARCODE_ORDER, sortByBarcodeOrder } from './BARCODE_ORDER_NEW';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 80;
