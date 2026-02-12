@@ -1656,7 +1656,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               {/* Categories */}
               {!loading && mode !== 'submitted' && (
-                <div className={`sticky ${showOrderPanel ? 'top-0' : 'top-[88px]'} z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
+                <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
                       { key: null, label: 'All', count: items.length, icon: null, type: 'all' },
