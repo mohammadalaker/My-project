@@ -142,6 +142,7 @@ function normalizeItemFromSupabase(row) {
 
 const Login = lazy(() => import('./components/Login'));
 const SkeletonGrid = lazy(() => import('./components/SkeletonLoader'));
+import TopBanner from './components/TopBanner';
 import BottomNav from './components/BottomNav';
 
 function App() {
