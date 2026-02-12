@@ -1643,7 +1643,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </button>
                   <button
                     onClick={() => setMode('offers')}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'offers' ? 'bg-white shadow-md text-amber-500 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'offers' ? 'bg-white shadow-md scale-105' : ''} ${customOffers.length > 0 ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Offers
                   </button>
