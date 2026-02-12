@@ -168,7 +168,7 @@ function App() {
       localStorage.setItem('sales_role', 'admin');
       setIsAuthenticated(true);
       setUserRole('admin');
-    } else if (username === '123' && password === '123') {
+    } else if (username === '123' && password === '321') {
       localStorage.setItem('sales_auth', 'true');
       localStorage.setItem('sales_role', 'customer');
       setIsAuthenticated(true);
