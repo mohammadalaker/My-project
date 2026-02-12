@@ -1314,6 +1314,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     <div
       className={`font-sans flex h-screen overflow-hidden text-slate-800 ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
     >
+      <TopBanner items={items.filter(i => i.isOffer)} />
       <div
         className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${showOrderPanel ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
       >
