@@ -30,6 +30,10 @@ import {
   Clock,
   ArrowUpDown,
   Star,
+  Gift,
+  Sparkles,
+  Percent,
+  ShoppingCart,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -142,8 +146,248 @@ function normalizeItemFromSupabase(row) {
 
 const Login = lazy(() => import('./components/Login'));
 const SkeletonGrid = lazy(() => import('./components/SkeletonLoader'));
-import TopBanner from './components/TopBanner';
 import BottomNav from './components/BottomNav';
+
+function AddToOfferRow({ item, getImage, onAdd }) {
+  const [qty, setQty] = useState(1);
+  const [price, setPrice] = useState(() => Math.round(item.priceAfterDiscount ?? item.price ?? 0));
+  const [isFree, setIsFree] = useState(false);
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 hover:border-amber-300 transition-colors">
+      {getImage(item) ? (
+        <img src={getImage(item)} alt="" className="w-12 h-12 object-contain rounded-lg" />
+      ) : (
+        <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center"><Package size={20} className="text-slate-400" /></div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-800 truncate">{item.name || item.barcode}</p>
+        <p className="text-xs text-slate-500">₪{Math.round(item.price ?? 0)}</p>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <input type="number" min={1} value={qty} onChange={(e) => setQty(Math.max(1, +e.target.value || 1))} className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-sm text-center" />
+        <label className="flex items-center gap-1 text-sm cursor-pointer">
+          <input type="checkbox" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} className="rounded" />
+          <span className="text-emerald-600 font-medium">مجاناً</span>
+        </label>
+        {!isFree && (
+          <input type="number" min={0} value={price} onChange={(e) => setPrice(+e.target.value || 0)} className="w-20 px-2 py-1.5 rounded-lg border border-slate-200 text-sm text-right" placeholder="السعر" />
+        )}
+        <button onClick={() => onAdd(item, qty, price, isFree)} className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-bold hover:bg-amber-600">
+          إضافة
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole, onEdit, onDelete, addOfferToOrder }) {
+  const totalPrice = offer.items.reduce((sum, e) => sum + (e.isFree ? 0 : e.offerPrice * e.quantity), 0);
+  const totalOriginalPrice = offer.items.reduce((sum, e) => {
+    const it = getItemByBarcode(e.barcode);
+    return sum + ((it?.price ?? 0) * e.quantity);
+  }, 0);
+  const savings = totalOriginalPrice > totalPrice ? totalOriginalPrice - totalPrice : 0;
+  const savingsPercent = totalOriginalPrice > 0 ? Math.round((savings / totalOriginalPrice) * 100) : 0;
+  const freeItems = offer.items.filter((e) => e.isFree);
+  const paidItems = offer.items.filter((e) => !e.isFree);
+
+  return (
+    <>
+      <style>{`
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 2s infinite;
+        }
+        .btn-modern {
+          background-size: 200% auto;
+          transition: 0.5s;
+        }
+        .btn-modern:hover {
+          background-position: right center;
+        }
+        .gift-unlock {
+          filter: grayscale(100%);
+          opacity: 0.7;
+          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .group:hover .gift-unlock {
+          filter: grayscale(0%);
+          opacity: 1;
+          transform: scale(1.1) rotate(6deg);
+        }
+        .unlock-badge {
+          opacity: 0;
+          transform: translateY(10px) scale(0.8);
+          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .group:hover .unlock-badge {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      `}</style>
+      <div className="group relative overflow-hidden rounded-[3rem] bg-slate-50 border-2 border-slate-100 shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-orange-500/20 hover:bg-white">
+
+        {/* Giant Ribbon */}
+        {savings > 0 && (
+          <div className="absolute top-10 -right-20 w-80 py-4 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white text-xl font-black text-center shadow-xl shadow-rose-500/40 rotate-45 z-30 tracking-widest border-y-2 border-white/20">
+            وفر ₪{Math.round(savings)}
+          </div>
+        )}
+
+        {/* Background Blurs */}
+        <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-white to-transparent -z-10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-orange-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+        <div className="relative p-8 sm:p-12 flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-12 z-20">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="bg-slate-900 text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg ring-2 ring-white">
+                  <Sparkles size={14} className="text-amber-400 animate-pulse" /> Super Bundle
+                </span>
+                <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-lg shadow-orange-500/20">
+                  Limited Time
+                </span>
+              </div>
+              <h3 className="text-4xl sm:text-5xl font-black text-slate-800 leading-none tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-indigo-600 transition-all">
+                {offer.title}
+              </h3>
+            </div>
+
+            {userRole === 'admin' && (
+              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-sm">
+                <button onClick={() => onEdit(offer)} className="p-3 rounded-xl text-indigo-600 hover:bg-indigo-50 transition-colors"><FileText size={24} /></button>
+                <button onClick={() => onDelete(offer.id)} className="p-3 rounded-xl text-rose-500 hover:bg-rose-50 transition-colors"><Trash2 size={24} /></button>
+              </div>
+            )}
+          </div>
+
+          {/* VISUAL EQUATION - SCALE UP */}
+          <div className="flex flex-col lg:flex-row items-center gap-8 mb-12 relative z-10">
+
+            {/* 1. Main Products - Left Side - HUGE IMAGES */}
+            <div className="flex-1 space-y-8 w-full">
+              {paidItems.map((entry) => {
+                const it = getItemByBarcode(entry.barcode);
+                return (
+                  <div key={entry.barcode} className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative p-5 rounded-[2rem] bg-white border-2 border-slate-100 shadow-md group/item hover:border-indigo-100 transition-colors">
+                    <div className="w-56 h-56 sm:w-80 sm:h-80 shrink-0 bg-white rounded-2xl p-5 relative flex items-center justify-center">
+                      <div className="absolute inset-0 bg-slate-50 rounded-2xl transform rotate-3 group-hover/item:rotate-6 transition-transform -z-10" />
+                      {it && getImage(it) ? (
+                        <img src={getImage(it)} alt="" className="w-full h-full object-contain filter drop-shadow-2xl group-hover/item:scale-110 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-200"><Package size={80} /></div>
+                      )}
+
+                      {/* Quantity Badge */}
+                      <div className="absolute -top-3 -left-3 w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black text-lg shadow-xl border-2 border-slate-50 transform -rotate-12 group-hover/item:-rotate-6 transition-transform">
+                        {entry.quantity}x
+                      </div>
+                    </div>
+
+                    <div className="text-center sm:text-left flex-1 min-w-0 py-2">
+                      <h4 className="text-base sm:text-lg font-bold text-slate-800 line-clamp-2 leading-tight mb-2">{it?.name || entry.barcode}</h4>
+                      <div className="text-3xl font-black text-slate-900">
+                        ₪{entry.offerPrice}
+                      </div>
+                      {it?.price && it.price > entry.offerPrice && (
+                        <div className="text-sm text-slate-400 line-through font-medium mt-0.5">
+                          Was ₪{it.price}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* PLUS SIGN */}
+            {freeItems.length > 0 && (
+              <div className="flex flex-col items-center justify-center gap-4 shrink-0">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 shadow-inner border border-white">
+                  <Plus size={40} strokeWidth={4} />
+                </div>
+              </div>
+            )}
+
+            {/* 2. Free Gifts - Right Side - UNLOCK EFFECT */}
+            {freeItems.length > 0 && (
+              <div className="flex-1 w-full">
+                <div className="relative p-1 bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-500 rounded-[2.5rem] shadow-xl shadow-teal-500/20">
+                  <div className="absolute -top-6 inset-x-0 flex justify-center z-30">
+                    <span className="bg-slate-900 text-white px-8 py-3 rounded-full font-black text-base uppercase tracking-widest shadow-xl flex items-center gap-2 ring-4 ring-slate-50 unlock-badge">
+                      <Gift size={22} className="text-emerald-400" /> هدايا مجانية!
+                    </span>
+                  </div>
+
+                  <div className="bg-white/95 backdrop-blur-xl rounded-[2.4rem] p-8 flex flex-col items-center text-center h-full">
+                    <p className="text-emerald-700 font-black text-2xl mb-6">مجاناً مع العرض</p>
+
+                    <div className="flex flex-wrap items-center justify-center gap-6">
+                      {freeItems.map((entry) => {
+                        const it = getItemByBarcode(entry.barcode);
+                        return (
+                          <div key={entry.barcode} className="group/gift relative">
+                            <div className="w-36 h-36 sm:w-44 sm:h-44 bg-white rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border-2 border-emerald-300 p-4 gift-unlock relative overflow-hidden">
+                              {it && getImage(it) ? (
+                                <img src={getImage(it)} alt="" className="w-full h-full object-contain filter drop-shadow-lg" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-200"><Gift size={48} /></div>
+                              )}
+                              {/* شريط مجاناً المائل */}
+                              <div className="absolute top-2 -right-8 w-32 py-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white font-black text-lg text-center shadow-xl rotate-45 border-y-2 border-white/30">
+                                مجاناً
+                              </div>
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-slate-600 max-w-[8rem] mx-auto line-clamp-2 leading-tight">{it?.name || 'هدية'}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="mt-auto pt-10 border-t-2 border-slate-100 border-dashed">
+            <div className="flex flex-col sm:flex-row items-end justify-between gap-8">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Total Bundle Price</p>
+                <div className="flex items-baseline gap-4 flex-wrap">
+                  <div className="text-6xl sm:text-7xl font-black text-slate-900 tracking-tighter">
+                    ₪{Math.round(totalPrice)}
+                  </div>
+                  {savings > 0 && (
+                    <div className="flex flex-col items-start">
+                      <span className="text-xl text-slate-400 line-through font-bold decoration-2 decoration-rose-300">₪{Math.round(totalOriginalPrice)}</span>
+                      <span className="text-sm font-black text-rose-500 bg-rose-50 px-3 py-1 rounded-lg border border-rose-100">SAVE {savingsPercent}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {userRole !== 'admin' && (
+                <button
+                  onClick={() => addOfferToOrder(offer)}
+                  className="w-full sm:w-auto px-12 py-6 rounded-3xl bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 hover:from-amber-300 hover:via-orange-400 hover:to-red-400 text-white font-black text-2xl shadow-2xl shadow-orange-500/40 hover:shadow-orange-500/60 hover:-translate-y-2 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-4 group/btn relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 skew-y-12" />
+                  <ShoppingCart size={32} className="group-hover:scale-110 transition-transform" />
+                  <span className="relative tracking-wide">ADD TO CART</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 function App() {
 
@@ -223,8 +467,24 @@ function App() {
   const [ordersError, setOrdersError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderActionLoading, setOrderActionLoading] = useState(false);
-  const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted'
+  const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
+
+  // Custom offers: [{ id, title, items: [{ barcode, quantity, offerPrice, isFree }] }]
+  const [customOffers, setCustomOffers] = useState(() => {
+    try {
+      const s = localStorage.getItem('sales_custom_offers');
+      return s ? JSON.parse(s) : [];
+    } catch { return []; }
+  });
+  const [editingOffer, setEditingOffer] = useState(null); // { id, title, items: [{ barcode, quantity, offerPrice, isFree }] } or null
+  const [offerSearch, setOfferSearch] = useState('');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sales_custom_offers', JSON.stringify(customOffers));
+    } catch (e) { console.warn('Could not save offers:', e); }
+  }, [customOffers]);
 
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -373,17 +633,48 @@ function App() {
 
 
 
-  const toggleOffer = async (item) => {
-    const newVal = !item.isOffer;
-    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isOffer: newVal } : i)));
-    try {
-      const { error } = await supabase.from('items').update({ is_offer: newVal }).eq('barcode', item.barcode);
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error toggling offer:', err);
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, isOffer: !newVal } : i)));
-      alert('Failed to update offer status. Check if is_offer column exists.');
+  const getItemByBarcode = (barcode) => items.find((i) => String(i.barcode) === String(barcode));
+
+  const createNewOffer = () => {
+    const id = 'o_' + Date.now();
+    setCustomOffers((prev) => [...prev, { id, title: 'عرض جديد', items: [] }]);
+    setEditingOffer({ id, title: 'عرض جديد', items: [] });
+  };
+
+  const addProductToOffer = (item, quantity, offerPrice, isFree) => {
+    if (!editingOffer) return;
+    const entry = { barcode: item.barcode, quantity: Math.max(1, Math.round(Number(quantity)) || 1), offerPrice: isFree ? 0 : (Number(offerPrice) || 0), isFree: !!isFree };
+    setEditingOffer((prev) => ({
+      ...prev,
+      items: [...(prev.items.filter((x) => x.barcode !== item.barcode)), entry],
+    }));
+  };
+
+  const removeFromEditingOffer = (barcode) => {
+    setEditingOffer((prev) => prev ? { ...prev, items: prev.items.filter((x) => x.barcode !== barcode) } : null);
+  };
+
+  const saveOffer = () => {
+    if (!editingOffer || editingOffer.items.length === 0) {
+      alert('أضف منتجاً واحداً على الأقل للعرض');
+      return;
     }
+    setCustomOffers((prev) => {
+      const next = prev.filter((o) => o.id !== editingOffer.id);
+      next.push({ id: editingOffer.id, title: editingOffer.title || 'عرض', items: editingOffer.items });
+      return next;
+    });
+    setEditingOffer(null);
+  };
+
+  const deleteOffer = (id) => {
+    if (!window.confirm('حذف هذا العرض؟')) return;
+    setCustomOffers((prev) => prev.filter((o) => o.id !== id));
+    if (editingOffer?.id === id) setEditingOffer(null);
+  };
+
+  const startEditOffer = (offer) => {
+    setEditingOffer({ id: offer.id, title: offer.title, items: [...offer.items] });
   };
 
   const abortControllerRef = useRef(null);
@@ -1314,7 +1605,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     <div
       className={`font-sans flex h-screen overflow-hidden text-slate-800 ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
     >
-      <TopBanner items={items.filter(i => i.isOffer)} />
       <div
         className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${showOrderPanel ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
       >
@@ -1737,6 +2027,159 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   <Suspense fallback={<div className="min-h-[40vh] animate-pulse bg-slate-100/50 rounded-2xl" />}>
                     <SkeletonGrid />
                   </Suspense>
+                ) : mode === 'offers' ? (
+                  /* Custom Offers - اختيار المنتجات للعروض */
+                  <div className="space-y-8 animate-fade-in">
+                    {userRole === 'admin' && (
+                      <div className="flex flex-wrap items-center gap-4">
+                        <button
+                          onClick={createNewOffer}
+                          className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                          <Plus size={22} /> إنشاء عرض جديد
+                        </button>
+                        {editingOffer && (
+                          <button
+                            onClick={() => setEditingOffer(null)}
+                            className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium"
+                          >
+                            إلغاء
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Editing Offer Panel */}
+                    {editingOffer && userRole === 'admin' && (
+                      <div className="rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 shadow-xl">
+                        <div className="flex items-center justify-between mb-6">
+                          <input
+                            type="text"
+                            value={editingOffer.title}
+                            onChange={(e) => setEditingOffer((p) => ({ ...p, title: e.target.value }))}
+                            className="text-xl font-bold bg-transparent border-b-2 border-amber-300 outline-none py-1 px-2 text-slate-800"
+                            placeholder="اسم العرض"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button onClick={saveOffer} className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700">
+                              حفظ العرض
+                            </button>
+                            <button onClick={() => setEditingOffer(null)} className="p-2 rounded-lg text-slate-500 hover:bg-slate-200">
+                              <X size={20} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {/* Product picker */}
+                          <div>
+                            <p className="text-sm font-bold text-slate-600 mb-3">اختر المنتجات للإضافة:</p>
+                            <input
+                              type="text"
+                              value={offerSearch}
+                              onChange={(e) => setOfferSearch(e.target.value)}
+                              placeholder="بحث بالاسم أو الباركود..."
+                              className="w-full mb-4 px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-amber-400"
+                            />
+                            <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                              {(offerSearch.trim()
+                                ? items.filter(
+                                  (i) =>
+                                    (i.name || '').toLowerCase().includes(offerSearch.trim().toLowerCase()) ||
+                                    (i.barcode || '').toString().includes(offerSearch.trim())
+                                )
+                                : items.slice(0, 50)
+                              ).map((item) => (
+                                <AddToOfferRow
+                                  key={item.id}
+                                  item={item}
+                                  getImage={getImage}
+                                  onAdd={addProductToOffer}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Items in offer */}
+                          <div>
+                            <p className="text-sm font-bold text-slate-600 mb-3">منتجات العرض:</p>
+                            {editingOffer.items.length === 0 ? (
+                              <div className="rounded-xl border-2 border-dashed border-amber-200 bg-white/50 py-12 text-center text-slate-500">
+                                لم تضف منتجات بعد
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {editingOffer.items.map((entry) => {
+                                  const it = getItemByBarcode(entry.barcode);
+                                  return (
+                                    <div
+                                      key={entry.barcode}
+                                      className="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-200 shadow-sm"
+                                    >
+                                      {it && getImage(it) ? (
+                                        <img src={getImage(it)} alt="" className="w-14 h-14 object-contain rounded-lg" />
+                                      ) : (
+                                        <div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center">
+                                          <Package size={24} className="text-slate-400" />
+                                        </div>
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-slate-800 truncate">{it?.name || entry.barcode}</p>
+                                        <p className="text-xs text-slate-500">الكمية: {entry.quantity}</p>
+                                        <p className="text-sm font-bold text-emerald-600">
+                                          {entry.isFree ? (
+                                            <span className="inline-flex items-center gap-1"><Gift size={14} /> مجاناً</span>
+                                          ) : (
+                                            <>₪{entry.offerPrice} لكل قطعة</>
+                                          )}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => removeFromEditingOffer(entry.barcode)}
+                                        className="p-2 rounded-lg text-rose-500 hover:bg-rose-50"
+                                      >
+                                        <Trash2 size={18} />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Offer cards - عرض للعملاء والأدمن */}
+                    <div className="flex flex-col gap-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                      {customOffers.map((offer) => (
+                        <OfferCard
+                          key={offer.id}
+                          offer={offer}
+                          getItemByBarcode={getItemByBarcode}
+                          getImage={getImage}
+                          getStockStatus={getStockStatus}
+                          userRole={userRole}
+                          onEdit={startEditOffer}
+                          onDelete={deleteOffer}
+                          addOfferToOrder={(o) => o.items.forEach((e) => {
+                            const it = getItemByBarcode(e.barcode);
+                            if (it) addToOrder({ ...it, priceAfterDiscount: e.isFree ? 0 : e.offerPrice }, e.quantity);
+                          })}
+                        />
+                      ))}
+                    </div>
+
+                    {customOffers.length === 0 && !editingOffer && (
+                      <div className="text-center py-20 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-200">
+                        <Gift size={64} className="mx-auto text-slate-300 mb-4" />
+                        <p className="text-slate-500 font-medium">لا توجد عروض حالياً</p>
+                        {userRole === 'admin' && (
+                          <p className="text-sm text-slate-400 mt-2">اضغط &quot;إنشاء عرض جديد&quot; لبدء الإضافة</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-12">
                     {[

@@ -1,6 +1,6 @@
-# SQL for Offers Feature
+# SQL للميزة العروض (Offers)
 
-Please run the following SQL in your Supabase SQL Editor to enable the "Offers" feature:
+شغّل التالي في Supabase → SQL Editor لتفعيل ميزة العروض:
 
 ```sql
 -- Add is_offer column to items table if it doesn't exist
