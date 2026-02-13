@@ -2038,7 +2038,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                     {/* Offer cards - عرض للعملاء والأدمن */}
                     <div className="flex flex-col gap-12 max-w-7xl mx-auto px-4 sm:px-6">
-                      {customOffers.map((offer) => (
+                      {customOffers.filter(offer => offer.items && offer.items.length > 0).map((offer) => (
                         <OfferCard
                           key={offer.id}
                           offer={offer}
