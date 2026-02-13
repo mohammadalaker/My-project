@@ -1081,6 +1081,10 @@ function App() {
       .join('');
     const cust = (orderInfo.companyName || orderInfo.merchantName || '—').replace(/</g, '&lt;');
     const date = (orderInfo.orderDate || '—').replace(/</g, '&lt;');
+    const paymentInfo = orderInfo.paymentMethod
+      ? ` &nbsp;|&nbsp; <span>Payment:</span> <span dir="ltr" lang="en">${orderInfo.paymentMethod}${orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? ` (${orderInfo.checksCount})` : ''}</span>`
+      : '';
+
     return `<!DOCTYPE html><html dir="ltr" lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Selected Items</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1116,7 +1120,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 </style></head><body>
 <div class="inv-wrap">
   <div class="inv-header"><h1 class="inv-title">Selected Items</h1><p class="inv-sub">Selected Products</p></div>
-  <div class="inv-info"><span>Client:</span> ${cust} &nbsp;|&nbsp; <span>Phone:</span> <span dir="ltr" lang="en">${(orderInfo.phone || '—').replace(/</g, '&lt;')}</span> &nbsp;|&nbsp; <span>Date:</span> <span dir="ltr" lang="en">${date}</span>${orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? ` &nbsp;|&nbsp; <span>Checks:</span> <span dir="ltr" lang="en">${String(orderInfo.checksCount).replace(/</g, '&lt;')}</span>` : ''}</div>
+  <div class="inv-info"><span>Client:</span> ${cust} &nbsp;|&nbsp; <span>Phone:</span> <span dir="ltr" lang="en">${(orderInfo.phone || '—').replace(/</g, '&lt;')}</span> &nbsp;|&nbsp; <span>Date:</span> <span dir="ltr" lang="en">${date}</span>${paymentInfo}</div>
   <div class="inv-cards">${cards}</div>
   <div class="inv-total-card"><span>Total</span><span dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</span></div>
   <button class="btn-print" onclick="window.print()">Print</button>
