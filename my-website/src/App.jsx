@@ -127,17 +127,33 @@ function amountToEnglishWords(amount) {
 
 const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer';
 
+const parsePrice = (val) => {
+  if (val === null || val === undefined || val === '') return null;
+  const str = String(val).replace(/[^\d.-]/g, '');
+  const num = Number(str);
+  return isNaN(num) ? null : num;
+};
+
 function normalizeItemFromSupabase(row) {
   if (!row) return null;
   const barcodeStr = String(row.barcode ?? '').trim();
+  const price = parsePrice(row.full_price) || 0;
+  const disc = parsePrice(row.price_after_disc);
+  // Prioritize discount price if it exists and is valid.
+  // If price_after_disc is 0, it might mean "free" or "no discount data". 
+  // Usually if no discount, it should be null or same as full price. 
+  // We assume if it's explicitly set to a non-zero value different from price, it's the deal.
+  // Safest: Use disc if Valid Number, else Price.
+  const finalPrice = (disc !== null && !isNaN(disc) && disc !== 0) ? disc : price;
+
   return {
     id: barcodeStr,
     barcode: barcodeStr,
     name: (row.eng_name ?? '').toString().trim(),
     group: (row.brand_group ?? '').toString().trim(),
     box: row.box_count != null && row.box_count !== '' ? String(row.box_count) : '',
-    price: Number(row.full_price) || 0,
-    priceAfterDiscount: Number(row.price_after_disc) || Number(row.full_price) || 0,
+    price: price,
+    priceAfterDiscount: finalPrice,
     stock: row.stock_count,
     image: (row.image_url ?? '').toString().trim() || null,
     isOffer: !!row.is_offer,
