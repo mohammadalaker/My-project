@@ -180,7 +180,7 @@ function AddToOfferRow({ item, getImage, onAdd }) {
   );
 }
 
-function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole, onEdit, onDelete, addOfferToOrder }) {
+function OfferCard({ offer, getItemByBarcode, getImage, getImageFallback, getStockStatus, userRole, onEdit, onDelete, addOfferToOrder }) {
   const totalPrice = offer.items.reduce((sum, e) => sum + (e.isFree ? 0 : e.offerPrice * e.quantity), 0);
   const totalOriginalPrice = offer.items.reduce((sum, e) => {
     const it = getItemByBarcode(e.barcode);
@@ -208,30 +208,23 @@ function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole
           background-position: right center;
         }
         .gift-unlock {
-          filter: grayscale(100%);
-          opacity: 0.7;
           transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .group:hover .gift-unlock {
-          filter: grayscale(0%);
-          opacity: 1;
           transform: scale(1.1) rotate(6deg);
         }
         .unlock-badge {
-          opacity: 0;
-          transform: translateY(10px) scale(0.8);
           transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .group:hover .unlock-badge {
-          opacity: 1;
-          transform: translateY(0) scale(1);
+          transform: translateY(-2px) scale(1.05);
         }
       `}</style>
-      <div className="group relative overflow-hidden rounded-[3rem] bg-slate-50 border-2 border-slate-100 shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-orange-500/20 hover:bg-white">
+      <div className="group relative overflow-hidden rounded-[2.5rem] bg-slate-50 border-2 border-slate-100 shadow-xl transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10 hover:bg-white hover:-translate-y-1">
 
         {/* Giant Ribbon */}
         {savings > 0 && (
-          <div className="absolute top-10 -right-20 w-80 py-4 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white text-xl font-black text-center shadow-xl shadow-rose-500/40 rotate-45 z-30 tracking-widest border-y-2 border-white/20">
+          <div className="absolute top-8 -right-12 w-40 py-1.5 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white text-sm font-black text-center shadow-lg shadow-rose-500/30 rotate-45 z-20 tracking-wider">
             وفر ₪{Math.round(savings)}
           </div>
         )}
@@ -240,7 +233,7 @@ function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-white to-transparent -z-10" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-orange-50/50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-        <div className="relative p-8 sm:p-12 flex flex-col h-full">
+        <div className="relative p-8 flex flex-col h-full">
           {/* Header */}
           <div className="flex items-start justify-between mb-12 z-20">
             <div>
@@ -252,7 +245,7 @@ function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole
                   Limited Time
                 </span>
               </div>
-              <h3 className="text-4xl sm:text-5xl font-black text-slate-800 leading-none tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-indigo-600 transition-all">
+              <h3 className="text-3xl sm:text-4xl font-black text-slate-800 leading-tight tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-indigo-600 transition-colors duration-300">
                 {offer.title}
               </h3>
             </div>
@@ -273,8 +266,8 @@ function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole
               {paidItems.map((entry) => {
                 const it = getItemByBarcode(entry.barcode);
                 return (
-                  <div key={entry.barcode} className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative p-5 rounded-[2rem] bg-white border-2 border-slate-100 shadow-md group/item hover:border-indigo-100 transition-colors">
-                    <div className="w-56 h-56 sm:w-80 sm:h-80 shrink-0 bg-white rounded-2xl p-5 relative flex items-center justify-center">
+                  <div key={entry.barcode} className="flex flex-col sm:flex-row items-center gap-6 relative p-4 rounded-[2rem] bg-white border border-slate-100 shadow-sm group/item hover:border-indigo-100 hover:shadow-md transition-all">
+                    <div className="w-40 h-40 shrink-0 bg-slate-50 rounded-2xl p-4 relative flex items-center justify-center">
                       <div className="absolute inset-0 bg-slate-50 rounded-2xl transform rotate-3 group-hover/item:rotate-6 transition-transform -z-10" />
                       {it && getImage(it) ? (
                         <img src={getImage(it)} alt="" className="w-full h-full object-contain filter drop-shadow-2xl group-hover/item:scale-110 transition-transform duration-500" />
@@ -289,7 +282,7 @@ function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole
                     </div>
 
                     <div className="text-center sm:text-left flex-1 min-w-0 py-2">
-                      <h4 className="text-base sm:text-lg font-bold text-slate-800 line-clamp-2 leading-tight mb-2">{it?.name || entry.barcode}</h4>
+                      <h4 className="text-xl font-bold text-slate-800 leading-tight mb-1 line-clamp-2">{it?.name || entry.barcode}</h4>
                       <div className="text-3xl font-black text-slate-900">
                         ₪{entry.offerPrice}
                       </div>
@@ -324,25 +317,43 @@ function OfferCard({ offer, getItemByBarcode, getImage, getStockStatus, userRole
                   </div>
 
                   <div className="bg-white/95 backdrop-blur-xl rounded-[2.4rem] p-8 flex flex-col items-center text-center h-full">
-                    <p className="text-emerald-700 font-black text-2xl mb-6">مجاناً مع العرض</p>
+                    <p className="text-emerald-700 font-black text-xs uppercase tracking-widest mb-4 mt-2">Free Gifts Included</p>
 
                     <div className="flex flex-wrap items-center justify-center gap-6">
                       {freeItems.map((entry) => {
                         const it = getItemByBarcode(entry.barcode);
+                        const imgSrc = it && (getImageFallback ? getImageFallback(it) : getImage(it));
                         return (
                           <div key={entry.barcode} className="group/gift relative">
-                            <div className="w-36 h-36 sm:w-44 sm:h-44 bg-white rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border-2 border-emerald-300 p-4 gift-unlock relative overflow-hidden">
-                              {it && getImage(it) ? (
-                                <img src={getImage(it)} alt="" className="w-full h-full object-contain filter drop-shadow-lg" />
+                            <div className="w-32 h-32 sm:w-40 sm:h-40 bg-white rounded-2xl shadow-md border-2 border-emerald-100 p-4 gift-unlock relative overflow-visible">
+                              {it && imgSrc ? (
+                                <div className="relative w-full h-full">
+                                  <img
+                                    src={imgSrc}
+                                    alt={it?.name || 'هدية'}
+                                    className="w-full h-full object-contain filter drop-shadow-lg relative z-10"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      const parent = e.target.parentElement;
+                                      const fb = parent?.querySelector('.free-gift-fallback');
+                                      if (fb) fb.style.display = 'flex';
+                                    }}
+                                  />
+                                  <div className="free-gift-fallback absolute inset-0 flex items-center justify-center bg-slate-50 rounded-xl" style={{ display: 'none' }}>
+                                    <Gift size={48} className="text-slate-300" />
+                                  </div>
+                                </div>
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-slate-200"><Gift size={48} /></div>
+                                <div className="w-full h-full flex items-center justify-center bg-slate-50 rounded-xl">
+                                  <Gift size={48} className="text-slate-300" />
+                                </div>
                               )}
-                              {/* شريط مجاناً المائل */}
-                              <div className="absolute top-2 -right-8 w-32 py-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white font-black text-lg text-center shadow-xl rotate-45 border-y-2 border-white/30">
+                              {/* شريط مجاناً - زاوية فقط */}
+                              <div className="absolute top-0 right-0 w-20 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-sm text-center shadow-lg rotate-45 translate-x-6 translate-y-2 border-y border-white/30">
                                 مجاناً
                               </div>
                             </div>
-                            <p className="mt-2 text-xs font-medium text-slate-600 max-w-[8rem] mx-auto line-clamp-2 leading-tight">{it?.name || 'هدية'}</p>
+                            <p className="mt-2 text-xs font-medium text-slate-600 max-w-[10rem] mx-auto line-clamp-2 leading-tight">{it?.name || 'هدية'}</p>
                           </div>
                         );
                       })}
@@ -818,6 +829,19 @@ function App() {
   };
 
   const getImage = (item) => getPublicImageUrl(item?.image);
+  const getImageFallback = (item) => {
+    const primary = getPublicImageUrl(item?.image);
+    if (primary) return primary;
+    if (!item?.barcode) return null;
+    const b = String(item.barcode).trim();
+    if (!b) return null;
+    const paths = [`electric/${b}.jpg`, `electric/${b}.jpeg`, `electric/${b}.png`, `${b}.jpg`, `${b}.jpeg`];
+    for (const p of paths) {
+      const url = getPublicImageUrl(p);
+      if (url) return url;
+    }
+    return null;
+  };
 
   /* Catalog Helpers */
 
@@ -2151,13 +2175,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     )}
 
                     {/* Offer cards - عرض للعملاء والأدمن */}
-                    <div className="flex flex-col gap-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col gap-10 max-w-5xl mx-auto px-4 sm:px-6">
                       {customOffers.map((offer) => (
                         <OfferCard
                           key={offer.id}
                           offer={offer}
                           getItemByBarcode={getItemByBarcode}
                           getImage={getImage}
+                          getImageFallback={getImageFallback}
                           getStockStatus={getStockStatus}
                           userRole={userRole}
                           onEdit={startEditOffer}
