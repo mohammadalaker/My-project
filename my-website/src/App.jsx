@@ -2696,6 +2696,50 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         />
                       </div>
                     </div>
+
+                    {/* 7. Payment Method */}
+                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                      <p className="text-[11px] font-bold text-slate-500">طريقة الدفع</p>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 flex-1 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="Cash"
+                            checked={orderInfo.paymentMethod === 'Cash'}
+                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                            className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                          />
+                          <span className="font-bold text-sm">نقدي (Cash)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 flex-1 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="Checks"
+                            checked={orderInfo.paymentMethod === 'Checks'}
+                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                            className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                          />
+                          <span className="font-bold text-sm">شيكات (Checks)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* 8. Checks Count (Conditional) */}
+                    {orderInfo.paymentMethod === 'Checks' && (
+                      <div className="space-y-1.5 animate-fade-in">
+                        <label className="text-[11px] font-bold text-slate-500 mr-1">عدد الشيكات</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={orderInfo.checksCount}
+                          onChange={(e) => setOrderInfoField('checksCount', e.target.value)}
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                          placeholder="أدخل عدد الشيكات..."
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
