@@ -1304,52 +1304,110 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           ${img}
           <div class="cat-info">
             <div class="cat-name">${item.name}</div>
-            <div class="cat-barcode">${item.barcode}</div>
-            <div class="cat-price">₪${item.price ?? 0}</div>
+            <div class="cat-details">
+              <span class="cat-group">${item.group || '—'}</span>
+              <span class="cat-barcode">${item.barcode}</span>
+            </div>
+            <div class="cat-prices">
+               ${item.priceAfterDiscount && item.priceAfterDiscount < item.price
+          ? `<div class="price-row"><span class="lbl">Consumer:</span> <span class="val old">₪${item.price}</span></div>
+                     <div class="price-row"><span class="lbl">Discount:</span> <span class="val new">₪${item.priceAfterDiscount}</span></div>`
+          : `<div class="price-row"><span class="lbl">Price:</span> <span class="val">₪${item.price ?? 0}</span></div>`
+        }
+            </div>
           </div>
         </div>
       `;
     }).join('');
 
-    return `<!DOCTYPE html>
-<html dir="ltr" lang="en">
+    const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
+
+    return `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
-<title>Product Catalog</title>
-<style>
-  body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; background: #fff; }
-  .cat-header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-  .cat-title { font-size: 2.5rem; color: #1e293b; margin: 0; }
-  .cat-sub { font-size: 1.1rem; color: #64748b; margin-top: 5px; }
+  <meta charset="utf-8">
+  <title>Maslamani Sales Catalog</title>
+  <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
+  body { font-family: 'Inter', sans-serif; margin: 0; padding: 40px; background: white; color: #1e293b; }
   
-  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px; }
+  /* Brand Header */
+  .brand-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
   
-  .cat-card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; page-break-inside: avoid; background: #fff; }
-  .cat-img { height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px; }
+  .brand-left { display: flex; align-items: center; gap: 16px; }
+  .brand-logo { 
+    width: 60px; height: 60px; 
+    background: linear-gradient(135deg, #ec4899 0%, #e11d48 100%); 
+    border-radius: 16px; 
+    display: flex; align-items: center; justify-content: center;
+    color: white; 
+    box-shadow: 0 10px 20px rgba(225, 29, 72, 0.2);
+  }
+  .brand-text h1 { font-size: 1.8rem; font-weight: 900; margin: 0; line-height: 1; color: #1e293b; letter-spacing: -1px; }
+  .brand-text h1 span { font-weight: 300; color: #64748b; }
+  .brand-date { font-size: 0.75rem; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 2px; margin-top: 6px; }
+
+  /* Modern Title */
+  .catalog-title { text-align: right; }
+  .catalog-title h2 { font-size: 3rem; font-weight: 900; line-height: 0.8; color: #f1f5f9; text-transform: uppercase; margin: 0; letter-spacing: -2px; }
+  .catalog-title h3 { font-size: 1.2rem; font-weight: 800; color: #0f172a; text-transform: uppercase; margin: 0; letter-spacing: 4px; margin-right: 4px; }
+
+  .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .cat-card { border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; page-break-inside: avoid; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+  
+  .cat-img { height: 180px; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 10px; }
   .cat-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .cat-no-img { font-size: 3rem; opacity: 0.3; }
   
-  .cat-info { padding: 16px; text-align: center; }
-  .cat-name { font-weight: 700; font-size: 1rem; color: #1e293b; margin-bottom: 8px; line-height: 1.4; height: 2.8em; overflow: hidden; }
-  .cat-barcode { font-family: monospace; color: #64748b; font-size: 0.9rem; margin-bottom: 8px; }
-  .cat-price { color: #ea580c; font-weight: 700; font-size: 1.2rem; }
+  .cat-info { padding: 12px; text-align: center; }
+  .cat-name { font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 8px; line-height: 1.3; height: 2.6em; overflow: hidden; }
+  .cat-details { display: flex; justify-content: center; gap: 8px; font-size: 0.75rem; color: #64748b; margin-bottom: 8px; }
+  .cat-group { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+  .cat-barcode { font-family: monospace; }
+  .cat-prices { border-top: 1px solid #f1f5f9; padding-top: 8px; margin-top: 8px; }
+  .price-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 2px; }
+  .lbl { color: #94a3b8; font-size: 0.75rem; }
+  .val { font-weight: 700; color: #334155; }
+  .val.old { text-decoration: line-through; color: #94a3b8; }
+  .val.new { color: #ea580c; font-weight: 800; }
 
   @media print {
     body { padding: 0; }
-    .cat-grid { gap: 16px; }
-    .cat-card { border: 1px solid #ddd; }
+    .cat-card { break-inside: avoid; }
   }
-</style>
+  </style>
 </head>
 <body>
-  <div class="cat-header">
-    <h1 class="cat-title">Product Catalog</h1>
-    <p class="cat-sub">${safeLocaleDate({ year: 'numeric', month: 'long', day: 'numeric' })}</p>
+  <div class="brand-header">
+    <div class="brand-left">
+        <div class="brand-logo">
+            <!-- Grid Icon SVG -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        </div>
+        <div class="brand-text">
+            <h1>Maslamani<span>Sales</span></h1>
+            <div class="brand-date">${dateStr}</div>
+        </div>
+    </div>
+    <div class="catalog-title">
+        <h3>Collection</h3>
+        <h2>Catalog</h2>
+    </div>
   </div>
+
   <div class="cat-grid">
     ${cards}
   </div>
-    <script>window.print();</script>
+    <script>
+      // Wait for images to load before printing
+      window.onload = function() {
+        // Simple timeout to allow images to render if cached or fast
+        setTimeout(function() {
+          window.print();
+        }, 800);
+      };
+    </script>
 </body>
 </html>`;
   }, []);
@@ -1359,6 +1417,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       if (prev.some(i => i.id === item.id)) return prev;
       return [...prev, item];
     });
+    setShowCatalogPanel(true); // Auto-open panel
   };
 
   const removeFromCatalog = (id) => {
@@ -1430,15 +1489,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <div
-      className={`font-sans flex h-screen overflow-hidden text-slate-800 ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
+      className={`font-sans flex h-screen overflow-hidden text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
     >
       <div
-        className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${showOrderPanel ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
+        className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
       >
-        <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative ${showOrderPanel ? 'rounded-3xl bg-white/40 shadow-xl border border-white/50' : ''}`}>
+        <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative ${(showOrderPanel || showCatalogPanel) ? 'rounded-3xl bg-white/40 shadow-xl border border-white/50' : ''}`}>
 
           {/* Header */}
-          <header className={`flex-shrink-0 z-30 transition-all duration-300 ${showOrderPanel ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'glass-panel sticky top-0 px-6 py-4'}`}>
+          <header className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'glass-panel sticky top-0 px-6 py-4'}`}>
             <div className="flex flex-wrap items-center justify-between gap-4 max-w-7xl mx-auto w-full">
               <div className="flex items-center gap-4 shrink-0">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/30 rotate-3' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30 -rotate-3'}`}>
@@ -2594,7 +2653,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</p>
-                      <p className="text-xs text-slate-500">{item.barcode}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 rounded">{item.barcode}</span>
+                        {item.group && <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 rounded">{item.group}</span>}
+                      </div>
+                      <div className="mt-2 flex items-baseline gap-3">
+                        {item.priceAfterDiscount && item.priceAfterDiscount < item.price ? (
+                          <>
+                            <span className="text-base font-black text-emerald-600">₪{item.priceAfterDiscount}</span>
+                            <span className="text-xs text-slate-400 line-through font-medium">₪{item.price}</span>
+                          </>
+                        ) : (
+                          <span className="text-base font-black text-slate-700">₪{item.price}</span>
+                        )}
+                      </div>
                     </div>
                     <button onClick={() => removeFromCatalog(item.id)} className="text-rose-500 hover:bg-rose-50 p-2 rounded-xl transition-colors">
                       <Trash2 size={16} />
