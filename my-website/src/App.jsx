@@ -2888,6 +2888,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         setMode={setMode}
         cartCount={orderLines.length}
         onOpenCart={() => setShowOrderPanel(true)}
+        hasOffers={customOffers.length > 0}
       />
     </div >
   );

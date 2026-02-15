@@ -1,15 +1,23 @@
 import React from 'react';
-import { Package, Grid } from 'lucide-react';
+import { Package, Grid, Gift } from 'lucide-react';
 
-export default function BottomNav({ mode, setMode, cartCount, onOpenCart }) {
+export default function BottomNav({ mode, setMode, cartCount, onOpenCart, hasOffers }) {
     return (
-        <div className="fixed bottom-0 left-0 right-0 glass-panel border-t-0 px-6 py-3 pb-safe z-50 flex items-center justify-around sm:hidden rounded-t-3xl backdrop-blur-xl">
+        <div className="fixed bottom-0 left-0 right-0 glass-panel border-t-0 px-4 py-3 pb-safe z-50 flex items-center justify-around sm:hidden rounded-t-3xl backdrop-blur-xl">
             <button
                 onClick={() => setMode('order')}
                 className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 ${mode === 'order' ? 'text-indigo-600 bg-indigo-50 -translate-y-1' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                <Package size={24} strokeWidth={mode === 'order' ? 2.5 : 2} className={mode === 'order' ? 'drop-shadow-sm' : ''} />
+                <Package size={22} strokeWidth={mode === 'order' ? 2.5 : 2} className={mode === 'order' ? 'drop-shadow-sm' : ''} />
                 <span className="text-[10px] font-bold">Sales</span>
+            </button>
+
+            <button
+                onClick={() => setMode('offers')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 ${mode === 'offers' ? 'text-amber-500 bg-amber-50 -translate-y-1' : hasOffers ? 'text-amber-500 hover:text-amber-600' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+                <Gift size={22} strokeWidth={mode === 'offers' ? 2.5 : 2} className={mode === 'offers' ? 'drop-shadow-sm' : ''} />
+                <span className="text-[10px] font-bold">Offers</span>
             </button>
 
             <div className="relative -top-8">
@@ -28,7 +36,7 @@ export default function BottomNav({ mode, setMode, cartCount, onOpenCart }) {
                 onClick={() => setMode('catalog')}
                 className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 ${mode === 'catalog' ? 'text-rose-600 bg-rose-50 -translate-y-1' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                <Grid size={24} strokeWidth={mode === 'catalog' ? 2.5 : 2} className={mode === 'catalog' ? 'drop-shadow-sm' : ''} />
+                <Grid size={22} strokeWidth={mode === 'catalog' ? 2.5 : 2} className={mode === 'catalog' ? 'drop-shadow-sm' : ''} />
                 <span className="text-[10px] font-bold">Catalog</span>
             </button>
         </div>
