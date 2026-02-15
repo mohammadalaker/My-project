@@ -287,14 +287,41 @@ function App() {
       return s ? JSON.parse(s) : [];
     } catch { return []; }
   });
-  const [editingOffer, setEditingOffer] = useState(null); // { id, title, items: [{ barcode, quantity, offerPrice, isFree }] } or null
+  const [editingOffer, setEditingOffer] = useState(null);
   const [offerSearch, setOfferSearch] = useState('');
+  const [offersLoaded, setOffersLoaded] = useState(false);
+
+  const fetchCustomOffers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('custom_offers').select('id, title, items, created_at').order('created_at', { ascending: true });
+      if (!error && data && data.length > 0) {
+        const parsed = data.map((r) => ({ id: r.id, title: r.title || 'عرض', items: Array.isArray(r.items) ? r.items : [] }));
+        setCustomOffers(parsed);
+        try { localStorage.setItem('sales_custom_offers', JSON.stringify(parsed)); } catch (_) {}
+      } else if (!error && (!data || data.length === 0)) {
+        const local = (() => { try { const s = localStorage.getItem('sales_custom_offers'); return s ? JSON.parse(s) : []; } catch { return []; } })();
+        if (local.length > 0) {
+          for (const o of local) {
+            try {
+              await supabase.from('custom_offers').upsert({ id: o.id, title: o.title || 'عرض', items: o.items || [], updated_at: new Date().toISOString() }, { onConflict: 'id' });
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (e) { console.warn('fetchCustomOffers:', e); }
+    setOffersLoaded(true);
+  }, []);
 
   useEffect(() => {
+    fetchCustomOffers();
+  }, [fetchCustomOffers]);
+
+  useEffect(() => {
+    if (!offersLoaded) return;
     try {
       localStorage.setItem('sales_custom_offers', JSON.stringify(customOffers));
     } catch (e) { console.warn('Could not save offers:', e); }
-  }, [customOffers]);
+  }, [customOffers, offersLoaded]);
 
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -464,23 +491,30 @@ function App() {
     setEditingOffer((prev) => prev ? { ...prev, items: prev.items.filter((x) => x.barcode !== barcode) } : null);
   };
 
-  const saveOffer = () => {
+  const saveOffer = async () => {
     if (!editingOffer || editingOffer.items.length === 0) {
       alert('أضف منتجاً واحداً على الأقل للعرض');
       return;
     }
+    const offerData = { id: editingOffer.id, title: editingOffer.title || 'عرض', items: editingOffer.items, updated_at: new Date().toISOString() };
     setCustomOffers((prev) => {
       const next = prev.filter((o) => o.id !== editingOffer.id);
-      next.push({ id: editingOffer.id, title: editingOffer.title || 'عرض', items: editingOffer.items });
+      next.push({ id: offerData.id, title: offerData.title, items: offerData.items });
       return next;
     });
     setEditingOffer(null);
+    try {
+      await supabase.from('custom_offers').upsert(offerData, { onConflict: 'id' });
+    } catch (e) { console.warn('Supabase save offer:', e); }
   };
 
-  const deleteOffer = (id) => {
+  const deleteOffer = async (id) => {
     if (!window.confirm('حذف هذا العرض؟')) return;
     setCustomOffers((prev) => prev.filter((o) => o.id !== id));
     if (editingOffer?.id === id) setEditingOffer(null);
+    try {
+      await supabase.from('custom_offers').delete().eq('id', id);
+    } catch (e) { console.warn('Supabase delete offer:', e); }
   };
 
   const startEditOffer = (offer) => {
