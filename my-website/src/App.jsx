@@ -26,6 +26,7 @@ import {
   Flame,
   Cookie,
   FileText,
+  FileDown,
   Grid,
   Clock,
   ArrowUpDown,
@@ -879,16 +880,20 @@ function App() {
         const imgHtml = imgSrc
           ? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" /></div>`
           : '<div class="inv-img"><span class="inv-no-img">📦</span></div>';
-        const name = (o.item?.name || '').replace(/</g, '&lt;').slice(0, 40);
+        const name = (o.item?.name || '').replace(/</g, '&lt;');
+        const group = (o.item?.group || '').replace(/</g, '&lt;');
+        const box = (o.item?.box || '').replace(/</g, '&lt;');
         return `<article class="inv-card">
           <span class="inv-num" dir="ltr" lang="en">${idx + 1}</span>
           ${imgHtml}
           <div class="inv-details">
             ${name ? `<div class="inv-name">${name}</div>` : ''}
             <div class="inv-barcode">${(o.item?.barcode || '—').replace(/</g, '&lt;')}</div>
+            ${group ? `<div class="inv-group">${group}</div>` : ''}
             <div class="inv-meta">
               <span class="inv-price" dir="ltr" lang="en">₪${unitPrice}</span>
               <span class="inv-qty" dir="ltr" lang="en">× ${o.qty}</span>
+              ${box ? `<span class="inv-box" dir="ltr" lang="en">Box: ${box}</span>` : ''}
               ${discPercent > 0 ? `<span class="inv-disc" dir="ltr" lang="en">Discount ${discPercent}%</span>` : ''}
             </div>
           </div>
@@ -902,27 +907,29 @@ function App() {
       ? ` &nbsp;|&nbsp; <span>Payment:</span> <span dir="ltr" lang="en">${orderInfo.paymentMethod}${orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? ` (${orderInfo.checksCount})` : ''}</span>`
       : '';
 
-    return `<!DOCTYPE html><html dir="ltr" lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Selected Items</title>
+    return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Order Summary - PDF</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;margin:0 auto;background:linear-gradient(160deg,#f8faff 0%,#f1f5f9 50%,#e2e8f0 100%);min-height:100vh}
 .inv-wrap{background:#fff;border-radius:24px;box-shadow:0 20px 60px -15px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.04);padding:32px;overflow:hidden}
-.inv-header{background:linear-gradient(135deg,#ea580c 0%,#f97316 50%,#fb923c 100%);color:#fff;padding:28px 24px;text-align:center;border-radius:16px;margin-bottom:24px;box-shadow:0 10px 30px -5px rgba(234,88,12,.4)}
-.inv-title{font-size:1.75rem;font-weight:800;margin:0;letter-spacing:-0.02em}
-.inv-sub{font-size:.9rem;opacity:.9;margin-top:6px}
+.inv-header{background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#334155 100%);color:#fff;padding:32px 28px;text-align:center;border-radius:20px;margin-bottom:24px;box-shadow:0 20px 40px -10px rgba(15,23,42,.4);border:1px solid rgba(255,255,255,.08)}
+.inv-title{font-size:1.5rem;font-weight:800;margin:0;letter-spacing:0.05em;text-transform:uppercase;opacity:.95}
+.inv-sub{font-size:.8rem;opacity:.7;margin-top:8px;letter-spacing:0.15em;font-weight:500}
 .inv-info{display:flex;gap:16px;flex-wrap:wrap;padding:16px 20px;background:#f8fafc;border-radius:12px;margin-bottom:24px;font-size:.95rem;color:#475569;border:1px solid #e2e8f0}
 .inv-info span{font-weight:600;color:#334155}
 .inv-cards{display:flex;flex-direction:column;gap:14px}
 .inv-card{display:flex;align-items:center;gap:16px;padding:16px 20px;background:#fff;border-radius:14px;border:1px solid #e2e8f0;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:box-shadow .2s}
 .inv-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
 .inv-num{min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);color:#64748b;font-weight:700;font-size:.8rem;border-radius:8px}
-.inv-img{width:64px;height:64px;flex-shrink:0;border-radius:12px;overflow:hidden;background:linear-gradient(145deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center}
+.inv-img{width:80px;height:80px;flex-shrink:0;border-radius:12px;overflow:hidden;background:linear-gradient(145deg,#f8fafc,#f1f5f9);border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center}
 .inv-img img{width:100%;height:100%;object-fit:contain;padding:4px}
 .inv-no-img{font-size:1.8rem;opacity:.5}
 .inv-details{flex:1;min-width:0}
-.inv-name{font-weight:600;color:#1e293b;font-size:.95rem;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-name{font-weight:600;color:#1e293b;font-size:.95rem;margin-bottom:4px;line-height:1.4;word-break:break-word}
 .inv-barcode{font-family:ui-monospace,monospace;font-size:.8rem;color:#64748b;font-weight:600}
+.inv-group{font-size:.75rem;color:#6366f1;font-weight:600;margin-top:2px}
+.inv-box{font-size:.75rem;color:#64748b}
 .inv-meta{display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap}
 .inv-price{font-weight:700;color:#ea580c;font-size:1rem}
 .inv-qty{font-size:.85rem;color:#64748b}
@@ -936,11 +943,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 @media print{body{background:#fff;padding:16px}.inv-wrap{box-shadow:none;border:1px solid #e2e8f0}.btn-print,.btn-save-order{display:none}.inv-card:hover{box-shadow:none}}
 </style></head><body>
 <div class="inv-wrap">
-  <div class="inv-header"><h1 class="inv-title">Selected Items</h1><p class="inv-sub">Selected Products</p></div>
-  <div class="inv-info"><span>Client:</span> ${cust} &nbsp;|&nbsp; <span>Phone:</span> <span dir="ltr" lang="en">${(orderInfo.phone || '—').replace(/</g, '&lt;')}</span> &nbsp;|&nbsp; <span>Date:</span> <span dir="ltr" lang="en">${date}</span>${paymentInfo}</div>
+  <div class="inv-header"><h1 class="inv-title">Order Summary</h1><p class="inv-sub">Products · Images · Details</p></div>
+  <div class="inv-info"><span>العميل:</span> ${cust} &nbsp;|&nbsp; <span>الهاتف:</span> <span dir="ltr" lang="en">${(orderInfo.phone || '—').replace(/</g, '&lt;')}</span> &nbsp;|&nbsp; <span>التاريخ:</span> <span dir="ltr" lang="en">${date}</span>${paymentInfo}</div>
   <div class="inv-cards">${cards}</div>
-  <div class="inv-total-card"><span>Total</span><span dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</span></div>
-  <button class="btn-print" onclick="window.print()">Print</button>
+  <div class="inv-total-card"><span>المجموع</span><span dir="ltr" lang="en">₪${orderTotal.toFixed(2)}</span></div>
+  <button class="btn-print" onclick="window.print()">طباعة / حفظ PDF</button>
 </div></body></html>`;
   }, [orderLines, orderTotal, orderInfo]);
 
@@ -954,6 +961,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       w.print();
       w.close();
     }, 300);
+  };
+
+  const handleOpenPdfOrder = () => {
+    if (orderLines.length === 0) {
+      alert('السلة فارغة. أضف منتجات أولاً.');
+      return;
+    }
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const html = getInventoryHtml();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
   };
 
   const validateOrder = () => {
@@ -2643,14 +2663,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-3">
-                <button onClick={handlePrintOrder} className="col-span-2 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-3">
-                  <span className="text-xl">🖨️</span> <span>Print Order</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button onClick={handleOpenPdfOrder} disabled={orderLines.length === 0} className="py-4 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-rose-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
+                  <FileDown size={20} /> <span>PDF</span>
                 </button>
-                <button onClick={handleSaveInvoice} className="col-span-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
+                <button onClick={handlePrintOrder} disabled={orderLines.length === 0} className="py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
+                  <span className="text-xl">🖨️</span> <span>Print</span>
+                </button>
+                <button onClick={handleSaveInvoice} className="py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
                   <span>Save</span>
                 </button>
-                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="col-span-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
+                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
                   <span>{activeTab === 'items' ? 'Next >' : '< Back'}</span>
                 </button>
               </div>
