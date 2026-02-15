@@ -298,14 +298,14 @@ function App() {
       if (!error && data && data.length > 0) {
         const parsed = data.map((r) => ({ id: r.id, title: r.title || 'عرض', items: Array.isArray(r.items) ? r.items : [] }));
         setCustomOffers(parsed);
-        try { localStorage.setItem('sales_custom_offers', JSON.stringify(parsed)); } catch (_) {}
+        try { localStorage.setItem('sales_custom_offers', JSON.stringify(parsed)); } catch (_) { }
       } else if (!error && (!data || data.length === 0)) {
         const local = (() => { try { const s = localStorage.getItem('sales_custom_offers'); return s ? JSON.parse(s) : []; } catch { return []; } })();
         if (local.length > 0) {
           for (const o of local) {
             try {
               await supabase.from('custom_offers').upsert({ id: o.id, title: o.title || 'عرض', items: o.items || [], updated_at: new Date().toISOString() }, { onConflict: 'id' });
-            } catch (_) {}
+            } catch (_) { }
           }
         }
       }
@@ -1569,27 +1569,27 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className="hidden sm:flex bg-slate-100/50 p-1 rounded-xl border border-white/50 backdrop-blur-sm">
                   {userRole === 'supervisor' && (
                     <button
-                      onClick={() => setMode('submitted')}
+                      onClick={() => { setMode('submitted'); setShowOrderPanel(false); }}
                       className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'submitted' ? 'bg-white shadow-md text-emerald-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                       Orders
                     </button>
                   )}
                   <button
-                    onClick={() => setMode('order')}
+                    onClick={() => { setMode('order'); setShowOrderPanel(false); }}
                     className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'order' ? 'bg-white shadow-md text-indigo-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Sales
                   </button>
                   <button
-                    onClick={() => setMode('offers')}
+                    onClick={() => { setMode('offers'); setShowOrderPanel(false); }}
                     className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'offers' ? 'bg-white shadow-md scale-105' : ''} ${customOffers.length > 0 ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Offers
                   </button>
                   {userRole !== 'customer' && (
                     <button
-                      onClick={() => setMode('catalog')}
+                      onClick={() => { setMode('catalog'); setShowOrderPanel(false); }}
                       className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'catalog' ? 'bg-white shadow-md text-rose-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                       Catalog
