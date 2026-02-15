@@ -263,6 +263,7 @@ function App() {
   const [catalogItems, setCatalogItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
+  const [currentOrderId, setCurrentOrderId] = useState(null); // Track ID for supervisor review
   const [orderInfo, setOrderInfo] = useState(() => ({
     companyName: '',
     merchantName: '',
@@ -1038,6 +1039,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const handleSaveInvoice = async () => {
+    // FIX: If supervisor is reviewing a submitted order, "Save" should trigger "Export Excel & Delete"
+    if (userRole === 'supervisor' && currentOrderId) {
+      handleExportExcel();
+      return;
+    }
+
     const error = validateOrder();
     if (error) {
       alert(error + '\nPlease fill in all required customer details.');
@@ -1076,7 +1083,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       setActiveTab('customer');
       return;
     }
-    const saved = await saveOrderToSupabase();
+
+    let saved = false;
+    const isSupervisorProcessing = userRole === 'supervisor' && currentOrderId;
+
+    if (isSupervisorProcessing) {
+      // Supervisor processing: Don't save new, but delete old AFTER excel generation logic
+      saved = true; // Treat as success to proceed
+    } else {
+      saved = await saveOrderToSupabase();
+    }
+
+    if (!saved && !isSupervisorProcessing) return; // Exit if save failed and not supervisor flow
 
     const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
@@ -1192,8 +1210,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     a.download = `Order-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
-    if (saved) clearOrderAndInfo();
-  }, [orderLines, orderTotal, orderInfo]);
+
+    // Logic for delete if supervisor
+    if (isSupervisorProcessing) {
+      try {
+        const { error } = await supabase.from('orders').delete().eq('id', currentOrderId);
+        if (error) throw error;
+        alert('Order saved to Excel and removed from system successfully.');
+      } catch (err) {
+        console.error('Error deleting order:', err);
+        alert('Order saved to Excel, but failed to remove from system: ' + err.message);
+      }
+      setCurrentOrderId(null);
+      clearOrderAndInfo();
+    } else if (saved) {
+      clearOrderAndInfo();
+    }
+  }, [orderLines, orderTotal, orderInfo, currentOrderId, userRole]);
 
   const handleOpenInventory = () => {
     const html = getInventoryHtml();
@@ -1776,43 +1809,40 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           {/* Approve (Agree) Button -> PDF + Complete */}
                           <button
                             type="button"
-                            onClick={async () => {
+                            onClick={() => {
                               if (!selectedOrder) return;
-                              setOrderActionLoading(true);
-                              try {
-                                // 1. Generate HTML & Print
-                                const html = getPrintHtml(selectedOrder);
-                                const w = window.open('', '_blank');
-                                if (w) {
-                                  w.document.write(html);
-                                  w.document.close();
-                                  w.focus();
-                                  // Give time for images to load if any, though here it's mostly text
-                                  setTimeout(() => {
-                                    w.print();
-                                    // w.close(); // Optional: close after print
-                                  }, 500);
-                                }
+                              // Load items into cart
+                              const newOrderItems = (selectedOrder.items || []).map(orderItem => {
+                                // Find original item data if possible to get full details (image, group, etc.)
+                                const originalItem = items.find(i => i.barcode === orderItem.barcode) || {};
+                                return {
+                                  id: originalItem.id || orderItem.barcode,
+                                  qty: orderItem.qty,
+                                  unitPrice: orderItem.unit_price || orderItem.price,
+                                  box: originalItem.box,
+                                  item: { ...originalItem, ...orderItem }, // Merge to ensure we have display data
+                                  customName: orderItem.name
+                                };
+                              });
 
-                                // 2. Mark as completed in Supabase
-                                const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
-                                if (error) {
-                                  if (error.message?.includes('column "status" of relation "orders" does not exist')) {
-                                    throw new Error('Missing "status" column. Please checking ORDERS_SUPABASE.md and run the SQL migration.');
-                                  }
-                                  throw error;
-                                }
+                              setOrderItems(newOrderItems);
+                              setOrderInfo({
+                                companyName: selectedOrder.customer_name || '',
+                                merchantName: '', // Optional or from order if saved
+                                phone: selectedOrder.customer_phone || '',
+                                address: selectedOrder.customer_address || '',
+                                orderDate: selectedOrder.order_date || new Date().toISOString().slice(0, 10),
+                                customerNumber: selectedOrder.customer_number || '',
+                                paymentMethod: selectedOrder.payment_method || '', // Assuming these fields exist in saved details
+                                checksCount: '',
+                              });
 
-                                // 3. Remove from UI
-                                setSubmittedOrders((prev) => prev.filter((o) => o.id !== selectedOrder.id));
-                                setSelectedOrder(null);
-
-                              } catch (e) {
-                                console.error(e);
-                                alert('Error processing order: ' + e.message);
-                              } finally {
-                                setOrderActionLoading(false);
-                              }
+                              setSelectedOrder(null);
+                              setCurrentOrderId(selectedOrder.id);
+                              setMode('order');
+                              setShowOrderPanel(true);
+                              // Note: We do NOT changing status to 'completed' here. 
+                              // The supervisor will review in the main screen and then Print/Save from there.
                             }}
                             disabled={orderActionLoading}
                             className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold flex items-center justify-center gap-2 disabled:opacity-50"
