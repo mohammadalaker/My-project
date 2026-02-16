@@ -141,20 +141,25 @@ async function main() {
     return;
   }
 
-  console.log('Items to delete (not in Excel):', toDelete.length);
+  console.log('Items to update to Stock 0 (not in Excel):', toDelete.length);
   const batchSize = 100;
-  let deleted = 0;
+  let updated = 0;
   for (let i = 0; i < toDelete.length; i += batchSize) {
     const batch = toDelete.slice(i, i + batchSize);
-    const { error } = await supabase.from('items').delete().in('barcode', batch);
+    // Update stock_count to 0 for these barcodes
+    const { error } = await supabase
+      .from('items')
+      .update({ stock_count: 0 })
+      .in('barcode', batch);
+
     if (error) {
-      console.error('Delete batch error:', error.message);
+      console.error('Update batch error:', error.message);
       break;
     }
-    deleted += batch.length;
-    console.log('Deleted', deleted, '/', toDelete.length);
+    updated += batch.length;
+    console.log('Updated', updated, '/', toDelete.length);
   }
-  console.log('Done. Deleted', deleted, 'item(s) that were not in Excel.');
+  console.log('Done. Updated', updated, 'item(s) to Stock 0.');
 }
 
 main().catch((err) => {

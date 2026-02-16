@@ -1255,6 +1255,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   const openEditModal = (item) => {
     if (userRole !== 'admin') return;
     setEditingItem(item);
+    const stockVal = item.stock;
+    const stockDisplay = (stockVal != null && stockVal !== '') ? stockVal : 0;
     setFormData({
       barcode: item.barcode || '',
       brand_group: item.group || '',
@@ -1262,7 +1264,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       box_count: item.box ?? '',
       full_price: item.price ?? '',
       price_after_disc: item.priceAfterDiscount ?? '',
-      stock_count: item.stock ?? '',
+      stock_count: stockDisplay,
       image_url: item.image || '',
     });
     setModalOpen(true);
@@ -1281,13 +1283,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         price_after_disc: formData.price_after_disc
           ? parseFloat(formData.price_after_disc)
           : null,
-        stock_count: formData.stock_count ? parseInt(formData.stock_count, 10) : 0,
+        stock_count: (() => {
+          const v = formData.stock_count;
+          if (v === '' || v == null) return null;
+          const n = parseInt(String(v), 10);
+          return isNaN(n) || n < 0 ? null : Math.round(n);
+        })(),
         image_url: formData.image_url.trim() || null,
       };
       if (editingItem) {
-        await supabase.from('items').update(payload).eq('barcode', editingItem.barcode);
+        const { error } = await supabase.from('items').update(payload).eq('barcode', editingItem.barcode);
+        if (error) throw error;
       } else {
-        await supabase.from('items').insert(payload);
+        const { error } = await supabase.from('items').insert(payload);
+        if (error) throw error;
       }
       setModalOpen(false);
       fetchItems(true);
@@ -2084,7 +2093,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   return (
                                     <div
                                       key={entry.barcode}
-                                      className="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-200 shadow-sm"
+                                      className={`flex items-center gap-4 p-4 rounded-xl border shadow-sm ${it ? 'bg-white border-slate-200' : 'bg-red-50 border-red-200'}`}
                                     >
                                       {it && getImage(it) ? (
                                         <img src={getImage(it)} alt="" className="w-14 h-14 object-contain rounded-lg" />
@@ -2094,8 +2103,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         </div>
                                       )}
                                       <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-slate-800 truncate">{it?.name || entry.barcode}</p>
-                                        <p className="text-xs text-slate-500">الكمية: {entry.quantity}</p>
+                                        <p className={`font-medium truncate ${it ? 'text-slate-800' : 'text-red-600 italic'}`}>
+                                          {it?.name || `Removed Product (${entry.barcode})`}
+                                        </p>
+                                        <p className="text-xs text-slate-500">الكمية: {entry.quantity} {it ? '' : '(Not Available)'}</p>
                                         <p className="text-sm font-bold text-emerald-600">
                                           {entry.isFree ? (
                                             <span className="inline-flex items-center gap-1"><Gift size={14} /> مجاناً</span>
@@ -2873,7 +2884,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <label><span className="text-xs block text-slate-600 font-medium mb-1">Name</span><input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
                 <label><span className="text-xs block text-slate-600 font-medium mb-1">Group</span><input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
                 <div className="grid grid-cols-2 gap-2">
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Qty (Stock)</span><input type="number" value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+                  <label>
+                    <span className="text-xs block text-slate-600 font-medium mb-1 flex items-center gap-2">
+                      Qty (Stock)
+                      {(formData.stock_count === '' || formData.stock_count == null || Number(formData.stock_count) <= 0) && (
+                        <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded">Out of Stock</span>
+                      )}
+                    </span>
+                    <input type="number" min={0} placeholder="0 = Out of Stock" value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" />
+                  </label>
                   <label><span className="text-xs block text-slate-600 font-medium mb-1">Box</span><input type="number" value={formData.box_count} onChange={(e) => setFormData((p) => ({ ...p, box_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
                 </div>
                 <div className="grid grid-cols-2 gap-2">

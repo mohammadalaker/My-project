@@ -12,13 +12,15 @@ export default function OfferCard({
     onDelete,
     addOfferToOrder
 }) {
-    const totalPrice = offer.items.reduce((sum, e) => sum + (e.isFree ? 0 : e.offerPrice * e.quantity), 0);
+    const totalPrice = offer.items.reduce((sum, e) => {
+        const it = getItemByBarcode(e.barcode);
+        return sum + (it ? (e.isFree ? 0 : e.offerPrice * e.quantity) : 0);
+    }, 0);
+
     const totalOriginalPrice = offer.items.reduce((sum, e) => {
         const it = getItemByBarcode(e.barcode);
         return sum + ((it?.price ?? 0) * e.quantity);
     }, 0);
-    const savings = totalOriginalPrice > totalPrice ? totalOriginalPrice - totalPrice : 0;
-    const savingsPercent = totalOriginalPrice > 0 ? Math.round((savings / totalOriginalPrice) * 100) : 0;
 
     const freeItems = offer.items.filter((e) => e.isFree);
     const paidItems = offer.items.filter((e) => !e.isFree);
@@ -104,7 +106,9 @@ export default function OfferCard({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                         {paidItems.map((entry, idx) => {
                             const it = getItemByBarcode(entry.barcode);
+                            const effectiveQty = it ? entry.quantity : 0;
                             const isLarge = idx === 0; // First item is featured larger
+
                             return (
                                 <div
                                     key={entry.barcode}
@@ -126,16 +130,20 @@ export default function OfferCard({
 
                                         <div className="w-full">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg">x{entry.quantity}</span>
+                                                <span className={`text-[10px] font-bold px-2 py-1 rounded shadow-lg ${it ? 'bg-slate-900 text-white' : 'bg-red-100 text-red-600'}`}>
+                                                    x{effectiveQty} {it ? '' : '(Deleted)'}
+                                                </span>
                                                 {it?.group && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{it.group}</span>}
                                             </div>
                                             {/* REDUCED NAME SIZE */}
-                                            <h4 className={`font-bold text-slate-800 leading-tight ${isLarge ? 'text-xl' : 'text-base'}`}>{it?.name || entry.barcode}</h4>
+                                            <h4 className={`font-bold text-slate-800 leading-tight ${isLarge ? 'text-xl' : 'text-base'}`}>
+                                                {it?.name || <span className="text-red-400 italic">Product Removed ({entry.barcode})</span>}
+                                            </h4>
 
                                             {/* INCREASED PRICE SIZE */}
                                             <div className="mt-3 flex items-baseline gap-1">
                                                 <span className="text-sm font-bold text-orange-500">₪</span>
-                                                <span className="text-3xl font-black text-slate-900">{entry.offerPrice}</span>
+                                                <span className="text-3xl font-black text-slate-900">{it ? entry.offerPrice : 0}</span>
                                                 <span className="text-slate-400 text-xs font-medium ml-1">/ unit</span>
                                             </div>
                                         </div>
@@ -164,7 +172,9 @@ export default function OfferCard({
                             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                                 {freeItems.map((entry) => {
                                     const it = getItemByBarcode(entry.barcode);
+                                    const effectiveQty = it ? entry.quantity : 0;
                                     const imgSrc = it && (getImageFallback ? getImageFallback(it) : getImage(it));
+
                                     return (
                                         // INCREASED SIZE OF GIFT CARD
                                         <div key={entry.barcode} className="shrink-0 w-56 flex flex-col items-center text-center bg-white p-4 rounded-3xl border-2 border-emerald-50 shadow-lg shadow-emerald-100/50 relative group/gift transition-transform hover:-translate-y-1">
@@ -178,10 +188,12 @@ export default function OfferCard({
                                                 <div className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-20">FREE</div>
                                             </div>
                                             <div className="min-w-0 w-full relative">
-                                                <p className="text-sm font-bold text-slate-700 leading-tight line-clamp-2 mb-2">{it?.name || 'Gift'}</p>
-                                                <div className="inline-flex items-center gap-1 bg-slate-900 text-white px-3 py-1 rounded-full text-xs font-black shadow-md mx-auto">
+                                                <p className="text-sm font-bold text-slate-700 leading-tight line-clamp-2 mb-2">
+                                                    {it?.name || <span className="text-red-400">Removed</span>}
+                                                </p>
+                                                <div className={`inline-flex items-center gap-1 text-white px-3 py-1 rounded-full text-xs font-black shadow-md mx-auto ${it ? 'bg-slate-900' : 'bg-red-500'}`}>
                                                     <span>QTY:</span>
-                                                    <span className="text-emerald-400 text-base">{entry.quantity}</span>
+                                                    <span className={it ? "text-emerald-400 text-base" : "text-white text-base"}>{effectiveQty}</span>
                                                 </div>
                                             </div>
                                         </div>
