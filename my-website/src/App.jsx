@@ -35,6 +35,8 @@ import {
   Sparkles,
   Percent,
   ShoppingCart,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -126,7 +128,7 @@ function amountToEnglishWords(amount) {
   return str + ' Only';
 }
 
-const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer';
+const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer, visible';
 
 const parsePrice = (val) => {
   if (val === null || val === undefined || val === '') return null;
@@ -158,6 +160,7 @@ function normalizeItemFromSupabase(row) {
     stock: row.stock_count,
     image: (row.image_url ?? '').toString().trim() || null,
     isOffer: !!row.is_offer,
+    visible: row.visible !== false && row.visible !== 0,
   };
 }
 
@@ -637,9 +640,9 @@ function App() {
         .select(ITEMS_SELECT);
 
       if (error) {
-        // If column missing, fallback to base query
-        if (error.message?.includes('column items.is_offer does not exist') || error.code === '42703') {
-          console.warn('is_offer column missing, falling back to base items query...');
+        // If column missing, fallback to base query (visible or is_offer)
+        if (error.message?.includes('column items.is_offer does not exist') || error.message?.includes('column items.visible does not exist') || error.code === '42703') {
+          console.warn('items column missing (is_offer/visible), falling back to base items query...');
           const BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url';
           const { data: retryData, error: retryError } = await supabase
             .from('items')
@@ -693,6 +696,10 @@ function App() {
   const filteredItems = useMemo(
     () => {
       let list = filteredByGroup;
+      // Non-admins see only visible products
+      if (userRole !== 'admin') {
+        list = list.filter((i) => i.visible !== false);
+      }
       // In offers mode, non-admins see only offers. Admins see all (to manage them).
       if (mode === 'offers' && userRole !== 'admin') {
         list = list.filter((i) => i.isOffer);
@@ -1424,6 +1431,32 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       setItems((prev) => prev.filter((i) => i.barcode !== barcode));
     } catch (err) {
       alert(err.message || 'Delete failed');
+    }
+  };
+
+  const toggleVisibility = async (item) => {
+    if (userRole !== 'admin') return;
+    const nextVisible = !(item.visible !== false);
+    try {
+      const { error } = await supabase.from('items').update({ visible: nextVisible }).eq('barcode', item.barcode);
+      if (error) throw error;
+      setItems((prev) => prev.map((i) => (i.barcode === item.barcode ? { ...i, visible: nextVisible } : i)));
+    } catch (err) {
+      console.warn('toggleVisibility:', err);
+      alert(err.message || 'Failed to update visibility. Add column: ALTER TABLE items ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE;');
+    }
+  };
+
+  const toggleOffer = async (item) => {
+    if (userRole !== 'admin') return;
+    const nextOffer = !item.isOffer;
+    try {
+      const { error } = await supabase.from('items').update({ is_offer: nextOffer }).eq('barcode', item.barcode);
+      if (error) throw error;
+      setItems((prev) => prev.map((i) => (i.barcode === item.barcode ? { ...i, isOffer: nextOffer } : i)));
+    } catch (err) {
+      console.warn('toggleOffer:', err);
+      alert(err.message || 'Failed to update offer status.');
     }
   };
 
@@ -2319,6 +2352,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   </div>
                                 )}
 
+                                {/* Visibility Toggle (Admin) - عين إظهار/إخفاء المنتج */}
+                                {userRole === 'admin' && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); toggleVisibility(item); }}
+                                    className={`absolute top-2 left-2 z-20 p-2 rounded-full shadow-md transition-all ${item.visible !== false ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-slate-300 text-slate-600 hover:bg-slate-400'}`}
+                                    title={item.visible !== false ? 'إخفاء المنتج من العملاء (انقر لإيقاف)' : 'إظهار المنتج للعملاء (انقر لإظهار)'}
+                                  >
+                                    {item.visible !== false ? <Eye size={16} /> : <EyeOff size={16} />}
+                                  </button>
+                                )}
+
                                 <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50">
                                   {getImage(item) ? (
                                     <img
@@ -2456,8 +2500,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                 {userRole === 'admin' && (
                                   <div className="absolute top-3 right-3 flex gap-1 transform translate-x-full opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
-                                    <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600"><FileText size={14} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600"><Trash2 size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="تعديل"><FileText size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
                                   </div>
                                 )}
                               </div>
