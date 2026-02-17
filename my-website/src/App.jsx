@@ -232,39 +232,52 @@ function App() {
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
-  // 2. Force Logout Logic (Listen to system_settings)
+  // 2. Force Logout Logic (Listen to custom_offers special row)
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // We can use a real-time subscription or polling. 
-    // Since this is a critical security feature but maybe not high-freq, 
-    // Polling every 30s-1m is fine, or Realtime. Let's do polling for simplicity and reliability without websocket limits.
-    // Actually, realtime is better for "immediate" effect.
-
-    const channel = supabase
-      .channel('public:system_settings')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_settings', filter: 'key=eq.force_logout_min_time' }, (payload) => {
-        const newTime = parseInt(payload.new.value, 10);
-        const myLoginTime = parseInt(localStorage.getItem('sales_login_time'), 10) || 0;
-        if (myLoginTime < newTime) {
-          handleLogout(true);
-        }
-      })
-      .subscribe();
-
-    // Also initial check
-    const checkForceLogout = async () => {
-      const { data } = await supabase.from('system_settings').select('value').eq('key', 'force_logout_min_time').single();
-      if (data && data.value) {
-        const forceTime = parseInt(data.value, 10);
-        const myLoginTime = parseInt(localStorage.getItem('sales_login_time'), 10) || 0;
-        if (myLoginTime < forceTime) {
-          handleLogout(true);
-        }
+    // Check force logout timestamp
+    const checkLogoutSignal = (signalTimestamp) => {
+      const myLoginTime = parseInt(localStorage.getItem('sales_login_time'), 10);
+      // If no login time (legacy session) or login time is before the force signal -> Logout
+      if (!myLoginTime || myLoginTime < signalTimestamp) {
+        handleLogout(true);
       }
     };
 
-    checkForceLogout();
+    // Realtime subscription to the signal row
+    const channel = supabase
+      .channel('public:custom_offers:force_logout')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'custom_offers',
+        filter: "id=eq.SYSTEM_FORCE_LOGOUT"
+      }, (payload) => {
+        // payload.new.title will hold the timestamp string
+        const newTime = parseInt(payload.new.title, 10);
+        if (newTime) checkLogoutSignal(newTime);
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'custom_offers',
+        filter: "id=eq.SYSTEM_FORCE_LOGOUT"
+      }, (payload) => {
+        const newTime = parseInt(payload.new.title, 10);
+        if (newTime) checkLogoutSignal(newTime);
+      })
+      .subscribe();
+
+    // Initial check
+    const initialCheck = async () => {
+      const { data } = await supabase.from('custom_offers').select('title').eq('id', 'SYSTEM_FORCE_LOGOUT').single();
+      if (data && data.title) {
+        checkLogoutSignal(parseInt(data.title, 10));
+      }
+    };
+
+    initialCheck();
 
     return () => { supabase.removeChannel(channel); };
   }, [isAuthenticated]);
@@ -313,16 +326,23 @@ function App() {
   const handleForceLogoutAll = async () => {
     if (!window.confirm('⚠️ هل أنت متأكد؟ سيتم تسجيل خروج جميع المستخدمين فوراً.')) return;
     try {
-      // Set cutoff time to NOW. Anyone logged in before NOW must logout.
+      // Set cutoff time to NOW.
       const now = Date.now().toString();
-      // Upsert the setting
-      const { error } = await supabase.from('system_settings').upsert({ key: 'force_logout_min_time', value: now });
+
+      // Upsert to custom_offers with special ID
+      // We use 'title' to store the timestamp
+      const { error } = await supabase.from('custom_offers').upsert({
+        id: 'SYSTEM_FORCE_LOGOUT',
+        title: now,
+        // items must be valid json/array per schema presumably, or null
+        items: []
+      });
+
       if (error) throw error;
+
       alert('تم إرسال أمر تسجيل الخروج للجميع.');
-      // Admin will also be logged out by the listener/hook naturally, or we can keep them signed in by updating their local storage time?
-      // Actually, if we want to logout EVERYONE including admin, this is fine. 
-      // If we want to keep THIS admin session, we should update local time.
-      // Let's update local time so the admin who clicked it stays logged in (optional but nice).
+
+      // Update local session so Admin stays logged in (if we want that)
       localStorage.setItem('sales_login_time', now);
     } catch (e) {
       console.error(e);
@@ -375,7 +395,7 @@ function App() {
 
   const fetchCustomOffers = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('custom_offers').select('id, title, items, created_at').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('custom_offers').select('id, title, items, created_at').neq('id', 'SYSTEM_FORCE_LOGOUT').order('created_at', { ascending: true });
       if (!error && data && data.length > 0) {
         const parsed = data.map((r) => ({ id: r.id, title: r.title || 'عرض', items: Array.isArray(r.items) ? r.items : [] }));
         setCustomOffers(parsed);
