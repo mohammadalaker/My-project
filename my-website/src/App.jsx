@@ -1132,28 +1132,37 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     ws.getCell(r, 1).value = 'Customer Customer';
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
-    ws.mergeCells(r, 1, r, 7);
+    ws.mergeCells(r, 1, r, 8);
     ws.getCell(r, 1).alignment = { horizontal: 'left' };
     border(ws.getCell(r, 1));
     r++;
-    const excelInfoRows = [['Company Name', orderInfo.companyName], ['Merchant Name', orderInfo.merchantName], ['Phone', orderInfo.phone], ['Address', orderInfo.address], ['Date', orderInfo.orderDate], ['Payment Method', orderInfo.paymentMethod], ...(orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? [['Checks Count', orderInfo.checksCount]] : [])];
+    const excelInfoRows = [
+      ['Company Name', orderInfo.companyName],
+      ['Merchant Name', orderInfo.merchantName],
+      ['Customer Number', orderInfo.customerNumber], // Added Customer Number
+      ['Phone', orderInfo.phone],
+      ['Address', orderInfo.address],
+      ['Date', orderInfo.orderDate],
+      ['Payment Method', orderInfo.paymentMethod],
+      ...(orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? [['Checks Count', orderInfo.checksCount]] : [])
+    ];
     excelInfoRows.forEach(([l, v], i) => {
       ws.getCell(r, 1).value = l;
       ws.getCell(r, 2).value = v || '';
       styleCell(ws.getCell(r, 1), { fill: i % 2 === 0 ? colors.light : colors.lightAlt, font: { bold: true, color: { argb: colors.textDark } }, alignment: { horizontal: 'left' } });
       styleCell(ws.getCell(r, 2), { fill: colors.white, font: { color: { argb: colors.textDark } }, alignment: { horizontal: 'left' } });
-      ws.mergeCells(r, 2, r, 7);
+      ws.mergeCells(r, 2, r, 8);
       r++;
     });
     r += 1;
     ws.getCell(r, 1).value = 'Item Details';
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
-    ws.mergeCells(r, 1, r, 7);
+    ws.mergeCells(r, 1, r, 8);
     ws.getCell(r, 1).alignment = { horizontal: 'left' };
     border(ws.getCell(r, 1));
     r++;
-    const headers = ['Name', 'Barcode', 'Qty', 'Price', 'Discounted', 'Discount %', 'Total'];
+    const headers = ['Name', 'Barcode', 'Group', 'Qty', 'Price', 'Discounted', 'Discount %', 'Total']; // Added Group
     headers.forEach((h, c) => {
       ws.getCell(r, c + 1).value = h;
       styleCell(ws.getCell(r, c + 1), { fill: colors.primary, font: { bold: true, color: { argb: colors.white }, size: 11 }, alignment: { horizontal: 'center', vertical: 'middle' } });
@@ -1165,41 +1174,43 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       const discPct = getLineDiscountPercent(o);
       ws.getCell(r, 1).value = (o.customName || o.item?.name || '').slice(0, 50);
       ws.getCell(r, 2).value = o.item?.barcode || '';
-      ws.getCell(r, 3).value = o.qty;
-      ws.getCell(r, 4).value = Number(o.item?.price) ?? 0;
-      ws.getCell(r, 5).value = getLineUnitPrice(o);
-      ws.getCell(r, 6).value = discPct > 0 ? discPct + '%' : '—';
-      ws.getCell(r, 7).value = parseFloat(getLineTotal(o).toFixed(2));
+      ws.getCell(r, 3).value = o.item?.group || ''; // Added Group value
+      ws.getCell(r, 4).value = o.qty;
+      ws.getCell(r, 5).value = Number(o.item?.price) ?? 0;
+      ws.getCell(r, 6).value = getLineUnitPrice(o);
+      ws.getCell(r, 7).value = discPct > 0 ? discPct + '%' : '—';
+      ws.getCell(r, 8).value = parseFloat(getLineTotal(o).toFixed(2));
       const rowFill = i % 2 === 0 ? colors.white : 'FFF8fafc';
-      for (let c = 1; c <= 7; c++) {
+      for (let c = 1; c <= 8; c++) {
         const cell = ws.getCell(r, c);
         styleCell(cell, {
           fill: rowFill,
-          font: c === 7 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
-          alignment: c <= 2 ? { horizontal: 'left' } : { horizontal: 'center' },
+          font: c === 8 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
+          alignment: c <= 3 ? { horizontal: 'left' } : { horizontal: 'center' }, // Alignment adjusted for text/numbers
         });
       }
       r++;
     });
     ws.getCell(r, 1).value = '';
-    ws.getCell(r, 5).value = 'Total';
-    ws.getCell(r, 7).value = parseFloat(orderTotal.toFixed(2));
-    for (let c = 1; c <= 7; c++) {
+    ws.getCell(r, 6).value = 'Total';
+    ws.getCell(r, 8).value = parseFloat(orderTotal.toFixed(2));
+    for (let c = 1; c <= 8; c++) {
       const cell = ws.getCell(r, c);
       styleCell(cell, {
         fill: colors.light,
-        font: c >= 5 ? { bold: true, size: 12, color: { argb: colors.primary } } : {},
-        alignment: c === 5 ? { horizontal: 'right' } : c === 7 ? { horizontal: 'center' } : {},
+        font: c >= 6 ? { bold: true, size: 12, color: { argb: colors.primary } } : {},
+        alignment: c === 6 ? { horizontal: 'right' } : c === 8 ? { horizontal: 'center' } : {},
       });
     }
     ws.getRow(r).height = 28;
-    ws.getColumn(1).width = 32;
-    ws.getColumn(2).width = 16;
-    ws.getColumn(3).width = 10;
-    ws.getColumn(4).width = 12;
-    ws.getColumn(5).width = 12;
-    ws.getColumn(6).width = 14;
-    ws.getColumn(7).width = 14;
+    ws.getColumn(1).width = 30;
+    ws.getColumn(2).width = 14;
+    ws.getColumn(3).width = 16; // Group column width
+    ws.getColumn(4).width = 8;
+    ws.getColumn(5).width = 10;
+    ws.getColumn(6).width = 10;
+    ws.getColumn(7).width = 12;
+    ws.getColumn(8).width = 12;
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
