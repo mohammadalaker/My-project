@@ -208,6 +208,67 @@ function App() {
   const [userRole, setUserRole] = useState(null); // 'admin' or 'customer'
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
+  // 1. Session Timeout Logic (30 minutes)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const checkSession = () => {
+      const loginTime = localStorage.getItem('sales_login_time');
+      if (loginTime) {
+        const now = Date.now();
+        const elapsed = now - parseInt(loginTime, 10);
+        // 30 minutes = 30 * 60 * 1000 = 1,800,000 ms
+        if (elapsed > 30 * 60 * 1000) {
+          handleLogout(true); // Force silent logout
+        }
+      }
+    };
+
+    // Check every minute
+    const interval = setInterval(checkSession, 60 * 1000);
+    // Also check immediately on mount/auth change
+    checkSession();
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  // 2. Force Logout Logic (Listen to system_settings)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // We can use a real-time subscription or polling. 
+    // Since this is a critical security feature but maybe not high-freq, 
+    // Polling every 30s-1m is fine, or Realtime. Let's do polling for simplicity and reliability without websocket limits.
+    // Actually, realtime is better for "immediate" effect.
+
+    const channel = supabase
+      .channel('public:system_settings')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_settings', filter: 'key=eq.force_logout_min_time' }, (payload) => {
+        const newTime = parseInt(payload.new.value, 10);
+        const myLoginTime = parseInt(localStorage.getItem('sales_login_time'), 10) || 0;
+        if (myLoginTime < newTime) {
+          handleLogout(true);
+        }
+      })
+      .subscribe();
+
+    // Also initial check
+    const checkForceLogout = async () => {
+      const { data } = await supabase.from('system_settings').select('value').eq('key', 'force_logout_min_time').single();
+      if (data && data.value) {
+        const forceTime = parseInt(data.value, 10);
+        const myLoginTime = parseInt(localStorage.getItem('sales_login_time'), 10) || 0;
+        if (myLoginTime < forceTime) {
+          handleLogout(true);
+        }
+      }
+    };
+
+    checkForceLogout();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isAuthenticated]);
+
   useEffect(() => {
     const auth = localStorage.getItem('sales_auth');
     const role = localStorage.getItem('sales_role');
@@ -219,34 +280,53 @@ function App() {
   }, []);
 
   const handleLogin = (username, password, setError) => {
+    const loginSuccess = (role) => {
+      localStorage.setItem('sales_auth', 'true');
+      localStorage.setItem('sales_role', role);
+      localStorage.setItem('sales_login_time', Date.now().toString()); // Store login time
+      setIsAuthenticated(true);
+      setUserRole(role);
+    };
+
     if (username === 'admin' && password === '123456') {
-      localStorage.setItem('sales_auth', 'true');
-      localStorage.setItem('sales_role', 'admin');
-      setIsAuthenticated(true);
-      setUserRole('admin');
+      loginSuccess('admin');
     } else if (username === '123' && password === '321') {
-      localStorage.setItem('sales_auth', 'true');
-      localStorage.setItem('sales_role', 'customer');
-      setIsAuthenticated(true);
-      setUserRole('customer');
-      setIsAuthenticated(true);
-      setUserRole('customer');
+      loginSuccess('customer');
+      // Fix potential double set bug in original code
     } else if (username === 'supervisor' && password === '123') {
-      localStorage.setItem('sales_auth', 'true');
-      localStorage.setItem('sales_role', 'supervisor');
-      setIsAuthenticated(true);
-      setUserRole('supervisor');
+      loginSuccess('supervisor');
     } else {
       setError('Invalid username or password');
     }
   };
 
-  const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+  const handleLogout = (silent = false) => {
+    if (silent || window.confirm('Are you sure you want to logout?')) {
       localStorage.removeItem('sales_auth');
       localStorage.removeItem('sales_role');
+      localStorage.removeItem('sales_login_time');
       setIsAuthenticated(false);
       setUserRole(null);
+    }
+  };
+
+  const handleForceLogoutAll = async () => {
+    if (!window.confirm('⚠️ هل أنت متأكد؟ سيتم تسجيل خروج جميع المستخدمين فوراً.')) return;
+    try {
+      // Set cutoff time to NOW. Anyone logged in before NOW must logout.
+      const now = Date.now().toString();
+      // Upsert the setting
+      const { error } = await supabase.from('system_settings').upsert({ key: 'force_logout_min_time', value: now });
+      if (error) throw error;
+      alert('تم إرسال أمر تسجيل الخروج للجميع.');
+      // Admin will also be logged out by the listener/hook naturally, or we can keep them signed in by updating their local storage time?
+      // Actually, if we want to logout EVERYONE including admin, this is fine. 
+      // If we want to keep THIS admin session, we should update local time.
+      // Let's update local time so the admin who clicked it stays logged in (optional but nice).
+      localStorage.setItem('sales_login_time', now);
+    } catch (e) {
+      console.error(e);
+      alert('خطأ: ' + e.message);
     }
   };
 
@@ -2416,6 +2496,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <span className="text-orange-500">.</span>
                   </h2>
                   <div className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1 opacity-60">
+                    Maslamani System
+
+                    {userRole === 'admin' && (
+                      <button
+                        onClick={handleForceLogoutAll}
+                        className="mt-2 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded border border-rose-200 hover:bg-rose-200"
+                      >
+                        تسجيل خروج الجميع
+                      </button>
+                    )}
+
                     <span>Order #</span><span>NEW-001</span>
                   </div>
                 </div>
