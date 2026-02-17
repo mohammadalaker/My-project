@@ -25,6 +25,9 @@ export default function OfferCard({
     const freeItems = offer.items.filter((e) => e.isFree);
     const paidItems = offer.items.filter((e) => !e.isFree);
 
+    const savings = totalOriginalPrice - totalPrice;
+    const savingsPercent = totalOriginalPrice > 0 ? Math.round((savings / totalOriginalPrice) * 100) : 0;
+
     return (
         <div className="w-full max-w-6xl mx-auto my-12 group">
             {/* 
