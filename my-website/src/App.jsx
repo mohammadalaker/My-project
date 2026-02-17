@@ -1957,7 +1957,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       return (
                         <button
                           key={key ?? 'all'}
-                          onClick={() => setSelectedGroup(key)}
+                          onClick={() => {
+                            setSelectedGroup(key);
+                            if (key === null) {
+                              scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
                           className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border border-transparent ${activeClass}`}
                         >
                           {Icon && <Icon size={18} className={isSelected ? 'animate-pulse' : ''} />}
@@ -1971,7 +1976,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {/* Sub-categories */}
                   {(selectedGroup === '__electrical__' || (selectedGroup && isElectricalGroup(selectedGroup))) && electricalGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => setSelectedGroup('__electrical__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => {
+                        setSelectedGroup('__electrical__');
+                        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {electricalGroupsSorted.map((g) => (
                         <button
                           key={g}
@@ -1985,7 +1993,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   )}
                   {(selectedGroup === '__home__' || (selectedGroup && selectedGroup !== '__electrical__' && !isElectricalGroup(selectedGroup))) && kitchenwareGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => setSelectedGroup('__home__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => {
+                        setSelectedGroup('__home__');
+                        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {kitchenwareGroupsSorted.map((g) => (
                         <button
                           key={g}
