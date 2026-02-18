@@ -21,6 +21,11 @@ function createMockClient() {
     catch: (fn) => emptyPromise.catch(fn),
     eq: () => ({ then: (fn) => fn({ data: null, error: null }), catch: (fn) => fn({}) }),
   };
+  const noopChannel = {
+    on: () => noopChannel,
+    subscribe: () => noopChannel,
+  };
+  const noopRemoveChannel = () => {};
   return {
     from: () => ({
       select: () => chain,
@@ -28,6 +33,8 @@ function createMockClient() {
       insert: () => emptyPromise,
       delete: () => ({ eq: () => emptyPromise }),
     }),
+    channel: () => noopChannel,
+    removeChannel: noopRemoveChannel,
     storage: {
       from: () => ({
         getPublicUrl: (path) => ({ data: { publicUrl: path ? `/${path}` : '' } }),
@@ -38,19 +45,37 @@ function createMockClient() {
   };
 }
 
-let client;
+const mock = createMockClient();
+let client = mock;
+
 try {
   if (hasValidEnv) {
-    client = createClient(supabaseUrl, supabaseAnonKey);
+    const real = createClient(supabaseUrl, supabaseAnonKey);
+    client = real;
   } else {
     if (!supabaseUrl || !supabaseAnonKey) {
       console.warn('Supabase env missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
     }
-    client = createMockClient();
   }
 } catch (e) {
   console.warn('Supabase client init failed:', e);
-  client = createMockClient();
+}
+
+if (typeof client.channel !== 'function') {
+  console.warn('Supabase client missing channel method. Polyfilling...');
+  client.channel = mock.channel;
+} else {
+  console.log('Supabase client has channel method.');
+}
+
+if (typeof client.removeChannel !== 'function') {
+  client.removeChannel = mock.removeChannel;
+}
+
+// Final check
+if (typeof client.channel !== 'function') {
+  console.error('CRITICAL: Supabase client still missing channel method after polyfill attempts.');
+  client.channel = () => ({ on: () => ({ subscribe: () => {} }), subscribe: () => {} });
 }
 
 export const supabase = client;

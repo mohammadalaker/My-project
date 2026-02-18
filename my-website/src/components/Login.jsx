@@ -10,7 +10,7 @@ export default function Login({ onLogin }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onLogin(username, password, setError);
+        onLogin(username, password, setError, rememberMe);
     };
 
     return (

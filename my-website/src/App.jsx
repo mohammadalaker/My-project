@@ -211,27 +211,24 @@ function App() {
   const [userRole, setUserRole] = useState(null); // 'admin' or 'customer'
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
-  // 1. Session Timeout Logic (30 minutes)
+  // 1. Session Timeout Logic (30 minutes) — لا يُطبق إذا "تذكرني" مفعّل
   useEffect(() => {
     if (!isAuthenticated) return;
+    if (localStorage.getItem('sales_remember_me') === 'true') return;
 
     const checkSession = () => {
       const loginTime = localStorage.getItem('sales_login_time');
       if (loginTime) {
         const now = Date.now();
         const elapsed = now - parseInt(loginTime, 10);
-        // 30 minutes = 30 * 60 * 1000 = 1,800,000 ms
         if (elapsed > 30 * 60 * 1000) {
-          handleLogout(true); // Force silent logout
+          handleLogout(true);
         }
       }
     };
 
-    // Check every minute
     const interval = setInterval(checkSession, 60 * 1000);
-    // Also check immediately on mount/auth change
     checkSession();
-
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
@@ -248,41 +245,53 @@ function App() {
       }
     };
 
-    // Realtime subscription to the signal row
-    const channel = supabase
-      .channel('public:custom_offers:force_logout')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'custom_offers',
-        filter: "id=eq.SYSTEM_FORCE_LOGOUT"
-      }, (payload) => {
-        // payload.new.title will hold the timestamp string
-        const newTime = parseInt(payload.new.title, 10);
-        if (newTime) checkLogoutSignal(newTime);
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'custom_offers',
-        filter: "id=eq.SYSTEM_FORCE_LOGOUT"
-      }, (payload) => {
-        const newTime = parseInt(payload.new.title, 10);
-        if (newTime) checkLogoutSignal(newTime);
-      })
-      .subscribe();
-
-    // Initial check
-    const initialCheck = async () => {
-      const { data } = await supabase.from('custom_offers').select('title').eq('id', 'SYSTEM_FORCE_LOGOUT').single();
-      if (data && data.title) {
-        checkLogoutSignal(parseInt(data.title, 10));
+    // Realtime subscription to the signal row (only if supabase supports channel)
+    let channel = null;
+    console.log('App.jsx: Checking supabase.channel...', typeof supabase.channel, supabase);
+    if (typeof supabase.channel === 'function') {
+      try {
+        channel = supabase
+          .channel('public:custom_offers:force_logout')
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'custom_offers',
+            filter: "id=eq.SYSTEM_FORCE_LOGOUT"
+          }, (payload) => {
+            const newTime = parseInt(payload.new.title, 10);
+            if (newTime) checkLogoutSignal(newTime);
+          })
+          .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'custom_offers',
+            filter: "id=eq.SYSTEM_FORCE_LOGOUT"
+          }, (payload) => {
+            const newTime = parseInt(payload.new.title, 10);
+            if (newTime) checkLogoutSignal(newTime);
+          })
+          .subscribe();
+      } catch (err) {
+        console.warn('Realtime channel setup failed:', err);
       }
+    }
+
+    const initialCheck = async () => {
+      try {
+        const { data } = await supabase.from('custom_offers').select('title').eq('id', 'SYSTEM_FORCE_LOGOUT').single();
+        if (data && data.title) {
+          checkLogoutSignal(parseInt(data.title, 10));
+        }
+      } catch (_) { }
     };
 
     initialCheck();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (channel && typeof supabase.removeChannel === 'function') {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -295,11 +304,16 @@ function App() {
     setHasCheckedAuth(true);
   }, []);
 
-  const handleLogin = (username, password, setError) => {
+  const handleLogin = (username, password, setError, rememberMe = true) => {
     const loginSuccess = (role) => {
       localStorage.setItem('sales_auth', 'true');
       localStorage.setItem('sales_role', role);
-      localStorage.setItem('sales_login_time', Date.now().toString()); // Store login time
+      localStorage.setItem('sales_login_time', Date.now().toString());
+      if (rememberMe) {
+        localStorage.setItem('sales_remember_me', 'true');
+      } else {
+        localStorage.removeItem('sales_remember_me');
+      }
       setIsAuthenticated(true);
       setUserRole(role);
     };
@@ -321,6 +335,7 @@ function App() {
       localStorage.removeItem('sales_auth');
       localStorage.removeItem('sales_role');
       localStorage.removeItem('sales_login_time');
+      localStorage.removeItem('sales_remember_me');
       setIsAuthenticated(false);
       setUserRole(null);
     }
@@ -803,7 +818,7 @@ function App() {
         }
         return [
           ...prev,
-          { id: item.id, qty: qty, unitPrice, box, item, customName: item.name },
+          { id: item.id, qty: qty, unitPrice, box, item, customName: item.group || item.name },
         ];
       });
     });
@@ -892,7 +907,7 @@ function App() {
         const consumerPrice = isSubmitted ? (o.consumer_price || 0) : (Number(o.item?.price) ?? 0);
         const discPercent = isSubmitted ? (o.discount_percent || 0) : getLineDiscountPercent(o);
 
-        const displayName = (o.name || o.customName || item.name || '').replace(/</g, '&lt;');
+        const displayName = (o.name || o.customName || item.group || item.name || '').replace(/</g, '&lt;');
         const barcode = (o.barcode || item.barcode || '').replace(/</g, '&lt;');
 
         return `<tr>
@@ -988,7 +1003,7 @@ function App() {
         const imgHtml = imgSrc
           ? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" /></div>`
           : '<div class="inv-img"><span class="inv-no-img">📦</span></div>';
-        const name = (o.item?.name || '').replace(/</g, '&lt;');
+        const name = (o.customName || o.item?.group || o.item?.name || '').replace(/</g, '&lt;');
         const group = (o.item?.group || '').replace(/</g, '&lt;');
         const box = (o.item?.box || '').replace(/</g, '&lt;');
         return `<article class="inv-card">
@@ -1107,7 +1122,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         total_amount: orderTotal,
         items: orderLines.map(line => ({
           barcode: line.item.barcode,
-          name: line.customName || line.item.name,
+          name: line.customName || line.item.group || line.item.name,
           qty: line.qty,
           consumer_price: Number(line.item?.price) ?? 0,
           discount_percent: getLineDiscountPercent(line),
@@ -1279,7 +1294,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const sortedLines = sortByBarcodeOrder(orderLines, BARCODE_ORDER);
     sortedLines.forEach((o, i) => {
       const discPct = getLineDiscountPercent(o);
-      ws.getCell(r, 1).value = (o.customName || o.item?.name || '').slice(0, 50);
+      ws.getCell(r, 1).value = (o.customName || o.item?.group || o.item?.name || '').slice(0, 50);
       ws.getCell(r, 2).value = o.item?.barcode || '';
       ws.getCell(r, 3).value = o.item?.group || ''; // Added Group value
       ws.getCell(r, 4).value = o.qty;
@@ -2645,9 +2660,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 <div className="flex justify-between items-start gap-3">
                                   <input
                                     className="text-base font-bold text-slate-800 leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400"
-                                    value={o.customName || o.item?.name || ''}
+                                    value={o.customName || o.item?.group || ''}
                                     onChange={(e) => setOrderLineName(o.id, e.target.value)}
-                                    placeholder="Product Name"
+                                    placeholder="Group Name"
                                   />
                                   <button onClick={() => removeFromOrder(o.id)} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
                                     <Trash2 size={16} />
@@ -3004,70 +3019,70 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           const step = boxCount > 0 ? boxCount : 1;
           const normalizeQty = (val) => Math.max(step, Math.round((parseInt(val, 10) || 0) / step) * step);
           return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
-            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
-              <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
+              <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
+                <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity (multiples of {step})</label>
-                <div className="flex items-center gap-2">
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity (multiples of {step})</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQuantityValue((v) => Math.max(step, v - step))}
+                      className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
+                      aria-label="نقص بوكس"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min={step}
+                      step={step}
+                      value={quantityValue}
+                      onChange={(e) => setQuantityValue(normalizeQty(e.target.value))}
+                      className="flex-1 text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                      autoFocus
+                      onFocus={(e) => e.target.select()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleConfirmQuantity();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setQuantityValue((v) => v + step)}
+                      className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
+                      aria-label="أضف بوكس"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {quantityItem.box && (
+                    <p className="text-xs text-slate-500 mt-2 text-center">
+                      Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span> — الكمية مضاعفات البوكس فقط (مثلاً {step}، {step * 2}، {step * 3}…)
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
                   <button
-                    type="button"
-                    onClick={() => setQuantityValue((v) => Math.max(step, v - step))}
-                    className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
-                    aria-label="نقص بوكس"
+                    onClick={() => setShowQuantityModal(false)}
+                    className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
                   >
-                    −
+                    Cancel
                   </button>
-                  <input
-                    type="number"
-                    min={step}
-                    step={step}
-                    value={quantityValue}
-                    onChange={(e) => setQuantityValue(normalizeQty(e.target.value))}
-                    className="flex-1 text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-                    autoFocus
-                    onFocus={(e) => e.target.select()}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleConfirmQuantity();
-                      }
-                    }}
-                  />
                   <button
-                    type="button"
-                    onClick={() => setQuantityValue((v) => v + step)}
-                    className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
-                    aria-label="أضف بوكس"
+                    onClick={handleConfirmQuantity}
+                    className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
                   >
-                    +
+                    Add to Cart
                   </button>
                 </div>
-                {quantityItem.box && (
-                  <p className="text-xs text-slate-500 mt-2 text-center">
-                    Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span> — الكمية مضاعفات البوكس فقط (مثلاً {step}، {step * 2}، {step * 3}…)
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowQuantityModal(false)}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmQuantity}
-                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
-                >
-                  Add to Cart
-                </button>
               </div>
             </div>
-          </div>
           );
         })()
       }
