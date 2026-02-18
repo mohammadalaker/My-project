@@ -2999,32 +2999,55 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {/* Quantity Modal */}
       {
-        showQuantityModal && quantityItem && (
+        showQuantityModal && quantityItem && (() => {
+          const boxCount = quantityItem.box ? parseInt(quantityItem.box, 10) : 1;
+          const step = boxCount > 0 ? boxCount : 1;
+          const normalizeQty = (val) => Math.max(step, Math.round((parseInt(val, 10) || 0) / step) * step);
+          return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
             <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
               <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={quantityValue}
-                  onChange={(e) => setQuantityValue(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-                  autoFocus
-                  onFocus={(e) => e.target.select()}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleConfirmQuantity();
-                    }
-                  }}
-                />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity (multiples of {step})</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setQuantityValue((v) => Math.max(step, v - step))}
+                    className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
+                    aria-label="نقص بوكس"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min={step}
+                    step={step}
+                    value={quantityValue}
+                    onChange={(e) => setQuantityValue(normalizeQty(e.target.value))}
+                    className="flex-1 text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                    autoFocus
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleConfirmQuantity();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setQuantityValue((v) => v + step)}
+                    className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
+                    aria-label="أضف بوكس"
+                  >
+                    +
+                  </button>
+                </div>
                 {quantityItem.box && (
                   <p className="text-xs text-slate-500 mt-2 text-center">
-                    Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span>
+                    Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span> — الكمية مضاعفات البوكس فقط (مثلاً {step}، {step * 2}، {step * 3}…)
                   </p>
                 )}
               </div>
@@ -3045,7 +3068,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
             </div>
           </div>
-        )
+          );
+        })()
       }
 
       {
