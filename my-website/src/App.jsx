@@ -889,7 +889,7 @@ function App() {
     const currentInfo = isSubmitted ? {
       companyName: orderData.customer_name || '',
       customerNumber: orderData.customer_number || '',
-      merchantName: orderData.merchant_name || '', // Assuming merchant_name field or default
+      merchantName: orderData.merchant_name || '',
       phone: orderData.customer_phone || '',
       address: orderData.customer_address || '',
       orderDate: orderData.order_date || (orderData.created_at ? new Date(orderData.created_at).toISOString().slice(0, 10) : ''),
@@ -897,21 +897,23 @@ function App() {
     } : orderInfo;
     const totalAmount = isSubmitted ? (orderData.total_amount || 0) : orderTotal;
 
-    const rows = lines
+    const rows = (lines && lines.length > 0) ? lines
       .map((o) => {
         const item = isSubmitted ? o : (o.item || {});
         // For submitted items, properties are direct. For cart items, they might be nested in item or direct
         const unitPrice = isSubmitted ? (o.unit_price || o.price || 0) : getLineUnitPrice(o);
         const total = isSubmitted ? (o.total || 0) : getLineTotal(o);
-        const price = isSubmitted ? (o.consumer_price || 0) : (Number(intent?.item?.price) ?? 0);
-        // fallback for consumer price: for cart items it's o.item.price. For submitted, it's consumer_price
         const consumerPrice = isSubmitted ? (o.consumer_price || 0) : (Number(o.item?.price) ?? 0);
         const discPercent = isSubmitted ? (o.discount_percent || 0) : getLineDiscountPercent(o);
 
         const displayName = (o.name || o.customName || item.group || item.name || '').replace(/</g, '&lt;');
         const barcode = (o.barcode || item.barcode || '').replace(/</g, '&lt;');
+        const imgUrl = !isSubmitted && o.item?.image ? getPublicImageUrl(o.item.image) : null;
+        const imgSrc = imgUrl ? String(imgUrl).replace(/"/g, '&quot;') : '';
+        const imgCell = imgSrc ? `<td class="inv-td-img"><img src="${imgSrc}" alt="" /></td>` : '<td class="inv-td-img">—</td>';
 
         return `<tr>
+          ${imgCell}
           <td>${displayName}</td>
           <td dir="ltr" lang="en">${barcode}</td>
           <td dir="ltr" lang="en">${o.qty}</td>
@@ -921,16 +923,16 @@ function App() {
           <td dir="ltr" lang="en">₪${total.toFixed(2)}</td>
         </tr>`;
       })
-      .join('');
+      .join('') : '<tr><td colspan="8" class="text-center">لا توجد أصناف في الطلبية</td></tr>';
 
     const infoRows = [
-      ['Company Name', orderInfo.companyName],
-      ['Customer No.', orderInfo.customerNumber],
-      ['Merchant Name', orderInfo.merchantName],
-      ['Phone', orderInfo.phone],
-      ['Address', orderInfo.address],
-      ['Date', orderInfo.orderDate],
-      ['Payment Method', orderInfo.paymentMethod],
+      ['Company Name', currentInfo.companyName],
+      ['Customer No.', currentInfo.customerNumber],
+      ['Merchant Name', currentInfo.merchantName],
+      ['Phone', currentInfo.phone],
+      ['Address', currentInfo.address],
+      ['Date', currentInfo.orderDate],
+      ['Payment Method', currentInfo.paymentMethod],
     ]
       .map(
         ([l, v]) =>
@@ -951,7 +953,12 @@ function App() {
   table.data-table th, table.data-table td { padding: 10px; border: 1px solid #d1d5db; text-align: right; }
   table.data-table th { background: #ea580c; color: #fff; font-size: 0.9rem; }
   table.data-table td { font-size: 0.9rem; }
+  .inv-td-img { width: 72px; text-align: center; vertical-align: middle; }
+  .inv-td-img img { max-width: 64px; max-height: 64px; object-fit: contain; display: inline-block; }
   .total-row { font-weight: 700; background: #fff7ed; }
+  .btn-print { padding: 14px 32px; background: linear-gradient(135deg, #ea580c, #f97316); color: #fff; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 1rem; margin-top: 20px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 14px rgba(234,88,12,.35); }
+  .btn-print:hover { transform: translateY(-2px); }
+  @media print { .btn-print { display: none; } }
 </style></head><body>
 <h1 class="print-title">فاتورة مبيعات</h1>
 
@@ -962,6 +969,7 @@ function App() {
 <table class="data-table">
   <thead>
     <tr>
+      <th>صورة</th>
       <th>وصف المنتج ورقم الموديل</th>
       <th>الرقم التسلسلي ( الباركود )</th>
       <th>العدد</th>
@@ -974,12 +982,16 @@ function App() {
   <tbody>
     ${rows}
     <tr class="total-row">
-      <td colspan="5"></td>
+      <td colspan="6"></td>
       <td>المجموع</td>
       <td dir="ltr" lang="en">₪${Number(totalAmount).toFixed(2)}</td>
     </tr>
   </tbody>
 </table>
+  <button class="btn-print" onclick="window.print()">طباعة / حفظ PDF</button>
+  <script>
+    window.onload = function() { setTimeout(function() { window.print(); }, 800); };
+  </script>
 </body></html>`;
   }, [orderLines, orderTotal, orderInfo]);
 
@@ -1075,30 +1087,39 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 </div></body></html>`;
   }, [orderLines, orderTotal, orderInfo]);
 
-  const handlePrintOrder = () => {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(getPrintHtml());
-    w.document.close();
-    w.focus();
-    setTimeout(() => {
-      w.print();
-      w.close();
-    }, 300);
-  };
-
-  const handleOpenPdfOrder = () => {
+  const openOrderPdfInNewTab = () => {
     if (orderLines.length === 0) {
       alert('السلة فارغة. أضف منتجات أولاً.');
       return;
     }
-    const w = window.open('', '_blank');
-    if (!w) return;
-    const html = getInventoryHtml();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
+    try {
+      const html = getPrintHtml();
+      if (!html || html.length < 100) {
+        alert('تعذر إنشاء محتوى الفاتورة. تأكد من وجود أصناف في الطلبية.');
+        return;
+      }
+      const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!w || w.closed) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+    } catch (e) {
+      console.error(e);
+      alert('حدث خطأ عند فتح الفاتورة: ' + (e.message || e));
+    }
   };
+
+  const handlePrintOrder = openOrderPdfInNewTab;
+  const handleOpenPdfOrder = openOrderPdfInNewTab;
 
   const validateOrder = () => {
     if (userRole === 'customer') { // user 123
