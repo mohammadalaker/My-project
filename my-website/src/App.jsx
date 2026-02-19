@@ -900,7 +900,6 @@ function App() {
     const rows = (lines && lines.length > 0) ? lines
       .map((o) => {
         const item = isSubmitted ? o : (o.item || {});
-        // For submitted items, properties are direct. For cart items, they might be nested in item or direct
         const unitPrice = isSubmitted ? (o.unit_price || o.price || 0) : getLineUnitPrice(o);
         const total = isSubmitted ? (o.total || 0) : getLineTotal(o);
         const consumerPrice = isSubmitted ? (o.consumer_price || 0) : (Number(o.item?.price) ?? 0);
@@ -914,81 +913,134 @@ function App() {
 
         return `<tr>
           ${imgCell}
-          <td>${displayName}</td>
-          <td dir="ltr" lang="en">${barcode}</td>
-          <td dir="ltr" lang="en">${o.qty}</td>
+          <td style="font-weight: 600;">${displayName}</td>
+          <td dir="ltr" lang="en" style="font-family: monospace; color: #64748b;">${barcode}</td>
+          <td dir="ltr" lang="en" style="font-weight: 700;">${o.qty}</td>
           <td dir="ltr" lang="en">₪${consumerPrice}</td>
-          <td dir="ltr" lang="en">${discPercent}%</td>
-          <td dir="ltr" lang="en">₪${unitPrice}</td>
-          <td dir="ltr" lang="en">₪${total.toFixed(2)}</td>
+          <td dir="ltr" lang="en">
+            <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.85rem;">${discPercent}%</span>
+          </td>
+          <td dir="ltr" lang="en" style="font-weight: 600;">₪${unitPrice}</td>
+          <td dir="ltr" lang="en" style="font-weight: 800; color: #ea580c; font-size: 1.05rem;">₪${total.toFixed(2)}</td>
         </tr>`;
       })
-      .join('') : '<tr><td colspan="8" class="text-center">لا توجد أصناف في الطلبية</td></tr>';
+      .join('') : '<tr><td colspan="8" style="text-align:center; padding: 40px; color:#64748b; font-size: 1.1rem;">لا توجد أصناف في الطلبية</td></tr>';
 
-    const infoRows = [
-      ['Company Name', currentInfo.companyName],
-      ['Customer No.', currentInfo.customerNumber],
-      ['Merchant Name', currentInfo.merchantName],
-      ['Phone', currentInfo.phone],
-      ['Address', currentInfo.address],
-      ['Date', currentInfo.orderDate],
-      ['Payment Method', currentInfo.paymentMethod],
+    const infoGridHtml = [
+      ['اسم الشركة', currentInfo.companyName],
+      ['رقم العميل', currentInfo.customerNumber],
+      ['اسم التاجر', currentInfo.merchantName],
+      ['رقم الهاتف', currentInfo.phone],
+      ['العنوان', currentInfo.address],
+      ['تاريخ الطلب', currentInfo.orderDate],
+      ['طريقة الدفع', currentInfo.paymentMethod],
     ]
+      .filter(([_, v]) => v) // only show if there is a value
       .map(
         ([l, v]) =>
-          `<tr><td class="info-label">${l}</td><td class="info-value" dir="ltr" lang="en">${(v || '').replace(/</g, '&lt;')}</td></tr>`
+          `<div class="info-item"><span class="info-label">${l}</span><span class="info-value" dir="ltr" lang="en">${(v || '').replace(/</g, '&lt;')}</span></div>`
       )
       .join('');
 
-    return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>Sales Order Agreement</title>
+    return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>فاتورة مبيعات</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  body { font-family: system-ui; padding: 24px; max-width: 800px; margin: 0 auto; direction: rtl; }
-  .print-title { font-size: 2rem; font-weight: 800; text-align: center; color: #c2410c; }
-  .section-title { font-weight: 700; padding: 8px 12px; background: #fff7ed; border: 1px solid #ea580c; border-radius: 6px; color: #c2410c; margin: 1rem 0 0.5rem; }
-  .info-table { width: 100%; border-collapse: collapse; }
-  .info-table td { padding: 8px 12px; border: 1px solid #d1d5db; }
-  .info-label { font-weight: 600; background: #fff7ed; width: 30%; } /* Adjusted width */
-  .info-value { background: #fff; }
-  table.data-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-  table.data-table th, table.data-table td { padding: 10px; border: 1px solid #d1d5db; text-align: right; }
-  table.data-table th { background: #ea580c; color: #fff; font-size: 0.9rem; }
-  table.data-table td { font-size: 0.9rem; }
-  .inv-td-img { width: 72px; text-align: center; vertical-align: middle; }
-  .inv-td-img img { max-width: 64px; max-height: 64px; object-fit: contain; display: inline-block; }
-  .total-row { font-weight: 700; background: #fff7ed; }
-  .btn-print { padding: 14px 32px; background: linear-gradient(135deg, #ea580c, #f97316); color: #fff; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 1rem; margin-top: 20px; display: block; margin-left: auto; margin-right: auto; box-shadow: 0 4px 14px rgba(234,88,12,.35); }
-  .btn-print:hover { transform: translateY(-2px); }
-  @media print { .btn-print { display: none; } }
+  body { font-family: 'Cairo', system-ui, sans-serif; padding: 40px; background: #f8fafc; color: #1e293b; margin: 0; direction: rtl; }
+  .invoice-container { max-width: 1000px; margin: 0 auto; background: #ffffff; padding: 48px; border-radius: 24px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px dashed #e2e8f0; padding-bottom: 24px; margin-bottom: 32px; }
+  .print-title { font-size: 2.5rem; font-weight: 800; color: #ea580c; margin: 0; }
+  .header-meta { text-align: left; color: #64748b; font-size: 0.95rem; display: flex; flex-direction: column; gap: 4px; }
+  
+  .section-title { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 10px; }
+  .section-title::before { content: ''; display: block; width: 6px; height: 24px; background: #ea580c; border-radius: 4px; }
+  
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; background: #fff7ed; padding: 24px; border-radius: 16px; margin-bottom: 40px; border: 1px solid #fdba74; }
+  .info-item { display: flex; flex-direction: column; gap: 6px; }
+  .info-label { font-size: 0.85rem; color: #9a3412; font-weight: 700; text-transform: uppercase; }
+  .info-value { font-size: 1.05rem; font-weight: 800; color: #431407; }
+  
+  table.data-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 2rem; font-size: 0.95rem; }
+  table.data-table thead th { background: #f1f5f9; color: #475569; padding: 16px; text-align: right; font-weight: 800; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+  table.data-table thead th:first-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+  table.data-table thead th:last-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+  
+  table.data-table tbody td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
+  table.data-table tbody tr:last-child td { border-bottom: none; }
+  table.data-table tbody tr:hover td { background: #f8fafc; }
+  
+  .inv-td-img { width: 80px; text-align: center; }
+  .inv-td-img img { width: 64px; height: 64px; object-fit: contain; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  
+  .total-section { display: flex; justify-content: flex-end; margin-top: 24px; }
+  .total-card { background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 24px 32px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.4); min-width: 340px; }
+  .total-row-flex { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; opacity: 0.9; margin-bottom: 12px; font-weight: 600; }
+  .total-row-main { display: flex; justify-content: space-between; align-items: center; font-size: 2rem; font-weight: 800; border-top: 1px solid rgba(255,255,255,0.25); padding-top: 16px; }
+  
+  .btn-print { padding: 16px 40px; background: #0f172a; color: #fff; border: none; border-radius: 16px; cursor: pointer; font-weight: 800; font-size: 1.1rem; margin: 40px auto 0; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3); transition: all 0.2s ease; font-family: 'Cairo', sans-serif; width: fit-content; }
+  .btn-print:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(15, 23, 42, 0.4); background: #000; }
+  
+  @media print {
+    body { padding: 0; background: #fff; }
+    .invoice-container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
+    .btn-print { display: none; }
+    .total-card { color: #000; background: #f8fafc; box-shadow: none; border: 2px solid #000; }
+    .total-row-main { border-top-color: #000; }
+    .info-grid { border: 2px solid #000; background: transparent; }
+    table.data-table thead th { background: transparent; border-bottom: 2px solid #000; color: #000; }
+    table.data-table tbody td { border-bottom: 1px solid #e2e8f0; }
+    .section-title::before { background: #000; }
+  }
 </style></head><body>
-<h1 class="print-title">فاتورة مبيعات</h1>
 
-<div class="section-title">بيانات العميل</div>
-<table class="info-table"><tbody>${infoRows}</tbody></table>
+<div class="invoice-container">
+  <div class="header">
+    <div>
+      <h1 class="print-title">فاتورة مبيعات</h1>
+      <div style="color: #64748b; margin-top: 8px; font-weight: 700; letter-spacing: 0.5px;">SALES ORDER AGREEMENT</div>
+    </div>
+    <div class="header-meta">
+      <span>تاريخ الإصدار: <span dir="ltr">${new Date().toISOString().slice(0, 10)}</span></span>
+      <span>عدد الأصناف: <span dir="ltr">${lines.length}</span></span>
+    </div>
+  </div>
 
-<div class="section-title">تفاصيل المنتجات</div>
-<table class="data-table">
-  <thead>
-    <tr>
-      <th>صورة</th>
-      <th>وصف المنتج ورقم الموديل</th>
-      <th>الرقم التسلسلي ( الباركود )</th>
-      <th>العدد</th>
-      <th>سعر المستهلك</th>
-      <th>نسبة الخصم</th>
-      <th>السعر بعد الخصم</th>
-      <th>المبلغ الاجمالي ( شامل الضريبة )</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${rows}
-    <tr class="total-row">
-      <td colspan="6"></td>
-      <td>المجموع</td>
-      <td dir="ltr" lang="en">₪${Number(totalAmount).toFixed(2)}</td>
-    </tr>
-  </tbody>
-</table>
-  <button class="btn-print" onclick="window.print()">طباعة / حفظ PDF</button>
+  <div class="section-title">بيانات العميل</div>
+  <div class="info-grid">
+    ${infoGridHtml}
+  </div>
+
+  <div class="section-title">تفاصيل المنتجات</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>صورة</th>
+        <th>وصف المنتج</th>
+        <th>الباركود</th>
+        <th>العدد</th>
+        <th>السعر</th>
+        <th>الخصم</th>
+        <th>سعر الوحدة</th>
+        <th>الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+
+  <div class="total-section">
+    <div class="total-card">
+      <div class="total-row-flex"><span>إجمالي كمية المنتجات</span><span dir="ltr" lang="en">${lines.reduce((sum, l) => sum + (l.qty || 0), 0)}</span></div>
+      <div class="total-row-main"><span>المجموع النهائي</span><span dir="ltr" lang="en">₪${Number(totalAmount).toFixed(2)}</span></div>
+    </div>
+  </div>
+
+  <button class="btn-print" onclick="window.print()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+    طباعة / حفظ PDF
+  </button>
+</div>
+
   <script>
     window.onload = function() { setTimeout(function() { window.print(); }, 800); };
   </script>
