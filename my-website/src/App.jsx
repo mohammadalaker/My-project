@@ -540,6 +540,7 @@ function App() {
     price_after_disc: '',
     stock_count: '',
     image_url: '',
+    visible: true,
   });
   const [uploading, setUploading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -1381,6 +1382,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       price_after_disc: '',
       stock_count: '',
       image_url: '',
+      visible: true,
     });
     setModalOpen(true);
   };
@@ -1399,6 +1401,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       price_after_disc: item.priceAfterDiscount ?? '',
       stock_count: stockDisplay,
       image_url: item.image || '',
+      visible: item.visible !== false,
     });
     setModalOpen(true);
   };
@@ -1423,6 +1426,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           return isNaN(n) || n < 0 ? null : Math.round(n);
         })(),
         image_url: formData.image_url.trim() || null,
+        visible: formData.visible !== false,
       };
       if (editingItem) {
         const { error } = await supabase.from('items').update(payload).eq('barcode', editingItem.barcode);
@@ -2367,17 +2371,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   </div>
                                 )}
 
-                                {/* Visibility Toggle (Admin) - عين إظهار/إخفاء المنتج */}
-                                {userRole === 'admin' && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); toggleVisibility(item); }}
-                                    className={`absolute top-2 left-2 z-20 p-2 rounded-full shadow-md transition-all ${item.visible !== false ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-slate-300 text-slate-600 hover:bg-slate-400'}`}
-                                    title={item.visible !== false ? 'إخفاء المنتج من العملاء (انقر لإيقاف)' : 'إظهار المنتج للعملاء (انقر لإظهار)'}
-                                  >
-                                    {item.visible !== false ? <Eye size={16} /> : <EyeOff size={16} />}
-                                  </button>
-                                )}
-
                                 <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50">
                                   {getImage(item) ? (
                                     <img
@@ -3115,6 +3108,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   <label><span className="text-xs block text-slate-600 font-medium mb-1">Price</span><input type="number" step="0.01" value={formData.full_price} onChange={(e) => setFormData((p) => ({ ...p, full_price: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
                   <label><span className="text-xs block text-slate-600 font-medium mb-1">Discounted</span><input type="number" step="0.01" value={formData.price_after_disc} onChange={(e) => setFormData((p) => ({ ...p, price_after_disc: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
                 </div>
+                {/* إظهار المنتج للعملاء - داخل صفحة التعديل */}
+                {userRole === 'admin' && (
+                  <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                    <span className="text-xs font-medium text-slate-600">إظهار المنتج للعملاء</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((p) => ({ ...p, visible: !(p.visible !== false) }))}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-all ${formData.visible !== false ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-slate-300 text-slate-600 hover:bg-slate-400'}`}
+                      title={formData.visible !== false ? 'إخفاء المنتج من العملاء' : 'إظهار المنتج للعملاء'}
+                    >
+                      {formData.visible !== false ? <Eye size={18} /> : <EyeOff size={18} />}
+                      <span>{formData.visible !== false ? 'ظاهر' : 'مخفي'}</span>
+                    </button>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <span className="text-xs block text-slate-600 font-medium">Image</span>
                   <div className="flex gap-3 items-start">
