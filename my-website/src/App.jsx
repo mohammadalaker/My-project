@@ -3083,52 +3083,88 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         showQuantityModal && quantityItem && (() => {
           const boxCount = quantityItem.box ? parseInt(quantityItem.box, 10) : 1;
           const step = boxCount > 0 ? boxCount : 1;
-          const normalizeQty = (val) => Math.max(step, Math.round((parseInt(val, 10) || 0) / step) * step);
+          const normalizeQty = (val) => {
+            if (val === '') return ''; // Allow empty while typing
+            const parsed = parseInt(val, 10);
+            if (isNaN(parsed) || parsed <= 0) return step;
+            return Math.max(step, Math.round(parsed / step) * step);
+          };
+          const getValidQty = (val) => {
+            const parsed = parseInt(val, 10);
+            if (isNaN(parsed) || parsed <= 0) return step;
+            return Math.max(step, Math.round(parsed / step) * step);
+          };
+
           return (
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
-              <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Quantity</h3>
-                <p className="text-slate-600 text-sm mb-4">{quantityItem.name}</p>
+              <div className="bg-white rounded-[24px] p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-xl font-bold text-slate-900 mb-3 text-left">Quantity</h3>
+                <p className="text-slate-600 text-sm mb-6 leading-relaxed text-right" dir="auto" style={{ direction: 'rtl' }}>
+                  {quantityItem.name}
+                </p>
 
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Enter Quantity (multiples of {step})</label>
-                  <div className="flex items-center gap-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-3 text-left w-full">Enter Quantity (multiples of {step})</label>
+                  <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setQuantityValue((v) => Math.max(step, v - step))}
-                      className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
-                      aria-label="نقص بوكس"
+                      onClick={() => setQuantityValue((v) => Math.max(step, getValidQty(v) - step))}
+                      className="w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 border-[#6366f1] bg-white text-[#6366f1] font-medium text-2xl hover:bg-indigo-50 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-[#6366f1] focus:ring-offset-1"
+                      aria-label="نقص"
                     >
                       −
                     </button>
                     <input
-                      type="number"
-                      min={step}
-                      step={step}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9٠-٩]*"
                       value={quantityValue}
-                      onChange={(e) => setQuantityValue(normalizeQty(e.target.value))}
-                      className="flex-1 text-center text-2xl font-bold py-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        // Convert Arabic numerals to English numerals
+                        const arabicNumbers = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /٨/g, /٩/g];
+                        for (let i = 0; i < 10; i++) {
+                          val = val.replace(arabicNumbers[i], i.toString());
+                        }
+                        // Strip anything that is not a digit
+                        val = val.replace(/[^0-9]/g, '');
+                        setQuantityValue(val);
+                      }}
+                      onBlur={() => {
+                        // When they click away, correct it to the nearest valid multiple
+                        setQuantityValue(getValidQty(quantityValue));
+                      }}
+                      className="flex-1 h-[52px] text-center text-xl font-bold rounded-xl border border-indigo-200 outline-none transition-all focus:border-[#6366f1] focus:ring-2 focus:ring-indigo-100 text-slate-900"
                       autoFocus
                       onFocus={(e) => e.target.select()}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
-                          handleConfirmQuantity();
+                          const val = getValidQty(quantityValue);
+                          setQuantityValue(val);
+                          if (quantityItem && val > 0) {
+                            addToOrder(quantityItem, val);
+                            setShowQuantityModal(false);
+                            setQuantityItem(null);
+                            setQuantityValue(1);
+                          }
                         }
                       }}
                     />
                     <button
                       type="button"
-                      onClick={() => setQuantityValue((v) => v + step)}
-                      className="w-12 h-12 rounded-xl border-2 border-indigo-100 bg-indigo-50 text-indigo-600 font-bold text-xl hover:bg-indigo-100 transition-colors shrink-0"
-                      aria-label="أضف بوكس"
+                      onClick={() => setQuantityValue((v) => getValidQty(v) + step)}
+                      className="w-[52px] h-[52px] flex items-center justify-center rounded-xl border border-indigo-100 bg-[#eef2ff] text-[#4f46e5] font-medium text-2xl hover:bg-indigo-100 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-[#6366f1] focus:ring-offset-1"
+                      aria-label="أضف"
                     >
                       +
                     </button>
                   </div>
                   {quantityItem.box && (
-                    <p className="text-xs text-slate-500 mt-2 text-center">
-                      Box Count: <span className="font-semibold text-slate-700">{quantityItem.box}</span> — الكمية مضاعفات البوكس فقط (مثلاً {step}، {step * 2}، {step * 3}…)
+                    <p className="text-xs text-slate-500 mt-4 text-center flex items-center justify-center gap-1.5 flex-wrap" dir="ltr">
+                      <span className="font-medium text-slate-600">Box Count: {quantityItem.box}</span>
+                      <span className="text-slate-400 mx-1">—</span>
+                      <span dir="rtl">الكمية مضاعفات البوكس فقط (مثلاً {step}، {step * 2}، {step * 3}...)</span>
                     </p>
                   )}
                 </div>
@@ -3136,13 +3172,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowQuantityModal(false)}
-                    className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                    className="flex-1 py-3.5 rounded-[14px] border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={handleConfirmQuantity}
-                    className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
+                    onClick={() => {
+                      const finalVal = getValidQty(quantityValue);
+                      setQuantityValue(finalVal);
+                      if (quantityItem && finalVal > 0) {
+                        addToOrder(quantityItem, finalVal);
+                        setShowQuantityModal(false);
+                        setQuantityItem(null);
+                        setQuantityValue(1);
+                      }
+                    }}
+                    className="flex-1 py-3.5 rounded-[14px] bg-[#6366f1] hover:bg-indigo-600 text-white font-bold text-sm transition-colors shadow-sm"
                   >
                     Add to Cart
                   </button>
