@@ -328,7 +328,7 @@ function App() {
 
     if (username === 'admin' && password === '123456') {
       loginSuccess('admin');
-    } else if (username === '123' && password === '321') {
+    } else if (username === 'sale' && password === '123') {
       loginSuccess('customer');
       // Fix potential double set bug in original code
     } else if (username === 'supervisor' && password === '123') {
@@ -1218,7 +1218,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   const saveOrderToSupabase = async () => {
     try {
       const orderData = {
-        prepared_by: userRole === 'customer' ? '123' : userRole,
+        prepared_by: userRole === 'customer' ? 'sale' : userRole,
         customer_name: orderInfo.companyName,
         customer_phone: orderInfo.phone,
         customer_address: orderInfo.address,
@@ -2334,6 +2334,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
                           <Plus size={22} /> إنشاء عرض جديد
+                        </button>
+                        <button
+                          onClick={handleForceLogoutAll}
+                          className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                          <Power size={22} /> تسجيل خروج الجميع
                         </button>
                         {editingOffer && (
                           <button
