@@ -862,7 +862,7 @@ function App() {
         }
         return [
           ...prev,
-          { id: item.id, qty: qty, unitPrice, box, item, customName: item.name || item.group },
+          { id: item.id, qty: qty, unitPrice, box, item, customName: item.productType || item.name || item.group },
         ];
       });
     });
