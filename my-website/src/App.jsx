@@ -1746,7 +1746,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   .cat-no-img { font-size: 3rem; opacity: 0.3; }
   
   .cat-info { padding: 12px; text-align: center; }
-  .cat-name { font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 8px; line-height: 1.3; height: 2.6em; overflow: hidden; }
+  .cat-name { font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 8px; line-height: 1.3; min-height: 2.6em; }
   .cat-details { display: flex; justify-content: center; gap: 8px; font-size: 0.75rem; color: #64748b; margin-bottom: 8px; }
   .cat-group { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
   .cat-barcode { font-family: monospace; }
