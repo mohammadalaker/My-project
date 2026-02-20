@@ -37,6 +37,7 @@ import {
   ShoppingCart,
   Eye,
   EyeOff,
+  Tag,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -565,9 +566,18 @@ function App() {
   const [editingNameItem, setEditingNameItem] = useState(null);
   const [newName, setNewName] = useState('');
 
+  // Quick Type Edit State
+  const [editingTypeItem, setEditingTypeItem] = useState(null);
+  const [newType, setNewType] = useState('');
+
   const openNameEditModal = (item) => {
     setEditingNameItem(item);
     setNewName(item.name || '');
+  };
+
+  const openTypeEditModal = (item) => {
+    setEditingTypeItem(item);
+    setNewType(item.productType || '');
   };
 
   const saveNameEdit = async () => {
@@ -590,6 +600,29 @@ function App() {
       setNewName('');
     } catch (err) {
       alert('Failed to update name: ' + err.message);
+    }
+  };
+
+  const saveTypeEdit = async () => {
+    if (!editingTypeItem) return;
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({ product_type: newType.trim() })
+        .eq('barcode', editingTypeItem.barcode);
+
+      if (error) throw error;
+
+      // Update local state
+      setItems((prev) =>
+        prev.map((i) =>
+          i.barcode === editingTypeItem.barcode ? { ...i, productType: newType.trim() } : i
+        )
+      );
+      setEditingTypeItem(null);
+      setNewType('');
+    } catch (err) {
+      alert('Failed to update product type: ' + err.message);
     }
   };
 
@@ -2612,13 +2645,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
                                     </div>
                                     {userRole === 'admin' && (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
-                                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0 -mt-1 -mr-1"
-                                        title="Quick Edit Name"
-                                      >
-                                        <FileText size={16} />
-                                      </button>
+                                      <div className="flex flex-col gap-1 -mt-1 -mr-1">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
+                                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
+                                          title="Quick Edit Name"
+                                        >
+                                          <FileText size={16} />
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }}
+                                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
+                                          title="Quick Edit Product Type"
+                                        >
+                                          <Tag size={16} />
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
                                   <p className="text-sm font-mono text-slate-500 mb-4">{item.barcode}</p>
@@ -3428,6 +3470,39 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </button>
                 <button
                   onClick={saveNameEdit}
+                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {
+        editingTypeItem && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditingTypeItem(null)}>
+            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-slate-800 mb-4">Edit Product Type</h3>
+              <input
+                value={newType}
+                onChange={(e) => setNewType(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all mb-6"
+                placeholder="Enter short product type (e.g. سخان ماء)"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveTypeEdit();
+                }}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditingTypeItem(null)}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveTypeEdit}
                   className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
                 >
                   Save
