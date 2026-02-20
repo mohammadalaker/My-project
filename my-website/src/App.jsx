@@ -980,14 +980,18 @@ function App() {
   .btn-print:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(15, 23, 42, 0.4); background: #000; }
   
   @media print {
+    @page { margin: 0.5cm; }
     body { padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .invoice-container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
+    .invoice-container { box-shadow: none; border: none; padding: 0; max-width: 100%; width: 100%; }
     .btn-print { display: none; }
-    .total-card { color: #000; background: #f8fafc !important; box-shadow: none; border: 2px solid #000; page-break-inside: avoid; break-inside: avoid; }
+    .total-card { color: #000; background: #f8fafc !important; box-shadow: none; border: 2px solid #000; page-break-inside: avoid; break-inside: avoid; min-width: 250px; }
     .total-row-main { border-top-color: #000; }
-    .info-grid { border: 2px solid #000; background: transparent !important; }
-    table.data-table thead th { background: transparent !important; border-bottom: 2px solid #000; color: #000; }
-    table.data-table tbody td { border-bottom: 1px solid #e2e8f0; }
+    .info-grid { border: 2px solid #000; background: transparent !important; gap: 10px; padding: 16px; }
+    table.data-table { font-size: 0.85rem; }
+    table.data-table thead th { background: transparent !important; border-bottom: 2px solid #000; color: #000; padding: 8px 4px; white-space: normal; font-size: 0.8rem; }
+    table.data-table tbody td { border-bottom: 1px solid #e2e8f0; padding: 8px 4px; }
+    .inv-td-img img { width: 40px; height: 40px; }
+    .inv-td-img { width: 50px; }
     .section-title::before { background: #000 !important; }
   }
 </style></head><body>
