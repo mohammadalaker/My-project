@@ -136,7 +136,7 @@ function amountToEnglishWords(amount) {
   return str + ' Only';
 }
 
-const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer, visible';
+const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer, visible, product_type';
 
 const parsePrice = (val) => {
   if (val === null || val === undefined || val === '') return null;
@@ -161,6 +161,7 @@ function normalizeItemFromSupabase(row) {
     id: barcodeStr,
     barcode: barcodeStr,
     name: (row.eng_name ?? '').toString().trim(),
+    productType: (row.product_type ?? '').toString().trim(),
     group: (row.brand_group ?? '').toString().trim(),
     box: row.box_count != null && row.box_count !== '' ? String(row.box_count) : '',
     price: price,
@@ -543,6 +544,7 @@ function App() {
     barcode: '',
     brand_group: '',
     eng_name: '',
+    product_type: '',
     box_count: '',
     full_price: '',
     price_after_disc: '',
@@ -667,7 +669,7 @@ function App() {
         // If column missing, fallback to base query (visible or is_offer)
         if (error.message?.includes('column items.is_offer does not exist') || error.message?.includes('column items.visible does not exist') || error.code === '42703') {
           console.warn('items column missing (is_offer/visible), falling back to base items query...');
-          const BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url';
+          const BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, product_type';
           const { data: retryData, error: retryError } = await supabase
             .from('items')
             .select(BASE_SELECT);
@@ -827,7 +829,7 @@ function App() {
         }
         return [
           ...prev,
-          { id: item.id, qty: qty, unitPrice, box, item, customName: item.group || item.name },
+          { id: item.id, qty: qty, unitPrice, box, item, customName: item.name || item.group },
         ];
       });
     });
@@ -913,15 +915,22 @@ function App() {
         const consumerPrice = isSubmitted ? (o.consumer_price || 0) : (Number(o.item?.price) ?? 0);
         const discPercent = isSubmitted ? (o.discount_percent || 0) : getLineDiscountPercent(o);
 
-        const displayName = (o.name || o.customName || item.group || item.name || '').replace(/</g, '&lt;');
-        const barcode = (o.barcode || item.barcode || '').replace(/</g, '&lt;');
+        const barcodeToLookup = o.barcode || item.barcode || '';
+        const liveItem = barcodeToLookup ? items.find(i => String(i.barcode) === String(barcodeToLookup)) : null;
+
+        const rawName = (item.name || o.customName || o.name || item.group || o.group || '').replace(/</g, '&lt;');
+        const prodTypeRaw = o.product_type || item.productType || liveItem?.productType || '';
+        const prodType = prodTypeRaw.replace(/</g, '&lt;');
+        const displayName = prodType ? prodType : rawName;
+        const productTypeStr = ''; // Removed the badge since we are replacing the name entirely
+        const barcode = barcodeToLookup.replace(/</g, '&lt;');
         const imgUrl = !isSubmitted && o.item?.image ? getPublicImageUrl(o.item.image) : null;
         const imgSrc = imgUrl ? String(imgUrl).replace(/"/g, '&quot;') : '';
         const imgCell = imgSrc ? `<td class="inv-td-img"><img src="${imgSrc}" alt="" /></td>` : '<td class="inv-td-img">—</td>';
 
         return `<tr>
           ${imgCell}
-          <td style="font-weight: 600;">${displayName}</td>
+          <td style="font-weight: 600;">${productTypeStr}${displayName}</td>
           <td dir="ltr" lang="en" style="font-family: monospace; color: #64748b;">${barcode}</td>
           <td dir="ltr" lang="en" style="font-weight: 700;">${o.qty}</td>
           <td dir="ltr" lang="en">₪${consumerPrice}</td>
@@ -1227,7 +1236,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         total_amount: orderTotal,
         items: orderLines.map(line => ({
           barcode: line.item.barcode,
-          name: line.customName || line.item.group || line.item.name,
+          name: line.customName || line.item.name || line.item.group,
+          product_type: line.item?.productType || null,
+          group: line.item?.group || null,
           qty: line.qty,
           consumer_price: Number(line.item?.price) ?? 0,
           discount_percent: getLineDiscountPercent(line),
@@ -1375,13 +1386,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     ws.getCell(1, 1).font = { bold: true, size: 20, color: { argb: colors.white } };
     ws.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.primary } };
     ws.getCell(1, 1).alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 2 };
-    ws.mergeCells(1, 1, 1, 7);
+    ws.mergeCells(1, 1, 1, 9);
     ws.getRow(1).height = 36;
     let r = 3;
     ws.getCell(r, 1).value = shapeText('Customer Customer');
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
-    ws.mergeCells(r, 1, r, 8);
+    ws.mergeCells(r, 1, r, 9);
     ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 2 };
     border(ws.getCell(r, 1));
     r++;
@@ -1400,18 +1411,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       ws.getCell(r, 2).value = shapeText(v || '');
       styleCell(ws.getCell(r, 1), { fill: i % 2 === 0 ? colors.light : colors.lightAlt, font: { bold: true, color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
       styleCell(ws.getCell(r, 2), { fill: colors.white, font: { color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
-      ws.mergeCells(r, 2, r, 8);
+      ws.mergeCells(r, 2, r, 9);
       r++;
     });
     r += 1;
     ws.getCell(r, 1).value = shapeText('Item Details');
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
-    ws.mergeCells(r, 1, r, 8);
+    ws.mergeCells(r, 1, r, 9);
     ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 2 };
     border(ws.getCell(r, 1));
     r++;
-    const headers = ['Name', 'Barcode', 'Group', 'Qty', 'Price', 'Discounted', 'Discount %', 'Total']; // Added Group
+    const headers = ['Type', 'Name', 'Barcode', 'Group', 'Qty', 'Price', 'Discounted', 'Discount %', 'Total'];
     headers.forEach((h, c) => {
       ws.getCell(r, c + 1).value = shapeText(h);
       styleCell(ws.getCell(r, c + 1), { fill: colors.primary, font: { bold: true, color: { argb: colors.white }, size: 11 }, alignment: { horizontal: 'center', vertical: 'middle' } });
@@ -1421,45 +1432,53 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const sortedLines = sortByBarcodeOrder(orderLines, BARCODE_ORDER);
     sortedLines.forEach((o, i) => {
       const discPct = getLineDiscountPercent(o);
-      ws.getCell(r, 1).value = shapeText((o.customName || o.item?.group || o.item?.name || '').slice(0, 50));
-      ws.getCell(r, 2).value = shapeText(o.item?.barcode || '');
-      ws.getCell(r, 3).value = shapeText(o.item?.group || ''); // Added Group value
-      ws.getCell(r, 4).value = o.qty;
-      ws.getCell(r, 5).value = Number(o.item?.price) ?? 0;
-      ws.getCell(r, 6).value = getLineUnitPrice(o);
-      ws.getCell(r, 7).value = discPct > 0 ? discPct + '%' : '—';
-      ws.getCell(r, 8).value = parseFloat(getLineTotal(o).toFixed(2));
+      const barcodeToLookup = o.barcode || o.item?.barcode || '';
+      const liveItem = barcodeToLookup ? items.find(i => String(i.barcode) === String(barcodeToLookup)) : null;
+
+      const prodType = (o.product_type || o.item?.productType || liveItem?.productType || '');
+      ws.getCell(r, 1).value = shapeText(prodType);
+
+      const rawName = (o.item?.name || o.customName || o.name || o.item?.group || o.group || '').slice(0, 50);
+      ws.getCell(r, 2).value = shapeText(prodType ? prodType : rawName);
+      ws.getCell(r, 3).value = shapeText(barcodeToLookup);
+      ws.getCell(r, 4).value = shapeText(o.item?.group || '');
+      ws.getCell(r, 5).value = o.qty;
+      ws.getCell(r, 6).value = Number(o.item?.price) ?? 0;
+      ws.getCell(r, 7).value = getLineUnitPrice(o);
+      ws.getCell(r, 8).value = discPct > 0 ? discPct + '%' : '—';
+      ws.getCell(r, 9).value = parseFloat(getLineTotal(o).toFixed(2));
       const rowFill = i % 2 === 0 ? colors.white : 'FFF8fafc';
-      for (let c = 1; c <= 8; c++) {
+      for (let c = 1; c <= 9; c++) {
         const cell = ws.getCell(r, c);
         styleCell(cell, {
           fill: rowFill,
-          font: c === 8 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
-          alignment: c <= 3 ? { horizontal: 'right' } : { horizontal: 'center' }, // Alignment adjusted for text/numbers
+          font: c === 9 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
+          alignment: c <= 4 ? { horizontal: 'right' } : { horizontal: 'center' },
         });
       }
       r++;
     });
     ws.getCell(r, 1).value = '';
-    ws.getCell(r, 6).value = shapeText('Total');
-    ws.getCell(r, 8).value = parseFloat(orderTotal.toFixed(2));
-    for (let c = 1; c <= 8; c++) {
+    ws.getCell(r, 7).value = shapeText('Total');
+    ws.getCell(r, 9).value = parseFloat(orderTotal.toFixed(2));
+    for (let c = 1; c <= 9; c++) {
       const cell = ws.getCell(r, c);
       styleCell(cell, {
         fill: colors.light,
-        font: c >= 6 ? { bold: true, size: 12, color: { argb: colors.primary } } : {},
-        alignment: c === 6 ? { horizontal: 'right' } : c === 8 ? { horizontal: 'center' } : {},
+        font: c >= 7 ? { bold: true, size: 12, color: { argb: colors.primary } } : {},
+        alignment: c === 7 ? { horizontal: 'right' } : c === 9 ? { horizontal: 'center' } : {},
       });
     }
     ws.getRow(r).height = 28;
-    ws.getColumn(1).width = 30;
-    ws.getColumn(2).width = 14;
-    ws.getColumn(3).width = 16; // Group column width
-    ws.getColumn(4).width = 8;
-    ws.getColumn(5).width = 10;
+    ws.getColumn(1).width = 16;
+    ws.getColumn(2).width = 30;
+    ws.getColumn(3).width = 14;
+    ws.getColumn(4).width = 16;
+    ws.getColumn(5).width = 8;
     ws.getColumn(6).width = 10;
-    ws.getColumn(7).width = 12;
+    ws.getColumn(7).width = 10;
     ws.getColumn(8).width = 12;
+    ws.getColumn(9).width = 12;
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -1486,7 +1505,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     } else if (saved) {
       clearOrderAndInfo();
     }
-  }, [orderLines, orderTotal, orderInfo, currentOrderId, userRole]);
+  }, [orderLines, orderTotal, orderInfo, currentOrderId, userRole, items]);
 
   const handleOpenInventory = () => {
     const html = getInventoryHtml();
@@ -1503,6 +1522,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       barcode: '',
       brand_group: '',
       eng_name: '',
+      product_type: '',
       box_count: '',
       full_price: '',
       price_after_disc: '',
@@ -1522,6 +1542,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       barcode: item.barcode || '',
       brand_group: item.group || '',
       eng_name: item.name || '',
+      product_type: item.productType || '',
       box_count: item.box ?? '',
       full_price: item.price ?? '',
       price_after_disc: item.priceAfterDiscount ?? '',
@@ -1540,6 +1561,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         barcode: formData.barcode.trim(),
         brand_group: formData.brand_group.trim() || null,
         eng_name: formData.eng_name.trim() || null,
+        product_type: formData.product_type.trim() || null,
         box_count: formData.box_count ? parseInt(formData.box_count, 10) : null,
         full_price: formData.full_price ? parseFloat(formData.full_price) : null,
         price_after_disc: formData.price_after_disc
@@ -1688,6 +1710,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         <div class="cat-card">
           ${img}
           <div class="cat-info">
+            ${item.productType ? `<div style="display:inline-block; background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.75rem; margin-bottom:6px;">${item.productType}</div>` : ''}
             <div class="cat-name">${item.name}</div>
             <div class="cat-details">
               <span class="cat-group">${item.group || '—'}</span>
@@ -2580,7 +2603,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                 <div className="p-5 flex-1 flex flex-col">
                                   <div className="flex justify-between items-start gap-2 mb-1">
-                                    <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
+                                    <div className="flex flex-col">
+                                      {item.productType && (
+                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded-md self-start mb-1 shadow-sm">
+                                          {item.productType}
+                                        </span>
+                                      )}
+                                      <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
+                                    </div>
                                     {userRole === 'admin' && (
                                       <button
                                         onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
@@ -3285,6 +3315,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <form onSubmit={handleSubmit} className="space-y-3">
                 <label><span className="text-xs block text-slate-600 font-medium mb-1">Barcode</span><input required value={formData.barcode} onChange={(e) => setFormData((p) => ({ ...p, barcode: e.target.value }))} disabled={!!editingItem} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-shadow" /></label>
                 <label><span className="text-xs block text-slate-600 font-medium mb-1">Name</span><input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+                <label><span className="text-xs block text-slate-600 font-medium mb-1">نوع المنتج</span><input value={formData.product_type} onChange={(e) => setFormData((p) => ({ ...p, product_type: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-amber-400 outline-none" placeholder="سخان ماء، عصارة حمضيات..." dir="rtl" /></label>
                 <label><span className="text-xs block text-slate-600 font-medium mb-1">Group</span><input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
                 <div className="grid grid-cols-2 gap-2">
                   <label>
