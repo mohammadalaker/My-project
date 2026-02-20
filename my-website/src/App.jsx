@@ -82,6 +82,14 @@ const isElectricalGroup = (g) =>
 const isHouseholdGroup = (g) =>
   g && HOUSEHOLD_GROUPS.some((hg) => String(g).trim().toLowerCase() === hg);
 
+/** Convert Arabic/Persian digits to English digits */
+function toEnglishDigits(str) {
+  if (typeof str !== 'string') return str;
+  return String(str)
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+}
+
 /** Convert amount to English words (Shekels and Agoras) */
 function amountToEnglishWords(amount) {
   const n = Math.max(0, Number(amount));
@@ -928,17 +936,17 @@ function App() {
 
     const infoGridHtml = [
       ['اسم الشركة', currentInfo.companyName],
-      ['رقم العميل', currentInfo.customerNumber],
+      ['رقم العميل', currentInfo.customerNumber, true],
       ['اسم التاجر', currentInfo.merchantName],
-      ['رقم الهاتف', currentInfo.phone],
+      ['رقم الهاتف', currentInfo.phone, true],
       ['العنوان', currentInfo.address],
       ['تاريخ الطلب', currentInfo.orderDate],
       ['طريقة الدفع', currentInfo.paymentMethod],
     ]
       .filter(([_, v]) => v) // only show if there is a value
       .map(
-        ([l, v]) =>
-          `<div class="info-item"><span class="info-label">${l}</span><span class="info-value" dir="ltr" lang="en">${(v || '').replace(/</g, '&lt;')}</span></div>`
+        ([l, v, isLtr]) =>
+          `<div class="info-item"><span class="info-label">${l}</span><span class="info-value text-slate-800" ${isLtr ? 'dir="ltr" lang="en" style="font-family: monospace;"' : ''}>${(String(v) || '').replace(/</g, '&lt;')}</span></div>`
       )
       .join('');
 
@@ -959,10 +967,10 @@ function App() {
   .section-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 10px; }
   .section-title::before { content: ''; display: block; width: 6px; height: 20px; background: #4f46e5; border-radius: 4px; }
   
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; background: #f8fafc; padding: 24px; border-radius: 16px; margin-bottom: 40px; border: 1px solid #e2e8f0; }
-  .info-item { display: flex; flex-direction: column; gap: 6px; }
-  .info-label { font-size: 0.85rem; color: #64748b; font-weight: 700; }
-  .info-value { font-size: 1.05rem; font-weight: 800; color: #0f172a; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; background: transparent; margin-bottom: 32px; }
+  .info-item { display: flex; flex-direction: column; gap: 4px; background: #f8fafc; padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; border-right: 4px solid #4f46e5; }
+  .info-label { font-size: 0.8rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-value { font-size: 1.1rem; font-weight: 800; color: #0f172a; word-break: break-word; }
   
   table.data-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-bottom: 2rem; font-size: 0.95rem; }
   table.data-table thead th { background: #f1f5f9; color: #475569; padding: 14px 16px; text-align: right; font-weight: 800; white-space: nowrap; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -996,7 +1004,8 @@ function App() {
     .brand-icon { box-shadow: none; }
     .header-meta { background: transparent !important; padding: 0; border: none; text-align: left; align-items: end; }
     
-    .info-grid { background: transparent !important; border: 1px solid #cbd5e1; padding: 16px; gap: 12px; margin-bottom: 24px; }
+    .info-grid { background: transparent !important; border: none; padding: 0; gap: 8px; margin-bottom: 16px; grid-template-columns: repeat(4, 1fr); }
+    .info-item { background: transparent !important; border: 1px solid #cbd5e1; border-right: 4px solid #0f172a; padding: 8px 12px; }
     
     table.data-table { font-size: 0.85rem; border-spacing: 0; }
     table.data-table thead th { background: transparent !important; border-bottom: 2px solid #0f172a; color: #0f172a; padding: 8px 4px; white-space: normal; font-size: 0.8rem; border-radius: 0 !important; }
@@ -2908,10 +2917,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <label className="text-[11px] font-bold text-slate-500 mr-1">التلفون <span className="text-rose-500">*</span></label>
                       <input
                         value={orderInfo.phone}
-                        onChange={(e) => setOrderInfoField('phone', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono shadow-sm"
+                        onChange={(e) => setOrderInfoField('phone', toEnglishDigits(e.target.value))}
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm font-mono text-left"
                         placeholder="05..."
-                        dir="rtl"
+                        dir="ltr"
+                        lang="en"
                       />
                     </div>
 
@@ -2944,9 +2954,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <label className="text-[11px] font-bold text-slate-500 mr-1">رقم الزبون ( في الشركة )</label>
                         <input
                           value={orderInfo.customerNumber}
-                          onChange={(e) => setOrderInfoField('customerNumber', e.target.value)}
-                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                          onChange={(e) => setOrderInfoField('customerNumber', toEnglishDigits(e.target.value))}
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono text-left"
                           placeholder="#"
+                          dir="ltr"
+                          lang="en"
                         />
                       </div>
                     </div>
