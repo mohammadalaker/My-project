@@ -980,15 +980,15 @@ function App() {
   .btn-print:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(15, 23, 42, 0.4); background: #000; }
   
   @media print {
-    body { padding: 0; background: #fff; }
+    body { padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .invoice-container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
     .btn-print { display: none; }
-    .total-card { color: #000; background: #f8fafc; box-shadow: none; border: 2px solid #000; }
+    .total-card { color: #000; background: #f8fafc !important; box-shadow: none; border: 2px solid #000; page-break-inside: avoid; break-inside: avoid; }
     .total-row-main { border-top-color: #000; }
-    .info-grid { border: 2px solid #000; background: transparent; }
-    table.data-table thead th { background: transparent; border-bottom: 2px solid #000; color: #000; }
+    .info-grid { border: 2px solid #000; background: transparent !important; }
+    table.data-table thead th { background: transparent !important; border-bottom: 2px solid #000; color: #000; }
     table.data-table tbody td { border-bottom: 1px solid #e2e8f0; }
-    .section-title::before { background: #000; }
+    .section-title::before { background: #000 !important; }
   }
 </style></head><body>
 
@@ -1128,7 +1128,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 .btn-print:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(234,88,12,.4)}
 .btn-save-order{padding:14px 32px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;margin-top:20px;display:block;width:100%;box-shadow:0 4px 14px rgba(16,185,129,.35);transition:transform .15s,box-shadow .15s}
 .btn-save-order:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(16,185,129,.4)}
-@media print{body{background:#fff;padding:16px}.inv-wrap{box-shadow:none;border:1px solid #e2e8f0}.btn-print,.btn-save-order{display:none}.inv-card:hover{box-shadow:none}}
+@media print{body{background:#fff;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}.inv-wrap{box-shadow:none;border:1px solid #e2e8f0}.btn-print,.btn-save-order{display:none}.inv-card:hover{box-shadow:none}.inv-total-card{page-break-inside:avoid;break-inside:avoid;border-color:#000;background:transparent!important;color:#000}.inv-header{background:transparent!important;color:#000;border:2px solid #000;box-shadow:none}}
 </style></head><body>
 <div class="inv-wrap">
   <div class="inv-header"><h1 class="inv-title">Order Summary</h1><p class="inv-sub">Products · Images · Details</p></div>
@@ -1293,8 +1293,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     if (!saved && !isSupervisorProcessing) return; // Exit if save failed and not supervisor flow
 
     const ExcelJS = (await import('exceljs')).default;
+    const arabicReshaperModule = await import('arabic-persian-reshaper');
+    const ArabicShaper = arabicReshaperModule.ArabicShaper || arabicReshaperModule.default?.ArabicShaper;
+    const shapeText = (text) => {
+      if (typeof text !== 'string') return text;
+      // Only reshape if it contains Arabic letters
+      if (/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text)) {
+        try { return ArabicShaper.convertArabic(text); } catch (e) { return text; }
+      }
+      return text;
+    };
+
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Sales Order', { views: [{ rightToLeft: false }] });
+    // Set worksheet view to Right-To-Left so Arabic text displays correctly in WPS Office and Excel
+    const ws = wb.addWorksheet('Sales Order', { views: [{ rightToLeft: true }] });
     const colors = {
       primary: 'FFea580c',
       primaryDark: 'FFc2410c',
@@ -1315,21 +1327,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const styleCell = (cell, opts = {}) => {
       if (opts.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.fill } };
       if (opts.font) cell.font = opts.font;
-      if (opts.alignment) cell.alignment = opts.alignment;
+      // Force RTL reading order for all cells (2 means Right-to-Left in ExcelJS)
+      const baseAlignment = { readingOrder: 2, wrapText: true };
+      cell.alignment = opts.alignment ? { ...baseAlignment, ...opts.alignment } : baseAlignment;
       border(cell);
     };
     ws.addRow(['Sales Order Agreement']);
     ws.getCell(1, 1).font = { bold: true, size: 20, color: { argb: colors.white } };
     ws.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.primary } };
-    ws.getCell(1, 1).alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell(1, 1).alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 2 };
     ws.mergeCells(1, 1, 1, 7);
     ws.getRow(1).height = 36;
     let r = 3;
-    ws.getCell(r, 1).value = 'Customer Customer';
+    ws.getCell(r, 1).value = shapeText('Customer Customer');
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
     ws.mergeCells(r, 1, r, 8);
-    ws.getCell(r, 1).alignment = { horizontal: 'left' };
+    ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 2 };
     border(ws.getCell(r, 1));
     r++;
     const excelInfoRows = [
@@ -1343,24 +1357,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       ...(orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? [['Checks Count', orderInfo.checksCount]] : [])
     ];
     excelInfoRows.forEach(([l, v], i) => {
-      ws.getCell(r, 1).value = l;
-      ws.getCell(r, 2).value = v || '';
-      styleCell(ws.getCell(r, 1), { fill: i % 2 === 0 ? colors.light : colors.lightAlt, font: { bold: true, color: { argb: colors.textDark } }, alignment: { horizontal: 'left' } });
-      styleCell(ws.getCell(r, 2), { fill: colors.white, font: { color: { argb: colors.textDark } }, alignment: { horizontal: 'left' } });
+      ws.getCell(r, 1).value = shapeText(l || '');
+      ws.getCell(r, 2).value = shapeText(v || '');
+      styleCell(ws.getCell(r, 1), { fill: i % 2 === 0 ? colors.light : colors.lightAlt, font: { bold: true, color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
+      styleCell(ws.getCell(r, 2), { fill: colors.white, font: { color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
       ws.mergeCells(r, 2, r, 8);
       r++;
     });
     r += 1;
-    ws.getCell(r, 1).value = 'Item Details';
+    ws.getCell(r, 1).value = shapeText('Item Details');
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
     ws.mergeCells(r, 1, r, 8);
-    ws.getCell(r, 1).alignment = { horizontal: 'left' };
+    ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 2 };
     border(ws.getCell(r, 1));
     r++;
     const headers = ['Name', 'Barcode', 'Group', 'Qty', 'Price', 'Discounted', 'Discount %', 'Total']; // Added Group
     headers.forEach((h, c) => {
-      ws.getCell(r, c + 1).value = h;
+      ws.getCell(r, c + 1).value = shapeText(h);
       styleCell(ws.getCell(r, c + 1), { fill: colors.primary, font: { bold: true, color: { argb: colors.white }, size: 11 }, alignment: { horizontal: 'center', vertical: 'middle' } });
     });
     ws.getRow(r).height = 24;
@@ -1368,9 +1382,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const sortedLines = sortByBarcodeOrder(orderLines, BARCODE_ORDER);
     sortedLines.forEach((o, i) => {
       const discPct = getLineDiscountPercent(o);
-      ws.getCell(r, 1).value = (o.customName || o.item?.group || o.item?.name || '').slice(0, 50);
-      ws.getCell(r, 2).value = o.item?.barcode || '';
-      ws.getCell(r, 3).value = o.item?.group || ''; // Added Group value
+      ws.getCell(r, 1).value = shapeText((o.customName || o.item?.group || o.item?.name || '').slice(0, 50));
+      ws.getCell(r, 2).value = shapeText(o.item?.barcode || '');
+      ws.getCell(r, 3).value = shapeText(o.item?.group || ''); // Added Group value
       ws.getCell(r, 4).value = o.qty;
       ws.getCell(r, 5).value = Number(o.item?.price) ?? 0;
       ws.getCell(r, 6).value = getLineUnitPrice(o);
@@ -1382,13 +1396,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         styleCell(cell, {
           fill: rowFill,
           font: c === 8 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
-          alignment: c <= 3 ? { horizontal: 'left' } : { horizontal: 'center' }, // Alignment adjusted for text/numbers
+          alignment: c <= 3 ? { horizontal: 'right' } : { horizontal: 'center' }, // Alignment adjusted for text/numbers
         });
       }
       r++;
     });
     ws.getCell(r, 1).value = '';
-    ws.getCell(r, 6).value = 'Total';
+    ws.getCell(r, 6).value = shapeText('Total');
     ws.getCell(r, 8).value = parseFloat(orderTotal.toFixed(2));
     for (let c = 1; c <= 8; c++) {
       const cell = ws.getCell(r, c);
@@ -2103,29 +2117,47 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               setOrderActionLoading(true);
                               try {
                                 const ExcelJS = (await import('exceljs')).default;
+                                const arabicReshaperModule = await import('arabic-persian-reshaper');
+                                const ArabicShaper = arabicReshaperModule.ArabicShaper || arabicReshaperModule.default?.ArabicShaper;
+                                const shapeText = (text) => {
+                                  if (typeof text !== 'string') return text;
+                                  if (/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text)) {
+                                    try { return ArabicShaper.convertArabic(text); } catch (e) { return text; }
+                                  }
+                                  return text;
+                                };
+
                                 const wb = new ExcelJS.Workbook();
+                                // Set worksheet view to Right-To-Left so Arabic text displays correctly in WPS Office and Excel
                                 const ws = wb.addWorksheet('Order Details', { views: [{ rightToLeft: true }] });
 
                                 ws.columns = [
-                                  { header: 'Item', key: 'name', width: 30 },
-                                  { header: 'Barcode', key: 'barcode', width: 15 },
-                                  { header: 'Qty', key: 'qty', width: 10 },
-                                  { header: 'Price', key: 'price', width: 12 },
-                                  { header: 'Total', key: 'total', width: 12 },
+                                  { header: shapeText('Item'), key: 'name', width: 30 },
+                                  { header: shapeText('Barcode'), key: 'barcode', width: 15 },
+                                  { header: shapeText('Qty'), key: 'qty', width: 10 },
+                                  { header: shapeText('Price'), key: 'price', width: 12 },
+                                  { header: shapeText('Total'), key: 'total', width: 12 },
                                 ];
 
                                 (selectedOrder.items || []).forEach(item => {
-                                  ws.addRow({
-                                    name: item.name || item.customName,
-                                    barcode: item.barcode,
+                                  const row = ws.addRow({
+                                    name: shapeText(item.name || item.customName),
+                                    barcode: shapeText(item.barcode),
                                     qty: item.qty,
                                     price: item.unit_price || item.price,
                                     total: item.total
                                   });
+                                  // Force RTL reading order for standard supervisor rows too
+                                  row.eachCell({ includeEmpty: true }, (cell) => {
+                                    cell.alignment = { readingOrder: 2, wrapText: true, horizontal: 'right' };
+                                  });
                                 });
 
                                 ws.addRow({});
-                                ws.addRow({ name: 'Total Amount', total: selectedOrder.total_amount });
+                                const totalRow = ws.addRow({ name: shapeText('Total Amount'), total: selectedOrder.total_amount });
+                                totalRow.eachCell({ includeEmpty: true }, (cell) => {
+                                  cell.alignment = { readingOrder: 2, wrapText: true, horizontal: 'right' };
+                                });
 
                                 const buf = await wb.xlsx.writeBuffer();
                                 const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
