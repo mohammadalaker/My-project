@@ -1206,13 +1206,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   const handleOpenPdfOrder = openOrderPdfInNewTab;
 
   const validateOrder = () => {
-    if (userRole === 'customer') { // user 123
-      if (!orderInfo.companyName?.trim()) return 'يرجى إدخال اسم الشركة (المشتري).';
-      if (!orderInfo.merchantName?.trim()) return 'يرجى إدخال اسم التاجر (المشتري).';
-      if (!orderInfo.phone?.trim()) return 'يرجى إدخال رقم الهاتف.';
-      if (!orderInfo.address?.trim()) return 'يرجى إدخال العنوان.';
-      if (!orderInfo.orderDate) return 'يرجى إدخال التاريخ.';
-    }
+    if (!orderInfo.companyName?.trim()) return 'يرجى إدخال اسم الشركة (المشتري).';
+    if (!orderInfo.merchantName?.trim()) return 'يرجى إدخال اسم التاجر (المشتري).';
+    if (!orderInfo.phone?.trim()) return 'يرجى إدخال رقم الهاتف.';
+    if (!orderInfo.address?.trim()) return 'يرجى إدخال العنوان.';
+    if (!orderInfo.orderDate) return 'يرجى إدخال التاريخ.';
+
     return null;
   };
 
@@ -1281,15 +1280,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
 
     const saved = await saveOrderToSupabase();
+    if (!saved) return;
 
+    // Trigger PDF Export download
     const html = getPrintHtml();
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Invoice-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.html`;
+    a.download = `Invoice-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.pdf.html`;
 
-    // Safer download trigger — avoid removeChild conflict with React portal on document.body
     a.style.display = 'none';
     a.setAttribute('aria-hidden', 'true');
     document.body.appendChild(a);
@@ -1301,25 +1301,32 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       URL.revokeObjectURL(url);
     }, 150);
 
-    if (saved) clearOrderAndInfo();
+    // Also trigger Excel export
+    await handleExportExcel(true); // pass true flag to skip saving again inside
+
+    clearOrderAndInfo();
   };
 
-  const handleExportExcel = useCallback(async () => {
+  const handleExportExcel = useCallback(async (skipSave = false) => {
     const error = validateOrder();
     if (error) {
-      alert(error + '\nPlease fill in all required customer details.');
-      setActiveTab('customer');
+      if (!skipSave) { // Only alert if NOT part of combined save
+        alert(error + '\nPlease fill in all required customer details.');
+        setActiveTab('customer');
+      }
       return;
     }
 
-    let saved = false;
+    let saved = skipSave ? true : false;
     const isSupervisorProcessing = userRole === 'supervisor' && currentOrderId;
 
-    if (isSupervisorProcessing) {
-      // Supervisor processing: Don't save new, but delete old AFTER excel generation logic
-      saved = true; // Treat as success to proceed
-    } else {
-      saved = await saveOrderToSupabase();
+    if (!skipSave) {
+      if (isSupervisorProcessing) {
+        // Supervisor processing: Don't save new, but delete old AFTER excel generation logic
+        saved = true; // Treat as success to proceed
+      } else {
+        saved = await saveOrderToSupabase();
+      }
     }
 
     if (!saved && !isSupervisorProcessing) return; // Exit if save failed and not supervisor flow
@@ -3029,15 +3036,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <button onClick={handleOpenPdfOrder} disabled={orderLines.length === 0} className="py-4 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-rose-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
-                  <FileDown size={20} /> <span>PDF</span>
+                  <FileDown size={20} /> <span>PDF Preview</span>
                 </button>
-                <button onClick={handlePrintOrder} disabled={orderLines.length === 0} className="py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
-                  <span className="text-xl">🖨️</span> <span>Print</span>
-                </button>
-                <button onClick={handleSaveInvoice} className="py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
-                  <span>Save</span>
+                <button onClick={handleSaveInvoice} className="py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/20 text-white font-bold rounded-2xl border transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
+                  <span>Save + Export</span>
                 </button>
                 <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
                   <span>{activeTab === 'items' ? 'Next >' : '< Back'}</span>
@@ -3048,7 +3052,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <button onClick={clearOrder} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 uppercase tracking-widest transition-colors flex items-center gap-2">
                   <Trash2 size={12} /> <span>Clear Order</span>
                 </button>
-                <button onClick={handleExportExcel} className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest transition-colors"><span>Export Excel</span></button>
               </div>
             </div>
           </aside>
