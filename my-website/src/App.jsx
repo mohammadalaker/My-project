@@ -191,7 +191,7 @@ function AddToOfferRow({ item, getImage, onAdd }) {
         <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center"><Package size={20} className="text-slate-400" /></div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 truncate">{item.name || item.barcode}</p>
+        <p className="text-xs font-bold text-slate-800 break-words leading-tight">{item.name || item.barcode}</p>
         <p className="text-xs text-slate-500">₪{Math.round(item.price ?? 0)}</p>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
@@ -2469,7 +2469,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         </div>
                                       )}
                                       <div className="flex-1 min-w-0">
-                                        <p className={`font-medium truncate ${it ? 'text-slate-800' : 'text-red-600 italic'}`}>
+                                        <p className={`text-xs font-bold break-words leading-tight ${it ? 'text-slate-800' : 'text-red-600 italic'}`}>
                                           {it?.name || `Removed Product (${entry.barcode})`}
                                         </p>
                                         <p className="text-xs text-slate-500">الكمية: {entry.quantity} {it ? '' : '(Not Available)'}</p>
@@ -2628,7 +2628,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           {item.productType}
                                         </span>
                                       )}
-                                      <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
+                                      <h3 className="text-xs font-bold text-slate-800 leading-tight min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
                                     </div>
                                     {userRole === 'admin' && (
                                       <div className="flex flex-col gap-1 -mt-1 -mr-1">
@@ -3142,7 +3142,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       {getImage(item) && <img src={getImage(item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</p>
+                      <p className="text-xs font-bold text-slate-800 break-words leading-tight">{item.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 rounded">{item.barcode}</span>
                         {item.group && <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 rounded">{item.group}</span>}
@@ -3187,7 +3187,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-6" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={80} className="text-slate-300" />}
               </div>
               {selectedItem.group && <p className="text-xs font-semibold text-indigo-600 mb-1">Group: {selectedItem.group}</p>}
-              <p className="text-slate-800 font-bold text-base mb-3 leading-snug">{selectedItem.name}</p>
+              <p className="text-slate-800 font-bold text-sm mb-3 leading-snug">{selectedItem.name}</p>
               <div className="space-y-2 text-sm">
                 <p className="text-slate-600">Price: <span dir="ltr" className="font-bold text-slate-800 text-base">₪{selectedItem.price ?? 0}</span></p>
                 <p className="text-slate-600">Discounted: <span dir="ltr" className="font-bold text-emerald-600 text-lg">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
