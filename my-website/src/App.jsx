@@ -1433,13 +1433,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       ['طريقة الدفع', orderInfo.paymentMethod],
       ...(orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? [['عدد الشيكات', orderInfo.checksCount]] : [])
     ];
-    // معلومات العميل على جهة الشمال: التسمية في العمود 1 والقيمة في العمود 2 (مدمج 2-9)، كلها محاذاة يمين
+    // معلومات العميل على جهة اليمين (العمود 9) والقيمة على جهة اليسار (العمود 1 مدمج 1-8)، كلها محاذاة يمين
     excelInfoRows.forEach(([l, v], i) => {
-      ws.getCell(r, 1).value = excelText(l || '');
-      ws.getCell(r, 2).value = excelText(v || '');
-      ws.mergeCells(r, 2, r, 9);
-      styleCell(ws.getCell(r, 1), { fill: i % 2 === 0 ? colors.light : colors.lightAlt, font: { bold: true, color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
-      styleCell(ws.getCell(r, 2), { fill: colors.white, font: { color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
+      ws.getCell(r, 9).value = excelText(l || '');
+      ws.getCell(r, 1).value = excelText(v || '');
+      ws.mergeCells(r, 1, r, 8);
+      styleCell(ws.getCell(r, 9), { fill: i % 2 === 0 ? colors.light : colors.lightAlt, font: { bold: true, color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
+      styleCell(ws.getCell(r, 1), { fill: colors.white, font: { color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
       r++;
     });
     r += 1;
