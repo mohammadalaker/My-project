@@ -1376,20 +1376,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     if (!saved && !isSupervisorProcessing) return; // Exit if save failed and not supervisor flow
 
     const ExcelJS = (await import('exceljs')).default;
-    const arabicReshaperModule = await import('arabic-persian-reshaper');
-    const ArabicShaper = arabicReshaperModule.ArabicShaper || arabicReshaperModule.default?.ArabicShaper;
-    const shapeText = (text) => {
-      if (typeof text !== 'string') return text;
-      // Only reshape if it contains Arabic letters
-      if (/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text)) {
-        try { return ArabicShaper.convertArabic(text); } catch (e) { return text; }
-      }
-      return text;
-    };
+    // لا نستخدم مشكل العربية في Excel - النص المنطقي (غير المشكل) يعرض بشكل صحيح مع محاذاة يمين و readingOrder RTL
+    const excelText = (text) => (text != null && typeof text !== 'string' ? String(text) : (text || ''));
 
     const wb = new ExcelJS.Workbook();
-    // Set worksheet view to Right-To-Left so Arabic text displays correctly in WPS Office and Excel
-    const ws = wb.addWorksheet('Sales Order', { views: [{ rightToLeft: true }] });
+    // الصفحة منسقة من الشمال: المحتوى يبدأ من العمود A (يسار)، اتجاه الورقة LTR
+    const ws = wb.addWorksheet('Sales Order', {
+      views: [{ rightToLeft: false, showGridLines: false }]
+    });
     const colors = {
       primary: 'FFea580c',
       primaryDark: 'FFc2410c',
@@ -1410,55 +1404,57 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const styleCell = (cell, opts = {}) => {
       if (opts.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.fill } };
       if (opts.font) cell.font = opts.font;
-      // Force RTL reading order for all cells (2 means Right-to-Left in ExcelJS)
-      const baseAlignment = { readingOrder: 2, wrapText: true };
+      // تخطيط الصفحة LTR (قراءة من اليسار)؛ النص العربي يبقى بمحاذاة يمين داخل الخلية
+      const baseAlignment = { readingOrder: 1, wrapText: true };
       cell.alignment = opts.alignment ? { ...baseAlignment, ...opts.alignment } : baseAlignment;
       border(cell);
     };
-    ws.addRow(['Sales Order Agreement']);
+    ws.addRow(['تفاصيل الطلبية']);
     ws.getCell(1, 1).font = { bold: true, size: 20, color: { argb: colors.white } };
     ws.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.primary } };
-    ws.getCell(1, 1).alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 2 };
+    ws.getCell(1, 1).alignment = { horizontal: 'center', vertical: 'middle', readingOrder: 1 };
     ws.mergeCells(1, 1, 1, 9);
     ws.getRow(1).height = 36;
     let r = 3;
-    ws.getCell(r, 1).value = shapeText('Customer Customer');
+    ws.getCell(r, 1).value = excelText('معلومات العميل');
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
     ws.mergeCells(r, 1, r, 9);
-    ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 2 };
+    ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 1 };
     border(ws.getCell(r, 1));
     r++;
     const excelInfoRows = [
-      ['Company Name', orderInfo.companyName],
-      ['Merchant Name', orderInfo.merchantName],
-      ['Customer Number', orderInfo.customerNumber], // Added Customer Number
-      ['Phone', orderInfo.phone],
-      ['Address', orderInfo.address],
-      ['Date', orderInfo.orderDate],
-      ['Payment Method', orderInfo.paymentMethod],
-      ...(orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? [['Checks Count', orderInfo.checksCount]] : [])
+      ['اسم العميل', orderInfo.companyName],
+      ['التاجر', orderInfo.merchantName],
+      ['رقم العميل', orderInfo.customerNumber],
+      ['رقم الهاتف', orderInfo.phone],
+      ['العنوان', orderInfo.address],
+      ['التاريخ', orderInfo.orderDate],
+      ['طريقة الدفع', orderInfo.paymentMethod],
+      ...(orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? [['عدد الشيكات', orderInfo.checksCount]] : [])
     ];
+    // معلومات العميل على جهة الشمال: التسمية في العمود 1 والقيمة في العمود 2 (مدمج 2-9)، كلها محاذاة يمين
     excelInfoRows.forEach(([l, v], i) => {
-      ws.getCell(r, 1).value = shapeText(l || '');
-      ws.getCell(r, 2).value = shapeText(v || '');
+      ws.getCell(r, 1).value = excelText(l || '');
+      ws.getCell(r, 2).value = excelText(v || '');
+      ws.mergeCells(r, 2, r, 9);
       styleCell(ws.getCell(r, 1), { fill: i % 2 === 0 ? colors.light : colors.lightAlt, font: { bold: true, color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
       styleCell(ws.getCell(r, 2), { fill: colors.white, font: { color: { argb: colors.textDark } }, alignment: { horizontal: 'right' } });
-      ws.mergeCells(r, 2, r, 9);
       r++;
     });
     r += 1;
-    ws.getCell(r, 1).value = shapeText('Item Details');
+    ws.getCell(r, 1).value = excelText('بيانات الأصناف');
     ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: colors.primary } };
     ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.light } };
     ws.mergeCells(r, 1, r, 9);
-    ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 2 };
+    ws.getCell(r, 1).alignment = { horizontal: 'right', readingOrder: 1 };
     border(ws.getCell(r, 1));
     r++;
-    const headers = ['Type', 'Name', 'Barcode', 'Group', 'Qty', 'Price', 'Discounted', 'Discount %', 'Total'];
+    const headers = ['الباركود', 'الصنف', 'المجموعة', 'الكمية', 'السعر', 'السعر بعد الخصم', 'الخصم', 'المجموع'];
     headers.forEach((h, c) => {
-      ws.getCell(r, c + 1).value = shapeText(h);
-      styleCell(ws.getCell(r, c + 1), { fill: colors.primary, font: { bold: true, color: { argb: colors.white }, size: 11 }, alignment: { horizontal: 'center', vertical: 'middle' } });
+      ws.getCell(r, c + 1).value = excelText(h);
+      const isArabicCol = c <= 2; // الباركود، الصنف، المجموعة
+      styleCell(ws.getCell(r, c + 1), { fill: colors.primary, font: { bold: true, color: { argb: colors.white }, size: 11 }, alignment: { horizontal: isArabicCol ? 'right' : 'center', vertical: 'middle', readingOrder: 1 } });
     });
     ws.getRow(r).height = 24;
     r++;
@@ -1469,49 +1465,47 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       const liveItem = barcodeToLookup ? items.find(i => String(i.barcode) === String(barcodeToLookup)) : null;
 
       const prodType = (o.product_type || o.item?.productType || liveItem?.productType || '');
-      ws.getCell(r, 1).value = shapeText(prodType);
-
       const rawName = (o.item?.name || o.customName || o.name || o.item?.group || o.group || '').slice(0, 50);
-      ws.getCell(r, 2).value = shapeText(prodType ? prodType : rawName);
-      ws.getCell(r, 3).value = shapeText(barcodeToLookup);
-      ws.getCell(r, 4).value = shapeText(o.item?.group || '');
-      ws.getCell(r, 5).value = o.qty;
-      ws.getCell(r, 6).value = Number(o.item?.price) ?? 0;
-      ws.getCell(r, 7).value = getLineUnitPrice(o);
-      ws.getCell(r, 8).value = discPct > 0 ? discPct + '%' : '—';
-      ws.getCell(r, 9).value = parseFloat(getLineTotal(o).toFixed(2));
+
+      ws.getCell(r, 1).value = excelText(barcodeToLookup);
+      ws.getCell(r, 2).value = excelText(prodType ? prodType : rawName);
+      ws.getCell(r, 3).value = excelText(o.item?.group || '');
+      ws.getCell(r, 4).value = o.qty;
+      ws.getCell(r, 5).value = Number(o.item?.price) ?? 0;
+      ws.getCell(r, 6).value = getLineUnitPrice(o);
+      ws.getCell(r, 7).value = discPct > 0 ? discPct + '%' : '—';
+      ws.getCell(r, 8).value = parseFloat(getLineTotal(o).toFixed(2));
       const rowFill = i % 2 === 0 ? colors.white : 'FFF8fafc';
-      for (let c = 1; c <= 9; c++) {
+      for (let c = 1; c <= 8; c++) {
         const cell = ws.getCell(r, c);
         styleCell(cell, {
           fill: rowFill,
-          font: c === 9 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
-          alignment: c <= 4 ? { horizontal: 'right' } : { horizontal: 'center' },
+          font: c === 8 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
+          alignment: c <= 3 ? { horizontal: 'right' } : { horizontal: 'center' },
         });
       }
       r++;
     });
     ws.getCell(r, 1).value = '';
-    ws.getCell(r, 7).value = shapeText('Total');
-    ws.getCell(r, 9).value = parseFloat(orderTotal.toFixed(2));
-    for (let c = 1; c <= 9; c++) {
+    ws.getCell(r, 6).value = excelText('المجموع الكلي');
+    ws.getCell(r, 8).value = parseFloat(orderTotal.toFixed(2));
+    for (let c = 1; c <= 8; c++) {
       const cell = ws.getCell(r, c);
       styleCell(cell, {
         fill: colors.light,
-        font: c >= 7 ? { bold: true, size: 12, color: { argb: colors.primary } } : {},
-        alignment: c === 7 ? { horizontal: 'right' } : c === 9 ? { horizontal: 'center' } : {},
+        font: c >= 6 ? { bold: true, size: 12, color: { argb: colors.primary } } : {},
+        alignment: c === 6 ? { horizontal: 'right', readingOrder: 1 } : c === 8 ? { horizontal: 'center' } : {},
       });
     }
     ws.getRow(r).height = 28;
     ws.getColumn(1).width = 16;
     ws.getColumn(2).width = 30;
-    ws.getColumn(3).width = 14;
-    ws.getColumn(4).width = 16;
-    ws.getColumn(5).width = 8;
+    ws.getColumn(3).width = 16;
+    ws.getColumn(4).width = 8;
+    ws.getColumn(5).width = 10;
     ws.getColumn(6).width = 10;
-    ws.getColumn(7).width = 10;
+    ws.getColumn(7).width = 12;
     ws.getColumn(8).width = 12;
-    ws.getColumn(9).width = 12;
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -2212,44 +2206,36 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               setOrderActionLoading(true);
                               try {
                                 const ExcelJS = (await import('exceljs')).default;
-                                const arabicReshaperModule = await import('arabic-persian-reshaper');
-                                const ArabicShaper = arabicReshaperModule.ArabicShaper || arabicReshaperModule.default?.ArabicShaper;
-                                const shapeText = (text) => {
-                                  if (typeof text !== 'string') return text;
-                                  if (/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text)) {
-                                    try { return ArabicShaper.convertArabic(text); } catch (e) { return text; }
-                                  }
-                                  return text;
-                                };
+                                const excelText = (t) => (t != null && typeof t !== 'string' ? String(t) : (t || ''));
 
                                 const wb = new ExcelJS.Workbook();
-                                // Set worksheet view to Right-To-Left so Arabic text displays correctly in WPS Office and Excel
-                                const ws = wb.addWorksheet('Order Details', { views: [{ rightToLeft: true }] });
+                                const ws = wb.addWorksheet('Order Details', {
+                                  views: [{ rightToLeft: false, showGridLines: false }]
+                                });
 
                                 ws.columns = [
-                                  { header: shapeText('Item'), key: 'name', width: 30 },
-                                  { header: shapeText('Barcode'), key: 'barcode', width: 15 },
-                                  { header: shapeText('Qty'), key: 'qty', width: 10 },
-                                  { header: shapeText('Price'), key: 'price', width: 12 },
-                                  { header: shapeText('Total'), key: 'total', width: 12 },
+                                  { header: excelText('الباركود'), key: 'barcode', width: 15 },
+                                  { header: excelText('الصنف'), key: 'name', width: 30 },
+                                  { header: excelText('الكمية'), key: 'qty', width: 10 },
+                                  { header: excelText('السعر'), key: 'price', width: 12 },
+                                  { header: excelText('المجموع'), key: 'total', width: 12 },
                                 ];
 
                                 (selectedOrder.items || []).forEach(item => {
                                   const row = ws.addRow({
-                                    name: shapeText(item.name || item.customName),
-                                    barcode: shapeText(item.barcode),
+                                    barcode: excelText(item.barcode),
+                                    name: excelText(item.name || item.customName),
                                     qty: item.qty,
                                     price: item.unit_price || item.price,
                                     total: item.total
                                   });
-                                  // Force RTL reading order for standard supervisor rows too
                                   row.eachCell({ includeEmpty: true }, (cell) => {
                                     cell.alignment = { readingOrder: 2, wrapText: true, horizontal: 'right' };
                                   });
                                 });
 
                                 ws.addRow({});
-                                const totalRow = ws.addRow({ name: shapeText('Total Amount'), total: selectedOrder.total_amount });
+                                const totalRow = ws.addRow({ name: excelText('المجموع الكلي'), total: selectedOrder.total_amount });
                                 totalRow.eachCell({ includeEmpty: true }, (cell) => {
                                   cell.alignment = { readingOrder: 2, wrapText: true, horizontal: 'right' };
                                 });
@@ -3082,12 +3068,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <div className="space-y-1.5 animate-fade-in">
                         <label className="text-[11px] font-bold text-slate-500 mr-1">عدد الشيكات</label>
                         <input
-                          type="number"
-                          min="1"
+                          type="text"
+                          inputMode="numeric"
                           value={orderInfo.checksCount}
-                          onChange={(e) => setOrderInfoField('checksCount', e.target.value)}
+                          onChange={(e) => setOrderInfoField('checksCount', toEnglishDigits(e.target.value))}
                           className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
-                          placeholder="أدخل عدد الشيكات..."
+                          placeholder="أدخل عدد الشيكات (مثلاً ٦ أو 6)..."
                         />
                       </div>
                     )}
