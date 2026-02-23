@@ -2510,6 +2510,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           userRole={userRole}
                           onEdit={startEditOffer}
                           onDelete={deleteOffer}
+                          onItemClick={setSelectedItem}
                           addOfferToOrder={(o) => o.items.forEach((e) => {
                             const it = getItemByBarcode(e.barcode);
                             if (it) addToOrder({ ...it, priceAfterDiscount: e.isFree ? 0 : e.offerPrice }, e.quantity);
@@ -2552,7 +2553,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             {sorted.map((item, index) => (
                               <div
                                 key={item.id}
-                                className="glass-card group flex flex-col h-full"
+                                className="glass-card group flex flex-col h-full cursor-pointer hover:shadow-xl transition-shadow"
+                                onClick={() => setSelectedItem(item)}
                                 style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
                               >
                                 {item.group && (
@@ -2622,13 +2624,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                 <div className="p-5 flex-1 flex flex-col">
                                   <div className="flex justify-between items-start gap-2 mb-1">
-                                    <div className="flex flex-col">
-                                      {item.productType && (
-                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded-md self-start mb-1 shadow-sm">
+                                    <div className="flex flex-col mb-1 min-h-[2.5em] justify-start w-full text-right" dir="rtl">
+                                      {item.productType ? (
+                                        <h3 className="text-sm font-bold text-slate-800 leading-tight">
                                           {item.productType}
-                                        </span>
+                                        </h3>
+                                      ) : (
+                                        <h3 className="text-sm font-bold text-slate-400 italic">
+                                          {/* Fallback if no product type is specified */}
+                                        </h3>
                                       )}
-                                      <h3 className="text-xs font-bold text-slate-800 leading-tight min-h-[2.5em]">{item.name || 'Unknown Product'}</h3>
+                                      <p className="text-xs text-slate-500 font-medium line-clamp-1 mt-0.5" title={item.name}>
+                                        {item.name || 'Unknown Product'}
+                                      </p>
                                     </div>
                                     {userRole === 'admin' && (
                                       <div className="flex flex-col gap-1 -mt-1 -mr-1">

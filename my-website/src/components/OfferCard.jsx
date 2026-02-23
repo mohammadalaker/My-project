@@ -10,7 +10,8 @@ export default function OfferCard({
     userRole,
     onEdit,
     onDelete,
-    addOfferToOrder
+    addOfferToOrder,
+    onItemClick
 }) {
     const totalPrice = offer.items.reduce((sum, e) => {
         const it = getItemByBarcode(e.barcode);
@@ -115,7 +116,8 @@ export default function OfferCard({
                             return (
                                 <div
                                     key={entry.barcode}
-                                    className={`group/item relative bg-white rounded-3xl p-6 shadow-sm border border-slate-100 transition-all hover:shadow-xl hover:border-slate-200 ${isLarge ? 'md:row-span-2 bg-gradient-to-br from-white to-slate-50' : ''}`}
+                                    className={`group/item relative bg-white rounded-3xl p-6 shadow-sm border border-slate-100 transition-all hover:shadow-xl hover:border-slate-200 cursor-pointer ${isLarge ? 'md:row-span-2 bg-gradient-to-br from-white to-slate-50' : ''}`}
+                                    onClick={() => onItemClick && it && onItemClick(it)}
                                 >
                                     {/* Floating index number for editorial feel - INCREASED VISIBILITY */}
                                     <span className="absolute top-4 left-6 text-[100px] font-black text-slate-200/40 leading-none select-none -translate-x-2 -translate-y-4 z-0">
@@ -138,10 +140,21 @@ export default function OfferCard({
                                                 </span>
                                                 {it?.group && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{it.group}</span>}
                                             </div>
-                                            {/* REDUCED NAME SIZE */}
-                                            <h4 className={`font-bold text-slate-800 leading-tight ${isLarge ? 'text-xl' : 'text-base'}`}>
-                                                {it?.name || <span className="text-red-400 italic">Product Removed ({entry.barcode})</span>}
-                                            </h4>
+
+                                            <div className="mb-2 w-full text-right" dir="rtl">
+                                                {it?.productType ? (
+                                                    <h4 className={`font-bold text-slate-800 leading-tight ${isLarge ? 'text-xl' : 'text-base'}`}>
+                                                        {it.productType}
+                                                    </h4>
+                                                ) : (
+                                                    <h4 className={`font-bold text-slate-400 italic ${isLarge ? 'text-xl' : 'text-base'}`}>
+                                                        {/* Fallback if no product type is specified */}
+                                                    </h4>
+                                                )}
+                                                <p className={`text-slate-500 font-medium line-clamp-1 mt-0.5 ${isLarge ? 'text-sm' : 'text-xs'}`} title={it?.name}>
+                                                    {it?.name || <span className="text-red-400 italic">Removed Product</span>}
+                                                </p>
+                                            </div>
 
                                             {/* INCREASED PRICE SIZE */}
                                             <div className="mt-3 flex items-baseline gap-1">
@@ -180,7 +193,7 @@ export default function OfferCard({
 
                                     return (
                                         // INCREASED SIZE OF GIFT CARD
-                                        <div key={entry.barcode} className="shrink-0 w-56 flex flex-col items-center text-center bg-white p-4 rounded-3xl border-2 border-emerald-50 shadow-lg shadow-emerald-100/50 relative group/gift transition-transform hover:-translate-y-1">
+                                        <div key={entry.barcode} onClick={() => onItemClick && it && onItemClick(it)} className="shrink-0 w-56 flex flex-col items-center text-center bg-white p-4 rounded-3xl border-2 border-emerald-50 shadow-lg shadow-emerald-100/50 relative group/gift transition-transform hover:-translate-y-1 cursor-pointer">
                                             <div className="w-24 h-24 bg-slate-50 rounded-2xl flex items-center justify-center shrink-0 mb-3 relative">
                                                 <div className="absolute inset-0 bg-emerald-500/5 rounded-2xl rotate-3 group-hover/gift:rotate-6 transition-transform"></div>
                                                 {imgSrc ? (
@@ -190,8 +203,13 @@ export default function OfferCard({
                                                 )}
                                                 <div className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md z-20">FREE</div>
                                             </div>
-                                            <div className="min-w-0 w-full relative">
-                                                <p className="text-sm font-bold text-slate-700 leading-tight line-clamp-2 mb-2">
+                                            <div className="min-w-0 w-full relative mt-2 flex flex-col items-center gap-1">
+                                                {it?.productType && (
+                                                    <h4 className="font-bold text-slate-800 leading-tight text-sm text-center w-full" dir="rtl">
+                                                        {it.productType}
+                                                    </h4>
+                                                )}
+                                                <p className="text-xs text-slate-500 font-medium line-clamp-1 text-center w-full px-2" title={it?.name} dir="rtl">
                                                     {it?.name || <span className="text-red-400">Removed</span>}
                                                 </p>
                                                 <div className={`inline-flex items-center gap-1 text-white px-3 py-1 rounded-full text-xs font-black shadow-md mx-auto ${it ? 'bg-slate-900' : 'bg-red-500'}`}>
