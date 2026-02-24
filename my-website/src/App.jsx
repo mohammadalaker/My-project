@@ -40,6 +40,7 @@ import {
   Tag,
   Cloud,
   CloudOff,
+  Printer,
 } from 'lucide-react';
 import { motion, useAnimation } from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
@@ -2257,7 +2258,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       onClick={() => !orderActionLoading && setSelectedOrder(null)}
                     >
                       <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90svh] overflow-hidden flex flex-col"
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90svh] overflow-hidden flex flex-col hide-on-print"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -2410,12 +2411,72 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             <FileText size={18} /> Excel
                           </button>
 
+                          {/* Print Receipt Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.print();
+                            }}
+                            disabled={orderActionLoading}
+                            className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            <Printer size={18} /> طباعة للفاتورة
+                          </button>
+
                           <button type="button" onClick={() => deleteOrder(selectedOrder)} disabled={orderActionLoading} className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                             {orderActionLoading ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                             حذف الطلب
                           </button>
                         </div>
                       </div>
+
+                      {/* THERMAL RECEIPT (Only visible when printing) */}
+                      <div className="hidden print:block print-receipt-only bg-white text-black p-4 w-[80mm] mx-auto text-sm" dir="rtl">
+                        <div className="text-center mb-4">
+                          <h2 className="text-xl font-bold border-b-2 border-black pb-2 mb-2">Maslamani Sales</h2>
+                          <p className="font-bold text-lg">طلب مبيعات</p>
+                          <p>رقم الطلب: {selectedOrder.id}</p>
+                          <p>{selectedOrder.order_date || (selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleDateString() : '—')}</p>
+                        </div>
+
+                        <div className="mb-4 text-xs font-bold leading-relaxed border-b border-black pb-2 border-dashed">
+                          <p>العميل: {selectedOrder.customer_name || '—'}</p>
+                          {selectedOrder.customer_phone && <p>الهاتف: {selectedOrder.customer_phone}</p>}
+                          {selectedOrder.customer_address && <p>العنوان: {selectedOrder.customer_address}</p>}
+                          <p>رقم العميل: {selectedOrder.customer_number || '—'}</p>
+                          <p>المندوب: {selectedOrder.prepared_by || '—'}</p>
+                        </div>
+
+                        <table className="w-full text-xs font-bold mb-4">
+                          <thead className="border-b border-black border-dashed">
+                            <tr>
+                              <th className="py-1 text-right w-1/2">الصنف</th>
+                              <th className="py-1 text-center font-normal px-1 w-1/4">الكمية</th>
+                              <th className="py-1 text-left w-1/4">الإجمالي</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(selectedOrder.items || []).map((row, idx) => (
+                              <tr key={idx} className="border-b border-slate-200 border-dotted border-opacity-30">
+                                <td className="py-2 pr-1">{row.name || row.barcode || '—'}</td>
+                                <td className="py-2 text-center text-[10px]">{row.qty} x ₪{row.price}</td>
+                                <td className="py-2 text-left">₪{Number(row.total ?? 0).toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        <div className="border-t-2 border-black pt-2 pb-6 flex justify-between font-black text-lg items-end">
+                          <span>المجموع الكلي:</span>
+                          <span className="text-2xl">₪{Number(selectedOrder.total_amount ?? 0).toLocaleString()}</span>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center pt-4 border-t border-black border-dashed mt-4 text-xs">
+                          <p className="mb-2">شكراً لتعاملكم معنا!</p>
+                          <p className="font-mono">{selectedOrder.id || 'NO-ID'}</p>
+                        </div>
+                      </div>
+
                     </div>,
                     document.body
                   )}
