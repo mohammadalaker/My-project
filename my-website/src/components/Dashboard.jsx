@@ -1,21 +1,46 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, CartesianGrid
 } from 'recharts';
-import { DollarSign, ShoppingCart, TrendingUp, Award } from 'lucide-react';
+import { DollarSign, ShoppingCart, TrendingUp, Award, Download, AlertTriangle, Calendar } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
 
 export default function Dashboard({ items, orders }) {
+    const [dateFilter, setDateFilter] = useState('all'); // all, today, 7days, month
+    const [exporting, setExporting] = useState(false);
+
+    // 0. Filter orders by date
+    const filteredOrders = useMemo(() => {
+        if (!orders) return [];
+        const now = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        const sevenDaysStr = sevenDaysAgo.toISOString().slice(0, 10);
+
+        const currentMonthPrefix = now.toISOString().slice(0, 7); // YYYY-MM
+
+        return orders.filter(o => {
+            const d = (o.order_date || o.created_at || '').slice(0, 10);
+            if (!d) return true; // Keep old orders with no date string
+            if (dateFilter === 'today') return d === todayStr;
+            if (dateFilter === '7days') return d >= sevenDaysStr && d <= todayStr;
+            if (dateFilter === 'month') return d.startsWith(currentMonthPrefix);
+            return true; // all
+        });
+    }, [orders, dateFilter]);
+
     // 1. Calculate General KPIs
     const kpis = useMemo(() => {
-        if (!orders || orders.length === 0) {
+        if (!filteredOrders || filteredOrders.length === 0) {
             return { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 };
         }
 
-        const totalRevenue = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
-        const totalOrders = orders.length;
+        const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        const totalOrders = filteredOrders.length;
         const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
 
         return { totalRevenue, totalOrders, avgOrderValue };
@@ -23,9 +48,9 @@ export default function Dashboard({ items, orders }) {
 
     // 2. Prepare Top Sellers
     const topSellers = useMemo(() => {
-        if (!orders) return [];
+        if (!filteredOrders) return [];
         const counts = {};
-        orders.forEach(o => {
+        filteredOrders.forEach(o => {
             (o.items || []).forEach(val => {
                 const itemCode = val.barcode || val.name || 'Unknown';
                 if (!counts[itemCode]) {
@@ -41,9 +66,9 @@ export default function Dashboard({ items, orders }) {
             .slice(0, 3);
     }, [orders]);
 
-    // 3. Prepare Bar Chart Data (Last 7 Days Revenue)
+    // 3. Prepare Bar Chart Data (Last 7 Days Revenue regardless of filter, to always show a trend)
     const barChartData = useMemo(() => {
-        if (!orders) return [];
+        if (!orders) return []; // Notice: We use ALL orders for trend line to avoid empty charts if filter is "today"
 
         // Get last 7 days dates
         const dataMap = {};
@@ -67,10 +92,10 @@ export default function Dashboard({ items, orders }) {
 
     // 4. Prepare Pie Chart Data (Revenue by Category/Group)
     const pieChartData = useMemo(() => {
-        if (!orders) return [];
+        if (!filteredOrders) return [];
         const groupRev = {};
 
-        orders.forEach(o => {
+        filteredOrders.forEach(o => {
             (o.items || []).forEach(val => {
                 // We try to find the group of the item
                 // First check if it's saved in the order line
@@ -97,15 +122,111 @@ export default function Dashboard({ items, orders }) {
         return Object.entries(groupRev)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
-    }, [orders, items]);
+    }, [filteredOrders, items]);
+
+    // 5. Low Stock Alerts
+    const lowStockItems = useMemo(() => {
+        if (!items) return [];
+        return items
+            .filter(i => {
+                // If it's explicitly tracked and > 0 but < 3
+                const s = Number(i.stock_count);
+                if (isNaN(s)) return false; // Infinite/Unlimited
+                return s >= 0 && s <= 3;
+            })
+            .sort((a, b) => Number(a.stock_count) - Number(b.stock_count));
+    }, [items]);
+
+    // Export Logic
+    const handleExportReport = async () => {
+        setExporting(true);
+        try {
+            const ExcelJS = (await import('exceljs')).default;
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('Sales Report', { views: [{ rightToLeft: true, showGridLines: false }] });
+
+            // Title
+            ws.mergeCells('A1', 'E1');
+            const titleCell = ws.getCell('A1');
+            titleCell.value = `تقرير المبيعات - ${dateFilter === 'today' ? 'اليوم' : dateFilter === '7days' ? 'آخر 7 أيام' : dateFilter === 'month' ? 'هذا الشهر' : 'الكل'}`;
+            titleCell.font = { name: 'Arial', size: 16, bold: true };
+            titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+            ws.addRow([]);
+
+            // KPI Table
+            ws.addRow(['إجمالي الإيرادات', 'عدد الطلبات', 'متوسط الفاتورة']);
+            ws.addRow([kpis.totalRevenue, kpis.totalOrders, kpis.avgOrderValue]);
+            ws.getRow(3).font = { bold: true };
+            ws.addRow([]);
+
+            // Orders Table
+            ws.addRow(['رقم الطلب', 'التاريخ', 'اسم العميل', 'الإجمالي']);
+            ws.getRow(6).font = { bold: true };
+
+            filteredOrders.forEach(o => {
+                ws.addRow([
+                    o.id || o.created_at,
+                    (o.order_date || o.created_at || '').slice(0, 10),
+                    o.customer_name || '—',
+                    o.total_amount
+                ]);
+            });
+
+            ws.columns = [
+                { width: 20 }, { width: 15 }, { width: 30 }, { width: 15 }, { width: 15 }
+            ];
+
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Report_${dateFilter}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error('Excel Export failed:', e);
+            alert('Failed to export report');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     return (
         <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
 
-            {/* Header */}
-            <div className="flex flex-col gap-2">
-                <h2 className="text-3xl font-black text-slate-800 tracking-tight">Supervisor Dashboard</h2>
-                <p className="text-slate-500 font-medium">Overview of your sales performance and metrics.</p>
+            {/* Header / Actions */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
+                <div className="flex flex-col gap-2">
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">Supervisor Dashboard</h2>
+                    <p className="text-slate-500 font-medium">Overview of your sales performance and metrics.</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
+                        <Calendar size={18} className="text-slate-400 mx-2" />
+                        <select
+                            value={dateFilter}
+                            onChange={e => setDateFilter(e.target.value)}
+                            className="bg-transparent text-sm font-bold text-slate-700 py-2 pr-6 border-none outline-none cursor-pointer focus:ring-0"
+                            dir="rtl"
+                        >
+                            <option value="today">اليوم</option>
+                            <option value="7days">آخر 7 أيام</option>
+                            <option value="month">هذا الشهر</option>
+                            <option value="all">كل الأوقات</option>
+                        </select>
+                    </div>
+
+                    <button
+                        onClick={handleExportReport}
+                        disabled={exporting}
+                        className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-4 py-2.5 rounded-xl font-bold transition-colors border border-emerald-200 shadow-sm"
+                    >
+                        <Download size={18} />
+                        {exporting ? 'تصدير...' : 'تصدير التقرير (Excel)'}
+                    </button>
+                </div>
             </div>
 
             {/* KPI Cards */}
@@ -220,6 +341,50 @@ export default function Dashboard({ items, orders }) {
                 </div>
 
             </div>
+
+            {/* Low Stock Alerts */}
+            {lowStockItems.length > 0 && (
+                <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4 text-rose-700">
+                        <AlertTriangle size={24} strokeWidth={2.5} />
+                        <h3 className="text-lg font-bold">تنبيه المخزون المنخفض (أقل من 3 قطع)</h3>
+                    </div>
+                    <div className="bg-white rounded-2xl overflow-hidden border border-rose-100">
+                        <table className="w-full text-sm text-right" dir="rtl">
+                            <thead className="bg-rose-50/50 text-rose-800 border-b border-rose-100">
+                                <tr>
+                                    <th className="py-3 px-4 font-bold w-20">صورة</th>
+                                    <th className="py-3 px-4 font-bold">الصنف</th>
+                                    <th className="py-3 px-4 font-bold">الكمية المتبقية</th>
+                                    <th className="py-3 px-4 font-bold text-left">الباركود</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {lowStockItems.map(item => (
+                                    <tr key={item.id} className="border-b border-rose-50 last:border-0 hover:bg-rose-50/30 transition-colors text-slate-700">
+                                        <td className="py-3 px-4">
+                                            {item.image ? (
+                                                <img src={item.image.startsWith('http') ? item.image : `https://hytncdomjctqihrqfswh.supabase.co/storage/v1/object/public/item-images/${item.image}`} alt={item.name} className="w-10 h-10 object-contain mix-blend-multiply rounded-md bg-slate-50 border border-slate-100 p-0.5" />
+                                            ) : (
+                                                <div className="w-10 h-10 bg-slate-100 rounded-md flex items-center justify-center text-slate-300">
+                                                    <ShoppingCart size={16} />
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="py-3 px-4 font-semibold">{item.name || item.group || '—'}</td>
+                                        <td className="py-3 px-4 font-black">
+                                            <span className={`px-2.5 py-1 rounded-md ${Number(item.stock_count) === 0 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                {item.stock_count} قطع
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-left font-mono text-slate-500">{item.barcode}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
         </div>
     );
