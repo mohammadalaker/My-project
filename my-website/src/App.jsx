@@ -957,17 +957,29 @@ function App() {
       setOrderItems((prev) => {
         const unitPrice = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
         const box = item.box != null && String(item.box).trim() ? String(item.box).trim() : null;
-        const qtyFromBox =
-          box && !isNaN(Number(box)) ? Math.max(1, Math.round(Number(box))) : 1;
+
+        let newQty = qty;
         const i = prev.findIndex((x) => x.id === item.id);
+
+        if (i >= 0) {
+          newQty = prev[i].qty + qty;
+        }
+
+        // Low Stock Enforcement
+        if (item.stock_count != null && item.stock_count > 0 && newQty > item.stock_count) {
+          alert(`عذراً، الكمية المتوفرة في المخزون هي ${item.stock_count} فقط لهذا الصنف.`);
+          newQty = item.stock_count; // Cap at max stock
+        }
+
         if (i >= 0) {
           const next = [...prev];
-          next[i] = { ...next[i], qty: next[i].qty + qty };
+          next[i] = { ...next[i], qty: newQty };
           return next;
         }
+
         return [
           ...prev,
-          { id: item.id, qty: qty, unitPrice, box, item, customName: item.productType || item.name || item.group },
+          { id: item.id, qty: newQty, unitPrice, box, item, customName: item.productType || item.name || item.group },
         ];
       });
     });
@@ -978,10 +990,21 @@ function App() {
   }, [startTransition]);
 
   const setOrderQty = useCallback((itemId, qty) => {
-    const n = Math.max(0, parseInt(qty, 10) || 0);
+    let n = Math.max(0, parseInt(qty, 10) || 0);
     startTransition(() => {
-      if (n === 0) setOrderItems((prev) => prev.filter((x) => x.id !== itemId));
-      else setOrderItems((prev) => prev.map((x) => (x.id === itemId ? { ...x, qty: n } : x)));
+      setOrderItems((prev) => {
+        const itemLine = prev.find(x => x.id === itemId);
+        if (itemLine && itemLine.item) {
+          const stock = itemLine.item.stock_count;
+          if (stock != null && stock > 0 && n > stock) {
+            alert(`عذراً، الكمية المتوفرة في المخزون هي ${stock} فقط لهذا الصنف.`);
+            n = stock;
+          }
+        }
+
+        if (n === 0) return prev.filter((x) => x.id !== itemId);
+        return prev.map((x) => (x.id === itemId ? { ...x, qty: n } : x));
+      });
     });
   }, [startTransition]);
 
@@ -2795,12 +2818,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <Package size={48} className="text-slate-200" />
                                   </div>
 
-                                  {getStockStatus(item) === 'Out of Stock' && (
+                                  {getStockStatus(item) === 'Out of Stock' ? (
                                     <div className="absolute top-2 right-2 z-10">
                                       <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
                                         Out of Stock
                                       </div>
                                     </div>
+                                  ) : (
+                                    item.stock_count > 0 && item.stock_count <= 5 && (
+                                      <div className="absolute top-2 right-2 z-10 animate-pulse">
+                                        <div className="bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-rose-500/30 flex items-center gap-1 border border-white/20" dir="rtl">
+                                          <Flame size={12} className="text-yellow-200" fill="currentColor" />
+                                          <span>باقي {item.stock_count} فقط!</span>
+                                        </div>
+                                      </div>
+                                    )
                                   )}
 
                                   {/* Offer Toggle (Admin Only in Offers Mode) */}

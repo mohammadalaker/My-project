@@ -1,5 +1,4 @@
-import React from 'react';
-import { ShoppingCart, Gift, Sparkles, Trash2, FileText, Zap, Star } from 'lucide-react';
+import { ShoppingCart, Gift, Sparkles, Trash2, FileText, Zap, Star, Flame } from 'lucide-react';
 
 export default function OfferCard({
     offer,
@@ -123,6 +122,15 @@ export default function OfferCard({
                                     <span className="absolute top-4 left-6 text-[100px] font-black text-slate-200/40 leading-none select-none -translate-x-2 -translate-y-4 z-0">
                                         {idx + 1}
                                     </span>
+
+                                    {it && it.stock_count > 0 && it.stock_count <= 5 && (
+                                        <div className="absolute top-4 right-4 z-20 animate-pulse">
+                                            <div className="bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-rose-500/30 flex items-center gap-1 border border-white/20" dir="rtl">
+                                                <Flame size={12} className="text-yellow-200" fill="currentColor" />
+                                                <span>باقي {it.stock_count} فقط!</span>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className={`relative flex flex-col h-full z-10 ${isLarge ? 'justify-between' : 'justify-center items-center md:items-start'}`}>
                                         <div className={`w-full ${isLarge ? 'h-64' : 'h-32'} flex items-center justify-center mb-6`}>
