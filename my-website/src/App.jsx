@@ -38,6 +38,8 @@ import {
   Eye,
   EyeOff,
   Tag,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 import { motion, useAnimation } from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
@@ -275,6 +277,18 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null); // 'admin' or 'customer'
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // 1. Session Timeout Logic (30 minutes) — لا يُطبق إذا "تذكرني" مفعّل
   useEffect(() => {
@@ -769,7 +783,8 @@ function App() {
       }
 
       // Cache the successfully fetched items locally
-      await saveProductsLocally(allItems);
+      const itemsToCache = allItems.map(item => ({ ...item, id: String(item.barcode ?? '').trim() }));
+      await saveProductsLocally(itemsToCache);
 
     } catch (err) {
       console.error('Supabase fetch error, trying local IndexedDB:', err);
@@ -2052,8 +2067,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {mode === 'catalog' ? <Grid className="text-white drop-shadow-md" size={24} /> : <Package className="text-white drop-shadow-md" size={24} />}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">Maslamani<span className="font-light">Sales</span></h1>
-                  <p className="text-slate-500 text-xs font-medium tracking-wide uppercase">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">Maslamani<span className="font-light">Sales</span></h1>
+                    {isOnline ? (
+                      <div className="flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full" title="متصل بالإنترنت">
+                        <Cloud size={12} className="fill-emerald-200" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full" title="غير متصل - سيتم المزامنة لاحقاً">
+                        <CloudOff size={12} /> أوفلاين
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-slate-500 text-xs font-medium tracking-wide uppercase mt-0.5">
                     {safeLocaleDate({ weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
                 </div>
@@ -2893,8 +2919,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div className="flex items-center justify-between px-8 py-6">
                 <div>
                   <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                    <span>POS</span>
-                    <span className="text-orange-500">.</span>
+                    <div className="flex items-center gap-2">
+                      <span>POS</span><span className="text-orange-500">.</span>
+                    </div>
+                    {isOnline ? (
+                      <div className="flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full" title="متصل بالإنترنت">
+                        <Cloud size={12} className="fill-emerald-200" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full" title="غير متصل - سيتم المزامنة لاحقاً">
+                        <CloudOff size={12} /> أوفلاين
+                      </div>
+                    )}
                   </h2>
                   <div className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1 opacity-60">
                     Maslamani System
