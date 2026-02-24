@@ -3,7 +3,7 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, CartesianGrid
 } from 'recharts';
-import { DollarSign, ShoppingCart, TrendingUp, Award, Download, AlertTriangle, Calendar } from 'lucide-react';
+import { DollarSign, ShoppingCart, TrendingUp, Award, Download, AlertTriangle, Calendar, Clock } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
 
@@ -136,6 +136,34 @@ export default function Dashboard({ items, orders }) {
             })
             .sort((a, b) => Number(a.stock_count) - Number(b.stock_count));
     }, [items]);
+
+    // 6. Peak Hours Analysis (Orders by Time of Day)
+    const peakHoursData = useMemo(() => {
+        if (!filteredOrders) return [];
+        // Initialize 24 hours
+        const hours = Array.from({ length: 24 }, (_, i) => ({
+            hour: i,
+            label: i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`,
+            revenue: 0,
+            count: 0
+        }));
+
+        filteredOrders.forEach(o => {
+            // Must have a valid timestamp to extract time
+            const ts = o.created_at || o.timestamp;
+            if (ts) {
+                const dateObj = new Date(ts);
+                if (!isNaN(dateObj.getTime())) {
+                    const h = dateObj.getHours();
+                    hours[h].revenue += (o.total_amount || 0);
+                    hours[h].count += 1;
+                }
+            }
+        });
+
+        // Optionally, filter out hours with zero activity to make chart cleaner, or keep all to show true gaps
+        return hours.filter(h => h.revenue > 0 || h.count > 0);
+    }, [filteredOrders]);
 
     // Export Logic
     const handleExportReport = async () => {
@@ -340,6 +368,43 @@ export default function Dashboard({ items, orders }) {
                     </div>
                 </div>
 
+            </div>
+
+            {/* Charts Row 2: Peak Hours */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col gap-6 mt-6">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <Clock size={20} className="text-indigo-500" />
+                        ساعات الذروة (Peak Hours)
+                    </h3>
+                    <p className="text-sm text-slate-500">متى يقوم الزبائن بالشراء أكثر؟ (الإيرادات حسب ساعة اليوم)</p>
+                </div>
+                <div className="h-72 w-full">
+                    {peakHoursData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={peakHoursData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                                <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} tickFormatter={(val) => `₪${val}`} />
+                                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={10} />
+                                <Tooltip
+                                    cursor={{ fill: '#f1f5f9' }}
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
+                                    formatter={(value, name) => [name === 'revenue' ? `₪${value}` : value, name === 'revenue' ? 'الإيرادات' : 'عدد الطلبات']}
+                                    labelFormatter={(label) => `الساعة: ${label}`}
+                                />
+                                <Legend verticalAlign="top" height={36} iconType="circle" />
+                                <Bar yAxisId="left" name="revenue" dataKey="revenue" fill="#ec4899" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                                <Bar yAxisId="right" name="count" dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                            <Clock size={48} className="mb-4 opacity-20" />
+                            <p>لا يوجد بيانات أوقات كافية لعرض ساعات الذروة</p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Low Stock Alerts */}
