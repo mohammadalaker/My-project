@@ -180,9 +180,11 @@ function normalizeItemFromSupabase(row) {
   };
 }
 
+import { QRCodeSVG } from 'qrcode.react';
 const Login = lazy(() => import('./components/Login'));
 const SkeletonGrid = lazy(() => import('./components/SkeletonLoader'));
 const CustomerDisplay = lazy(() => import('./components/CustomerDisplay'));
+const CustomerProductView = lazy(() => import('./components/CustomerProductView'));
 import BottomNav from './components/BottomNav';
 import OfferCard from './components/OfferCard';
 import Dashboard from './components/Dashboard';
@@ -276,6 +278,7 @@ function SwipeToDeleteItem({ children, onDelete }) {
 function App() {
 
   const isCustomerDisplayMode = typeof window !== 'undefined' && window.location.search.includes('mode=display');
+  const isCustomerProductMode = typeof window !== 'undefined' && window.location.search.includes('barcode=');
 
   /* Login State */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -295,6 +298,22 @@ function App() {
         </div>
       }>
         <CustomerDisplay />
+      </Suspense>
+    );
+  }
+
+  // Return Customer Product View Early (Interactive Catalog)
+  if (isCustomerProductMode) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="animate-pulse text-indigo-500 flex flex-col items-center">
+            <Package size={48} className="mb-4" />
+            <span className="font-bold">Loading Product...</span>
+          </div>
+        </div>
+      }>
+        <CustomerProductView />
       </Suspense>
     );
   }
@@ -3136,6 +3155,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                 {userRole === 'admin' && (
                                   <div className="absolute top-3 right-3 flex gap-1 transform translate-x-full opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                                    <button onClick={(e) => { e.stopPropagation(); handlePrintQR(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="طباعة QR"><Smartphone size={14} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="تعديل"><FileText size={14} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
                                   </div>
