@@ -15,6 +15,10 @@
 }
 
 @layer base {
+  button, input, a, select, textarea, [role="button"] {
+    touch-action: manipulation;
+  }
+  
   body {
     @apply antialiased text-slate-800;
     font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
