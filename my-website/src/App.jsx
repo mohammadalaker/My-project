@@ -41,8 +41,9 @@ import {
 } from 'lucide-react';
 import { motion, useAnimation } from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
-import { supabase } from './lib/supabaseClient';
+import supabase from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
+import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
@@ -265,7 +266,6 @@ function SwipeToDeleteItem({ children, onDelete }) {
     </div>
   );
 }
-
 
 
 function App() {
@@ -745,16 +745,13 @@ function App() {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     let allItems = [];
-    let errorToThrow = null;
 
     try {
-      // First try with is_offer
       const { data, error } = await supabase
         .from('items')
         .select(ITEMS_SELECT);
 
       if (error) {
-        // If column missing, fallback to base query (visible or is_offer)
         if (error.message?.includes('column items.is_offer does not exist') || error.message?.includes('column items.visible does not exist') || error.code === '42703') {
           console.warn('items column missing (is_offer/visible), falling back to base items query...');
           const BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, product_type';
@@ -771,24 +768,60 @@ function App() {
         allItems = data || [];
       }
 
+      // Cache the successfully fetched items locally
+      await saveProductsLocally(allItems);
+
+    } catch (err) {
+      console.error('Supabase fetch error, trying local IndexedDB:', err);
+      // Fallback to local IndexedDB if offline or API fails
+      try {
+        allItems = await getLocalProducts();
+      } catch (idbErr) {
+        console.error('Failed to load from local DB', idbErr);
+      }
+    } finally {
       const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
       const sorted = sortByBarcodeOrder(normalized, BARCODE_ORDER);
       setItems(sorted);
       setHasMore(false);
-    } catch (err) {
-      console.error('Supabase fetch error:', err);
-      // Even on error, we don't want to crash. 
-      // If items were already loaded, keep them? Or maybe show empty
-      // But here we just log it.
-    } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   }, []);
 
+  // Sync offline orders on startup and when online event fires
+  const syncOfflineOrders = useCallback(async () => {
+    try {
+      const pendingOrders = await getSyncQueue();
+      if (pendingOrders.length === 0) return;
+
+      console.log(`Attempting to sync ${pendingOrders.length} offline orders...`);
+      for (const order of pendingOrders) {
+        // Remove local id/timestamp properties added by IDB before sending to Supabase
+        const { id, timestamp, ...orderDataToSync } = order;
+
+        const { error } = await supabase.from('orders').insert([orderDataToSync]);
+        if (!error) {
+          // If successful, remove from the local sync queue
+          await removeFromSyncQueue(order.id);
+          console.log(`Successfully synced offline order ${order.id}`);
+        } else {
+          console.error(`Failed to sync offline order ${order.id}:`, error);
+        }
+      }
+    } catch (err) {
+      console.error('Offline sync failed:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchItems();
-  }, [fetchItems]);
+    syncOfflineOrders();
+
+    // Listen to online events to trigger background sync immediately
+    window.addEventListener('online', syncOfflineOrders);
+    return () => window.removeEventListener('online', syncOfflineOrders);
+  }, [fetchItems, syncOfflineOrders]);
 
   // Removed pagination and server-side search effects
   const loadMore = () => { };
@@ -1331,38 +1364,45 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const saveOrderToSupabase = async () => {
-    try {
-      const orderData = {
-        prepared_by: userRole === 'customer' ? 'sale' : userRole,
-        customer_name: orderInfo.companyName,
-        customer_phone: orderInfo.phone,
-        customer_address: orderInfo.address,
-        customer_number: orderInfo.customerNumber,
-        order_date: orderInfo.orderDate,
-        total_amount: orderTotal,
-        items: orderLines.map(line => ({
-          barcode: line.item.barcode,
-          name: line.customName || line.item.name || line.item.group,
-          product_type: line.item?.productType || null,
-          group: line.item?.group || null,
-          qty: line.qty,
-          consumer_price: Number(line.item?.price) ?? 0,
-          discount_percent: getLineDiscountPercent(line),
-          unit_price: getLineUnitPrice(line),
-          price: getLineUnitPrice(line), // Keep for compatibility
-          total: getLineTotal(line)
-        })),
-        details: orderInfo
-      };
+    const orderData = {
+      prepared_by: userRole === 'customer' ? 'sale' : userRole,
+      customer_name: orderInfo.companyName,
+      customer_phone: orderInfo.phone,
+      customer_address: orderInfo.address,
+      customer_number: orderInfo.customerNumber,
+      order_date: orderInfo.orderDate,
+      total_amount: orderTotal,
+      items: orderLines.map(line => ({
+        barcode: line.item.barcode,
+        name: line.customName || line.item.name || line.item.group,
+        product_type: line.item?.productType || null,
+        group: line.item?.group || null,
+        qty: line.qty,
+        consumer_price: Number(line.item?.price) ?? 0,
+        discount_percent: getLineDiscountPercent(line),
+        unit_price: getLineUnitPrice(line),
+        price: getLineUnitPrice(line),
+        total: getLineTotal(line)
+      })),
+      details: orderInfo
+    };
 
+    try {
       const { error } = await supabase.from('orders').insert([orderData]);
       if (error) throw error;
-      alert('Order submitted successfully to supervisor!');
+      alert('Order submitted successfully space to supervisor!');
       return true;
     } catch (err) {
-      console.error('Error saving order:', err);
-      alert('Note: Invoice saved locally, but failed to submit to supervisor (Database error: ' + err.message + ')');
-      return false;
+      console.warn('Error saving order online, queueing offline:', err);
+      try {
+        await addToSyncQueue(orderData);
+        alert('🌐 لا يوجد اتصال بالإنترنت. تم حفظ الطلب محلياً وستتم المزامنة تلقائياً فور عودة الاتصال.');
+        return true; // Return true to allow PDF/Excel generation to continue offline
+      } catch (idbErr) {
+        console.error('Failed to save order offline:', idbErr);
+        alert('Note: Invoice failed to save locally or online. (Database error: ' + idbErr.message + ')');
+        return false;
+      }
     }
   };
 

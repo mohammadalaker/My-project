@@ -25,7 +25,7 @@ function createMockClient() {
     on: () => noopChannel,
     subscribe: () => noopChannel,
   };
-  const noopRemoveChannel = () => {};
+  const noopRemoveChannel = () => { };
   return {
     from: () => ({
       select: () => chain,
@@ -75,7 +75,8 @@ if (typeof client.removeChannel !== 'function') {
 // Final check
 if (typeof client.channel !== 'function') {
   console.error('CRITICAL: Supabase client still missing channel method after polyfill attempts.');
-  client.channel = () => ({ on: () => ({ subscribe: () => {} }), subscribe: () => {} });
+  client.channel = () => ({ on: () => ({ subscribe: () => { } }), subscribe: () => { } });
 }
 
 export const supabase = client;
+export default client;
