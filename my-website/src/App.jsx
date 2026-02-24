@@ -39,6 +39,8 @@ import {
   EyeOff,
   Tag,
 } from 'lucide-react';
+import { motion, useAnimation } from 'framer-motion';
+import { useDrag } from '@use-gesture/react';
 import { supabase } from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 
@@ -207,6 +209,59 @@ function AddToOfferRow({ item, getImage, onAdd }) {
           إضافة
         </button>
       </div>
+    </div>
+  );
+}
+
+function SwipeToDeleteItem({ children, onDelete }) {
+  const controls = useAnimation();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const bind = useDrag(({ movement: [mx], down, direction: [xDir], velocity: [vx] }) => {
+    if (isDeleting) return;
+
+    const threshold = 100; // Swipe threshold to trigger delete
+    const isSwipeRight = mx > 0; // We pull to the right (RTL context) or left? The user is RTL native, pulling might mean pulling to left or right. Let's allow either direction or just RTL swipe (mx > 0 or mx < 0). Actually, let's just make it work for both directions.
+    const isOverThreshold = Math.abs(mx) > threshold;
+
+    if (!down && isOverThreshold) {
+      // Trigger delete
+      setIsDeleting(true);
+      controls.start({ x: mx > 0 ? 500 : -500, opacity: 0, transition: { duration: 0.2 } }).then(() => {
+        onDelete();
+      });
+    } else if (!down) {
+      // Snap back
+      controls.start({ x: 0, opacity: 1, transition: { type: 'spring', bounce: 0.5 } });
+    } else {
+      // Update position while dragging
+      controls.set({ x: mx });
+    }
+  }, { axis: 'x', filterTaps: true });
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-3xl mb-3">
+      {/* Background delete indicator */}
+      <div className="absolute inset-0 bg-rose-500 rounded-3xl flex items-center justify-between px-6 pointer-events-none">
+        <div className="flex items-center gap-2 text-white font-bold opacity-100">
+          <Trash2 size={24} />
+          <span>حذف</span>
+        </div>
+        <div className="flex items-center gap-2 text-white font-bold opacity-100">
+          <span>حذف</span>
+          <Trash2 size={24} />
+        </div>
+      </div>
+
+      {/* Foreground swipable item */}
+      <motion.div
+        {...bind()}
+        animate={controls}
+        className="w-full relative z-10 touch-pan-y"
+        style={{ touchAction: 'pan-y' }}
+      >
+        {children}
+      </motion.div>
     </div>
   );
 }
@@ -2856,95 +2911,98 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <div className="h-px flex-1 bg-slate-200"></div>
                             </div>
                           )}
-                          <div className="group relative bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:scale-[1.02]">
-                            <div className="flex gap-4">
-                              <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100 relative">
-                                {getImage(o.item) ? (
-                                  <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
-                                ) : (
-                                  <Package size={24} className="text-slate-300" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start gap-3">
-                                  <input
-                                    className="text-base font-bold text-slate-800 leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400"
-                                    value={o.customName || o.item?.group || ''}
-                                    onChange={(e) => setOrderLineName(o.id, e.target.value)}
-                                    placeholder="Group Name"
-                                  />
-                                  <button onClick={() => removeFromOrder(o.id)} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
-                                    <Trash2 size={16} />
-                                  </button>
+                          <SwipeToDeleteItem onDelete={() => removeFromOrder(o.id)}>
+                            <div className="group relative bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:scale-[1.02]">
+                              <div className="flex gap-4">
+                                <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100 relative pointer-events-none">
+                                  {getImage(o.item) ? (
+                                    <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
+                                  ) : (
+                                    <Package size={24} className="text-slate-300" />
+                                  )}
                                 </div>
-                                <p className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2">
-                                  <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">{o.item?.barcode}</span>
-                                  {o.item?.group && <span className="text-slate-400">• {o.item?.group}</span>}
-                                </p>
-
-                                <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate" dir="rtl">
-                                  {/* Qty Control */}
-                                  <div className="flex flex-col justify-center items-center bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm shrink-0 w-14" dir="ltr">
-                                    <button
-                                      onClick={() => setOrderQty(o.id, parseInt(o.qty || 0) + 1)}
-                                      className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                    >
-                                      <Plus size={18} strokeWidth={3} />
-                                    </button>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start gap-3">
                                     <input
-                                      className="w-full bg-transparent text-center text-lg font-black text-slate-700 outline-none my-1"
-                                      value={o.qty || ''}
-                                      onChange={(e) => setOrderQty(o.id, e.target.value)}
+                                      className="text-base font-bold text-slate-800 leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400"
+                                      value={o.customName || o.item?.group || ''}
+                                      onChange={(e) => setOrderLineName(o.id, e.target.value)}
+                                      placeholder="Group Name"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                     />
-                                    <button
-                                      onClick={() => setOrderQty(o.id, Math.max(1, (parseInt(o.qty || 0) - 1)))}
-                                      className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                    >
-                                      <Minus size={18} strokeWidth={3} />
+                                    <button onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
+                                      <Trash2 size={16} />
                                     </button>
                                   </div>
+                                  <p className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2 pointer-events-none">
+                                    <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">{o.item?.barcode}</span>
+                                    {o.item?.group && <span className="text-slate-400">• {o.item?.group}</span>}
+                                  </p>
 
-                                  {/* Pricing Squares Grid */}
-                                  <div className="flex-1 w-full grid grid-cols-2 gap-3">
-
-                                    {/* Card 1: Consumer Price */}
-                                    <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-2xl p-3 border border-slate-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">سعر المستهلك</span>
-                                      <span className="font-bold text-slate-600 text-sm sm:text-base font-mono">₪{getLineOriginalPrice(o)}</span>
+                                  <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate pointer-events-none" dir="rtl">
+                                    {/* Qty Control */}
+                                    <div className="flex flex-col justify-center items-center bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm shrink-0 w-14 pointer-events-auto" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
+                                      <button
+                                        onClick={() => setOrderQty(o.id, parseInt(o.qty || 0) + 1)}
+                                        className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                      >
+                                        <Plus size={18} strokeWidth={3} />
+                                      </button>
+                                      <input
+                                        className="w-full bg-transparent text-center text-lg font-black text-slate-700 outline-none my-1"
+                                        value={o.qty || ''}
+                                        onChange={(e) => setOrderQty(o.id, e.target.value)}
+                                      />
+                                      <button
+                                        onClick={() => setOrderQty(o.id, Math.max(1, (parseInt(o.qty || 0) - 1)))}
+                                        className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                      >
+                                        <Minus size={18} strokeWidth={3} />
+                                      </button>
                                     </div>
 
-                                    {/* Card 2: Discount */}
-                                    <div className={`rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all ${getLineDiscountPercent(o) > 0 ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
-                                      <span className={`text-[10px] font-bold uppercase tracking-wider ${getLineDiscountPercent(o) > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>نسبة الخصم</span>
-                                      <span className={`font-bold text-sm sm:text-base font-mono ${getLineDiscountPercent(o) > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{getLineDiscountPercent(o)}%</span>
-                                    </div>
+                                    {/* Pricing Squares Grid */}
+                                    <div className="flex-1 w-full grid grid-cols-2 gap-3 pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
 
-                                    {/* Card 3: Price After Discount (Input) */}
-                                    <div className="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-1 text-center relative focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all hover:border-indigo-200">
-                                      <span className="text-[10px] font-bold text-indigo-500/80 uppercase tracking-wider">بعد الخصم</span>
-                                      <div className="flex items-center justify-center gap-0.5" dir="ltr">
-                                        <span className="text-slate-400 font-bold text-xs mb-0.5">₪</span>
-                                        <input
-                                          type="number"
-                                          className="w-20 bg-transparent text-center font-black text-slate-800 outline-none text-lg sm:text-lg"
-                                          value={getLineUnitPrice(o) || ''}
-                                          onChange={(e) => setOrderLinePrice(o.id, e.target.value)}
-                                          onFocus={(e) => e.target.select()}
-                                        />
+                                      {/* Card 1: Consumer Price */}
+                                      <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-2xl p-3 border border-slate-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">سعر المستهلك</span>
+                                        <span className="font-bold text-slate-600 text-sm sm:text-base font-mono">₪{getLineOriginalPrice(o)}</span>
                                       </div>
-                                    </div>
 
-                                    {/* Card 4: Total */}
-                                    <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-2xl p-3 border border-orange-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
-                                      <span className="text-[10px] font-bold text-orange-600/70 uppercase tracking-wider">المجموع</span>
-                                      <span dir="ltr" className="font-black text-orange-600 text-lg sm:text-xl tracking-tight">₪{getLineTotal(o).toFixed(2)}</span>
-                                    </div>
+                                      {/* Card 2: Discount */}
+                                      <div className={`rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all ${getLineDiscountPercent(o) > 0 ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${getLineDiscountPercent(o) > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>نسبة الخصم</span>
+                                        <span className={`font-bold text-sm sm:text-base font-mono ${getLineDiscountPercent(o) > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{getLineDiscountPercent(o)}%</span>
+                                      </div>
 
+                                      {/* Card 3: Price After Discount (Input) */}
+                                      <div className="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-1 text-center relative focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all hover:border-indigo-200">
+                                        <span className="text-[10px] font-bold text-indigo-500/80 uppercase tracking-wider">بعد الخصم</span>
+                                        <div className="flex items-center justify-center gap-0.5" dir="ltr">
+                                          <span className="text-slate-400 font-bold text-xs mb-0.5">₪</span>
+                                          <input
+                                            type="number"
+                                            className="w-20 bg-transparent text-center font-black text-slate-800 outline-none text-lg sm:text-lg"
+                                            value={getLineUnitPrice(o) || ''}
+                                            onChange={(e) => setOrderLinePrice(o.id, e.target.value)}
+                                            onFocus={(e) => e.target.select()}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* Card 4: Total */}
+                                      <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-2xl p-3 border border-orange-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
+                                        <span className="text-[10px] font-bold text-orange-600/70 uppercase tracking-wider">المجموع</span>
+                                        <span dir="ltr" className="font-black text-orange-600 text-lg sm:text-xl tracking-tight">₪{getLineTotal(o).toFixed(2)}</span>
+                                      </div>
+
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
+                          </SwipeToDeleteItem>
                         </div>
                       );
                     })
