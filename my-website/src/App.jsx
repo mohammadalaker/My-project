@@ -182,6 +182,7 @@ function normalizeItemFromSupabase(row) {
 
 const Login = lazy(() => import('./components/Login'));
 const SkeletonGrid = lazy(() => import('./components/SkeletonLoader'));
+const CustomerDisplay = lazy(() => import('./components/CustomerDisplay'));
 import BottomNav from './components/BottomNav';
 import OfferCard from './components/OfferCard';
 import Dashboard from './components/Dashboard';
@@ -274,12 +275,29 @@ function SwipeToDeleteItem({ children, onDelete }) {
 
 function App() {
 
+  const isCustomerDisplayMode = typeof window !== 'undefined' && window.location.search.includes('mode=display');
 
   /* Login State */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null); // 'admin' or 'customer'
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  // Return Customer Display Early
+  if (isCustomerDisplayMode) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="animate-pulse text-indigo-500 flex flex-col items-center">
+            <Package size={48} className="mb-4" />
+            <span className="font-bold">Loading Display...</span>
+          </div>
+        </div>
+      }>
+        <CustomerDisplay />
+      </Suspense>
+    );
+  }
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1061,6 +1079,40 @@ function App() {
   const getLineTotal = (o) =>
     Math.max(0, getLineUnitPrice(o) * (o.qty || 0));
   const orderTotal = orderLines.reduce((s, o) => s + getLineTotal(o), 0);
+
+  // Broadcast Cart Updates to Customer Display
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('mode=display')) return;
+
+    // We debounce the actual broadcast slightly or just send it directly if not heavy.
+    // It's small data so direct is fine.
+    try {
+      const payload = {
+        items: orderLines.map(line => ({
+          id: line.id,
+          name: line.customName || line.item.name || line.item.group,
+          barcode: line.item.barcode,
+          price: Number(line.item?.price) ?? 0,
+          unit_price: getLineUnitPrice(line),
+          qty: line.qty,
+          total: getLineTotal(line),
+          image: line.item?.image,
+          productType: line.item?.productType
+        })),
+        total: orderTotal,
+        customerName: orderInfo.merchantName || orderInfo.companyName,
+        customerPoints: orderInfo.phone && customers ? customers.find(c => c.phone === orderInfo.phone)?.loyalty_points : null
+      };
+
+      supabase.channel('pos-display').send({
+        type: 'broadcast',
+        event: 'cart_update',
+        payload: payload
+      });
+    } catch (e) {
+      console.warn('Failed to broadcast to POS display', e);
+    }
+  }, [orderLines, orderTotal, orderInfo, customers]);
   const itemTotalWithTax = (lines) => (lines || orderLines).reduce((s, o) => s + getLineTotal(o), 0);
 
   const orderLinesByBox = [...orderLines].sort((a, b) =>
