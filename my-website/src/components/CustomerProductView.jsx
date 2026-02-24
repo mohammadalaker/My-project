@@ -44,6 +44,14 @@ export default function CustomerProductView() {
         fetchProduct();
     }, []);
 
+    // تحديث عنوان الصفحة عند توفر المنتج (يجب أن يكون الـ hook دائماً في نفس الترتيب)
+    useEffect(() => {
+        if (!product) return;
+        const title = product.eng_name || product.brand_group || product.barcode || 'Product';
+        document.title = `${title} | Maslamani Sales`;
+        return () => { document.title = 'Maslamani Sales'; };
+    }, [product]);
+
     const getPublicImageUrl = (img) => {
         if (!img) return null;
         if (img.startsWith('http')) return img;
@@ -91,12 +99,6 @@ export default function CustomerProductView() {
     const hasDiscount = finalPrice < price;
     const discountPercent = hasDiscount ? Math.round(((price - finalPrice) / price) * 100) : 0;
     const stockCount = Number(product.stock_count) || 0;
-
-    useEffect(() => {
-      const title = product?.eng_name || product?.brand_group || product?.barcode || 'Product';
-      document.title = `${title} | Maslamani Sales`;
-      return () => { document.title = 'Maslamani Sales'; };
-    }, [product]);
 
     return (
         <div className="min-h-[100dvh] bg-white font-sans selection:bg-indigo-100 pb-24" dir="rtl">
