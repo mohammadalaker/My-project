@@ -183,6 +183,7 @@ const Login = lazy(() => import('./components/Login'));
 const SkeletonGrid = lazy(() => import('./components/SkeletonLoader'));
 import BottomNav from './components/BottomNav';
 import OfferCard from './components/OfferCard';
+import Dashboard from './components/Dashboard';
 
 function AddToOfferRow({ item, getImage, onAdd }) {
   const [qty, setQty] = useState(1);
@@ -2089,6 +2090,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className="hidden sm:flex bg-slate-100/50 p-1 rounded-xl border border-white/50 backdrop-blur-sm">
                   {userRole === 'supervisor' && (
                     <button
+                      onClick={() => { setMode('dashboard'); setShowOrderPanel(false); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'dashboard' ? 'bg-white shadow-md text-amber-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Dashboard
+                    </button>
+                  )}
+                  {userRole === 'supervisor' && (
+                    <button
                       onClick={() => { setMode('submitted'); setShowOrderPanel(false); }}
                       className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'submitted' ? 'bg-white shadow-md text-emerald-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
                     >
@@ -2505,6 +2514,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   <Suspense fallback={<div className="min-h-[40svh] animate-pulse bg-slate-100/50 rounded-2xl" />}>
                     <SkeletonGrid />
                   </Suspense>
+                ) : mode === 'dashboard' ? (
+                  /* Dashboard View */
+                  <Dashboard items={items} orders={submittedOrders} />
                 ) : mode === 'offers' ? (
                   /* Custom Offers - اختيار المنتجات للعروض */
                   <div className="space-y-8 animate-fade-in">
