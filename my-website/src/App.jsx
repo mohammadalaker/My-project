@@ -1047,7 +1047,9 @@ function App() {
       )
       .join('');
 
-    return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>فاتورة مبيعات</title>
+    return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>فاتورة مبيعات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
   body { font-family: 'Tajawal', system-ui, sans-serif; padding: 40px; background: #f8fafc; color: #1e293b; margin: 0; direction: rtl; }
@@ -1090,6 +1092,20 @@ function App() {
   
   .btn-print { padding: 16px 40px; background: #0f172a; color: #fff; border: none; border-radius: 16px; cursor: pointer; font-weight: 800; font-size: 1.1rem; margin: 40px auto 0; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25); transition: all 0.2s ease; font-family: 'Tajawal', sans-serif; width: fit-content; }
   .btn-print:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(15, 23, 42, 0.35); background: #4f46e5; }
+  
+  @media screen and (max-width: 1024px) {
+    body { padding: 20px; }
+    .invoice-container { padding: 24px; border-radius: 16px; }
+    .header { flex-direction: column; align-items: flex-start; gap: 20px; }
+    .header-meta { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
+    .total-section { justify-content: stretch; }
+    .total-card { width: 100%; min-width: 0; }
+    .btn-print { width: 100%; }
+    
+    /* Make table scrollable horizontally if it overflows */
+    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 2rem; border-radius: 12px; }
+    table.data-table { min-width: 700px; margin-bottom: 0; }
+  }
   
   @media print {
     @page { margin: 0.5cm; }
@@ -1139,23 +1155,25 @@ function App() {
   </div>
 
   <div class="section-title">تفاصيل المنتجات</div>
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>صورة</th>
-        <th>وصف المنتج</th>
-        <th>الباركود</th>
-        <th>العدد</th>
-        <th>السعر</th>
-        <th>الخصم</th>
-        <th>سعر الوحدة</th>
-        <th>الإجمالي</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows}
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>صورة</th>
+          <th>وصف المنتج</th>
+          <th>الباركود</th>
+          <th>العدد</th>
+          <th>السعر</th>
+          <th>الخصم</th>
+          <th>سعر الوحدة</th>
+          <th>الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </div>
 
   <div class="total-section">
     <div class="total-card">
