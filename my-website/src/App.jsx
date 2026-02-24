@@ -41,6 +41,7 @@ import {
   Cloud,
   CloudOff,
   Printer,
+  Smartphone,
 } from 'lucide-react';
 import { motion, useAnimation } from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
@@ -1906,6 +1907,46 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  /** Open printable QR sticker for customer self-scan URL (?barcode=...) */
+  const handlePrintQR = (item) => {
+    if (!item?.barcode) return;
+    const base = typeof window !== 'undefined' ? window.location.origin + (window.location.pathname || '/') : '';
+    const productUrl = `${base}${base.endsWith('/') ? '' : ''}?barcode=${encodeURIComponent(String(item.barcode).trim())}`;
+    const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&margin=8&data=${encodeURIComponent(productUrl)}`;
+    const name = (item.name || item.eng_name || item.barcode || '').slice(0, 40);
+    const barcodeStr = String(item.barcode || '').trim();
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>QR - ${barcodeStr}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
+  .sticker { width: 80mm; min-height: 60mm; border: 1px dashed #e2e8f0; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  .sticker img { width: 180px; height: 180px; display: block; }
+  .sticker .name { font-size: 11px; font-weight: 700; color: #1e293b; text-align: center; line-height: 1.3; }
+  .sticker .barcode { font-size: 10px; font-family: monospace; color: #64748b; }
+  @media print { body { padding: 0; } .sticker { border: none; box-shadow: none; page-break-inside: avoid; } }
+</style></head><body>
+  <div class="sticker">
+    <img src="${qrApi}" alt="QR" />
+    <span class="name">${name.replace(/</g, '&lt;')}</span>
+    <span class="barcode">${barcodeStr.replace(/</g, '&lt;')}</span>
+  </div>
+  <p style="margin-top:16px;font-size:12px;color:#94a3b8;">اطبع هذه الصفحة (Ctrl+P) ثم قص اللصاقة وضَعها على الرف</p>
+</body></html>`;
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      const a = document.createElement('a');
+      a.href = productUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = productUrl;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
   const toggleVisibility = async (item) => {
     if (userRole !== 'admin') return;
     const nextVisible = !(item.visible !== false);

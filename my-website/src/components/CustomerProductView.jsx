@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import supabase from '../lib/supabaseClient';
-import { Package, Smartphone, ShieldCheck, Zap, Info, ChevronRight, Share2, Flame } from 'lucide-react';
+import { Package, Smartphone, ShieldCheck, Zap, Info, Share2, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function CustomerProductView() {
@@ -91,6 +91,12 @@ export default function CustomerProductView() {
     const hasDiscount = finalPrice < price;
     const discountPercent = hasDiscount ? Math.round(((price - finalPrice) / price) * 100) : 0;
     const stockCount = Number(product.stock_count) || 0;
+
+    useEffect(() => {
+      const title = product?.eng_name || product?.brand_group || product?.barcode || 'Product';
+      document.title = `${title} | Maslamani Sales`;
+      return () => { document.title = 'Maslamani Sales'; };
+    }, [product]);
 
     return (
         <div className="min-h-[100dvh] bg-white font-sans selection:bg-indigo-100 pb-24" dir="rtl">
@@ -196,7 +202,7 @@ export default function CustomerProductView() {
                         ) : (
                             <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 mb-6">
                                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                    <CheckCircle2 className="text-emerald-600" size={16} />
+                                    <span className="text-emerald-600 font-bold text-lg">✓</span>
                                 </div>
                                 <p className="font-bold text-emerald-800 text-sm">متوفر في المخزون</p>
                             </div>
