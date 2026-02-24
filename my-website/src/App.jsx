@@ -492,6 +492,20 @@ function App() {
   const [offerSearch, setOfferSearch] = useState('');
   const [offersLoaded, setOffersLoaded] = useState(false);
 
+  // Customers
+  const [customers, setCustomers] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerPredictions, setShowCustomerPredictions] = useState(false);
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        setCustomers(data);
+      }
+    } catch (e) { console.warn('fetchCustomers:', e); }
+  }, []);
+
   const fetchCustomOffers = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('custom_offers').select('id, title, items, created_at').neq('id', 'SYSTEM_FORCE_LOGOUT').order('created_at', { ascending: true });
@@ -515,7 +529,8 @@ function App() {
 
   useEffect(() => {
     fetchCustomOffers();
-  }, [fetchCustomOffers]);
+    fetchCustomers();
+  }, [fetchCustomOffers, fetchCustomers]);
 
   useEffect(() => {
     if (!offersLoaded) return;
@@ -1430,7 +1445,46 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     try {
       const { error } = await supabase.from('orders').insert([orderData]);
       if (error) throw error;
+
+      // Update Customer Loyalty Points and Total Spent automatically
+      if (orderInfo.phone) {
+        try {
+          const pointsEarned = Math.floor(orderTotal / 100); // 1 point per 100 ILS
+
+          // Check if customer exists
+          const { data: existingCustomer } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('phone', orderInfo.phone)
+            .single();
+
+          if (existingCustomer) {
+            await supabase.from('customers').update({
+              name: orderInfo.merchantName || orderInfo.companyName,
+              address: orderInfo.address,
+              customer_number: orderInfo.customerNumber,
+              total_spent: Number(existingCustomer.total_spent || 0) + Number(orderTotal),
+              loyalty_points: Number(existingCustomer.loyalty_points || 0) + pointsEarned,
+              last_order_date: new Date().toISOString()
+            }).eq('phone', orderInfo.phone);
+          } else {
+            await supabase.from('customers').insert([{
+              phone: orderInfo.phone,
+              name: orderInfo.merchantName || orderInfo.companyName,
+              address: orderInfo.address,
+              customer_number: orderInfo.customerNumber,
+              total_spent: orderTotal,
+              loyalty_points: pointsEarned,
+              last_order_date: new Date().toISOString()
+            }]);
+          }
+        } catch (custErr) {
+          console.warn('Failed to update customer points:', custErr);
+        }
+      }
+
       alert('Order submitted successfully space to supervisor!');
+      fetchCustomers(); // Refresh the autocomplete dropdown
       return true;
     } catch (err) {
       console.warn('Error saving order online, queueing offline:', err);
@@ -3310,17 +3364,72 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       />
                     </div>
 
-                    {/* 3. التلفون */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1">التلفون <span className="text-rose-500">*</span></label>
+                    {/* 3. التلفون (مع بحث تلقائي للزبائن) */}
+                    <div className="space-y-1.5 relative">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1 flex items-center justify-between">
+                        <span>التلفون <span className="text-rose-500">*</span></span>
+                        {orderInfo.phone && customers.find(c => c.phone === orderInfo.phone) && (
+                          <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                            <Star size={10} fill="currentColor" />
+                            {customers.find(c => c.phone === orderInfo.phone).loyalty_points || 0} نقطة
+                          </span>
+                        )}
+                      </label>
                       <input
                         value={orderInfo.phone}
-                        onChange={(e) => setOrderInfoField('phone', toEnglishDigits(e.target.value))}
+                        onChange={(e) => {
+                          const val = toEnglishDigits(e.target.value);
+                          setOrderInfoField('phone', val);
+                          setCustomerSearch(val);
+                          setShowCustomerPredictions(true);
+                        }}
+                        onFocus={() => setShowCustomerPredictions(true)}
+                        onBlur={() => setTimeout(() => setShowCustomerPredictions(false), 200)}
                         className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm font-mono text-left"
                         placeholder="05..."
                         dir="ltr"
                         lang="en"
+                        autoComplete="off"
                       />
+
+                      {/* Customer Predictions Dropdown */}
+                      {showCustomerPredictions && customerSearch.length >= 2 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                          {customers.filter(c => c.phone && c.phone.includes(customerSearch)).length === 0 ? (
+                            <div className="p-3 text-sm text-slate-500 text-center">زبون جديد (لم يسبق تسجيله)</div>
+                          ) : (
+                            customers.filter(c => c.phone && c.phone.includes(customerSearch)).map(cust => (
+                              <div
+                                key={cust.id}
+                                onClick={() => {
+                                  setOrderInfo(prev => ({
+                                    ...prev,
+                                    phone: cust.phone,
+                                    merchantName: cust.name || prev.merchantName,
+                                    companyName: cust.name || prev.companyName,
+                                    address: cust.address || prev.address,
+                                    customerNumber: cust.customer_number || prev.customerNumber,
+                                  }));
+                                  setCustomerSearch(cust.phone);
+                                  setShowCustomerPredictions(false);
+                                }}
+                                className="p-3 hover:bg-orange-50 cursor-pointer border-b border-slate-100 last:border-0 flex items-center justify-between transition-colors"
+                              >
+                                <div className="text-right flex-1">
+                                  <div className="font-bold text-slate-800 text-sm">{cust.name}</div>
+                                  <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                                    <span className="font-mono" dir="ltr">{cust.phone}</span>
+                                    {cust.address && <span>• {cust.address}</span>}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{cust.loyalty_points || 0} pts</span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* 4. العنوان */}
