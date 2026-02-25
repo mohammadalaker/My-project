@@ -78,6 +78,20 @@ export default function CustomerDisplay() {
         return data?.publicUrl || null;
     };
 
+    const getImageFallback = (item) => {
+        const primary = getPublicImageUrl(item?.image);
+        if (primary) return primary;
+        if (!item?.barcode) return null;
+        const b = String(item.barcode).trim();
+        if (!b) return null;
+        const paths = [`electric/${b}.jpg`, `electric/${b}.jpeg`, `electric/${b}.png`, `${b}.jpg`, `${b}.jpeg`];
+        for (const p of paths) {
+            const url = getPublicImageUrl(p);
+            if (url) return url;
+        }
+        return null;
+    };
+
     const isCartEmpty = cartState.items.length === 0;
 
     return (
@@ -154,9 +168,27 @@ export default function CustomerDisplay() {
                                             <div className="flex flex-wrap justify-center gap-6 w-full">
                                                 {offers[currentOfferIndex].items.slice(0, 4).map((item, idx) => (
                                                     <div key={idx} className="bg-white p-4 rounded-3xl shadow-lg border border-slate-100 flex flex-col items-center max-w-[200px] w-full transform hover:scale-105 transition-transform">
-                                                        <div className="w-24 h-24 mb-4 bg-slate-50 rounded-2xl flex items-center justify-center p-2">
-                                                            {/* Fallback icon since we don't have full item details in custom_offers sometimes, but we can display a generic box or icon */}
-                                                            <Package size={40} className="text-slate-300" />
+                                                        <div className="w-24 h-24 mb-4 bg-slate-50 rounded-2xl flex items-center justify-center p-2 relative">
+                                                            {getImageFallback(item) ? (
+                                                                <>
+                                                                    <img
+                                                                        src={getImageFallback(item)}
+                                                                        alt={`Product ${item.barcode}`}
+                                                                        className="max-w-full max-h-full object-contain mix-blend-multiply transition-opacity duration-300 peer"
+                                                                        onError={(e) => {
+                                                                            e.target.style.display = 'none';
+                                                                            if (e.target.nextElementSibling) {
+                                                                                e.target.nextElementSibling.style.display = 'flex';
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <div className="absolute inset-0 flex items-center justify-center hidden">
+                                                                        <Package size={40} className="text-slate-300" />
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <Package size={40} className="text-slate-300" />
+                                                            )}
                                                         </div>
                                                         <p className="font-bold text-center text-slate-800 line-clamp-2 text-sm">
                                                             المنتج {item.barcode}
