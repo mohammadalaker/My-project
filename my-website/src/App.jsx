@@ -502,6 +502,7 @@ function App() {
   const [showCatalogPanel, setShowCatalogPanel] = useState(false);
   const [catalogItems, setCatalogItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [isSwitchingCategory, setIsSwitchingCategory] = useState(false);
   const [orderItems, setOrderItems] = useState([]);
   const [currentOrderId, setCurrentOrderId] = useState(null); // Track ID for supervisor review
   const [orderInfo, setOrderInfo] = useState(() => ({
@@ -1151,7 +1152,25 @@ function App() {
   /* Catalog Helpers */
 
 
+  const handleCategorySwitch = useCallback((cat) => {
+    if (selectedGroup === cat) return;
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(20); // Light haptic tap for category switch
+    }
+    setIsSwitchingCategory(true);
+    setSelectedGroup(cat);
+
+    // Artificial fast delay to allow skeleton to flash for perceived performance
+    setTimeout(() => {
+      setIsSwitchingCategory(false);
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    }, 250);
+  }, [selectedGroup]);
+
   const addToOrder = useCallback((item, qty = 1) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(50); // Haptic feedback for Add to Cart
+    }
     startTransition(() => {
       setOrderItems((prev) => {
         const unitPrice = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
@@ -3038,12 +3057,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       return (
                         <button
                           key={key ?? 'all'}
-                          onClick={() => {
-                            setSelectedGroup(key);
-                            if (key === null) {
-                              scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                            }
-                          }}
+                          onClick={() => handleCategorySwitch(key)}
                           className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border border-transparent ${activeClass}`}
                         >
                           {Icon && <Icon size={18} className={isSelected ? 'animate-pulse' : ''} />}
@@ -3057,14 +3071,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {/* Sub-categories */}
                   {(selectedGroup === '__electrical__' || (selectedGroup && isElectricalGroup(selectedGroup))) && electricalGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => {
-                        setSelectedGroup('__electrical__');
-                        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                      }} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => handleCategorySwitch('__electrical__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {electricalGroupsSorted.map((g) => (
                         <button
                           key={g}
-                          onClick={() => setSelectedGroup(g)}
+                          onClick={() => handleCategorySwitch(g)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-indigo-600'}`}
                         >
                           {g}
@@ -3074,14 +3085,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   )}
                   {(selectedGroup === '__home__' || (selectedGroup && selectedGroup !== '__electrical__' && !isElectricalGroup(selectedGroup))) && kitchenwareGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => {
-                        setSelectedGroup('__home__');
-                        scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                      }} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => handleCategorySwitch('__home__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {kitchenwareGroupsSorted.map((g) => (
                         <button
                           key={g}
-                          onClick={() => setSelectedGroup(g)}
+                          onClick={() => handleCategorySwitch(g)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-sky-600'}`}
                         >
                           {g}
@@ -3105,7 +3113,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               />
 
               <div className="px-4 sm:px-6 mt-6">
-                {loading ? (
+                {(loading || isSwitchingCategory) ? (
                   <Suspense fallback={<div className="min-h-[40svh] animate-pulse bg-slate-100/50 rounded-2xl" />}>
                     <SkeletonGrid />
                   </Suspense>
