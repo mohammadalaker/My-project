@@ -43,8 +43,9 @@ import {
   Printer,
   Smartphone,
   Mic,
+  MonitorPlay, // For presentation mode
 } from 'lucide-react';
-import { motion, useAnimation }
+import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
 import supabase from './lib/supabaseClient';
@@ -523,6 +524,7 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
+  const [presentationItem, setPresentationItem] = useState(null);
 
   // Held Orders State
   const [heldOrders, setHeldOrders] = useState(() => {
@@ -3373,6 +3375,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       {uploading && cardUploadItemRef.current?.id === item.id ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                                     </button>
                                   )}
+
+                                  {/* Presentation Mode Button */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setPresentationItem(item); }}
+                                    className="absolute top-2 left-2 p-2 rounded-xl bg-white/80 backdrop-blur-md text-slate-600 hover:text-indigo-600 hover:bg-white shadow-sm transform transition-all duration-300 hover:scale-110 z-20 group-hover:opacity-100 opacity-60 sm:opacity-0"
+                                    title="عرض للزبون"
+                                  >
+                                    <MonitorPlay size={20} />
+                                  </button>
                                 </div>
 
                                 <div className="p-5 flex-1 flex flex-col">
@@ -4675,6 +4687,94 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         </div>
       )}
+
+      {/* Presentation Mode Modal */}
+      <AnimatePresence>
+        {presentationItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col pt-6 pb-12 px-8 overflow-hidden"
+            onClick={() => setPresentationItem(null)} // Close when clicking background
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setPresentationItem(null)}
+              className="absolute top-6 right-8 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-[110]"
+            >
+              <X size={32} />
+            </button>
+
+            {/* Content Container */}
+            <div
+              className="flex-1 max-w-7xl w-full mx-auto flex flex-col md:flex-row items-center gap-12 sm:gap-16"
+              onClick={(e) => e.stopPropagation()} // Prevent clicking content from closing
+            >
+              {/* Product Image */}
+              <div className="w-full md:w-1/2 flex-1 flex items-center justify-center relative min-h-[40vh] md:min-h-full">
+                {/* Decorative glow */}
+                <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none" />
+                <img
+                  src={getImageFallback(presentationItem)}
+                  alt={presentationItem.name}
+                  className="max-w-full max-h-[60vh] md:max-h-[85vh] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
+
+              {/* Product Details (Arabic optimized) */}
+              <div className="w-full md:w-1/2 flex flex-col justify-center items-center md:items-start text-center md:text-right" dir="rtl">
+                {presentationItem.productType && (
+                  <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-2xl sm:text-3xl text-indigo-400 font-bold tracking-widest uppercase mb-4"
+                  >
+                    {presentationItem.productType}
+                  </motion.p>
+                )}
+
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-4xl sm:text-6xl lg:text-7xl font-black text-white leading-tight mb-8"
+                >
+                  {presentationItem.name}
+                </motion.h2>
+
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3, type: "spring" }}
+                  className="mt-4 px-8 py-4 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm shadow-2xl"
+                >
+                  <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-1 text-center md:text-right">Price</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl text-emerald-400 font-bold opacity-80">₪</span>
+                    <span className="text-7xl font-black text-emerald-400 tracking-tighter">
+                      {Math.round(presentationItem.priceAfterDiscount ?? presentationItem.price ?? 0)}
+                    </span>
+                  </div>
+                </motion.div>
+
+                {/* Gentle hint to close */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.6 }}
+                  transition={{ delay: 1 }}
+                  className="text-slate-500 mt-12 text-sm flex items-center justify-center md:justify-start gap-2"
+                >
+                  <MonitorPlay size={16} /> المس الشاشة للإغلاق
+                </motion.p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile Bottom Nav */}
       <BottomNav
