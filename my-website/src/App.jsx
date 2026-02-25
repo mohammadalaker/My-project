@@ -3380,7 +3380,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); setPresentationItem(item); }}
-                                    className="absolute top-2 left-2 p-2 rounded-xl bg-white/80 backdrop-blur-md text-slate-600 hover:text-indigo-600 hover:bg-white shadow-sm transform transition-all duration-300 hover:scale-110 z-20 group-hover:opacity-100 opacity-60 sm:opacity-0"
+                                    className="absolute top-2 left-2 p-2 rounded-xl bg-white/80 backdrop-blur-md text-slate-600 hover:text-indigo-600 hover:bg-white shadow-sm transform transition-all duration-300 hover:scale-110 z-20 opacity-80 hover:opacity-100"
                                     title="عرض للزبون"
                                   >
                                     <MonitorPlay size={20} />
