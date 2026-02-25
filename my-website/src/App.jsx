@@ -42,8 +42,10 @@ import {
   CloudOff,
   Printer,
   Smartphone,
+  Mic,
 } from 'lucide-react';
-import { motion, useAnimation } from 'framer-motion';
+import { motion, useAnimation }
+  from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
 import supabase from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
@@ -518,6 +520,7 @@ function App() {
   const [ordersError, setOrdersError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderActionLoading, setOrderActionLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
 
@@ -1107,6 +1110,41 @@ function App() {
     }
     return null;
   };
+
+  /* Voice Search Integration */
+  const startVoiceSearch = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("عذراً، متصفحك لا يدعم خاصية البحث الصوتي.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ar'; // Optimize for Arabic
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setSearch(transcript);
+      setPage(0);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Voice recognition error", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  }, [setSearch, setPage, setIsListening]);
 
   /* Catalog Helpers */
 
@@ -2647,12 +2685,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         value={search}
                         onChange={(e) => { setSearch(e.target.value); setPage(0); }}
                       />
-                      {search && (
+                      {search ? (
                         <button
                           className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-500 transition-colors"
                           onClick={() => setSearch('')}
+                          title="مسح البحث"
                         >
                           <X size={20} />
+                        </button>
+                      ) : (
+                        <button
+                          className={`absolute inset-y-0 right-0 pr-4 flex items-center transition-colors ${isListening ? 'text-rose-500 animate-pulse drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 'text-slate-400 hover:text-indigo-500'}`}
+                          onClick={startVoiceSearch}
+                          title="بحث بالصوت"
+                        >
+                          <Mic size={20} />
                         </button>
                       )}
                     </div>
