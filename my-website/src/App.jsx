@@ -3159,7 +3159,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <div
                                 key={item.id}
                                 className="glass-card group flex flex-col h-full cursor-pointer hover:shadow-xl transition-shadow"
-                                onClick={() => setSelectedItem(item)}
+                                onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
                                 style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
                               >
                                 {item.group && (
