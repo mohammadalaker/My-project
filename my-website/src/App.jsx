@@ -519,6 +519,21 @@ function App() {
   const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
 
+  // Held Orders State
+  const [heldOrders, setHeldOrders] = useState(() => {
+    try {
+      const stored = localStorage.getItem('sales_held_orders');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [showHeldOrdersModal, setShowHeldOrdersModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sales_held_orders', JSON.stringify(heldOrders));
+    } catch (e) { console.warn('Could not save held orders:', e); }
+  }, [heldOrders]);
+
   // Custom offers: [{ id, title, items: [{ barcode, quantity, offerPrice, isFree }] }]
   const [customOffers, setCustomOffers] = useState(() => {
     try {
@@ -1588,6 +1603,42 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     });
   };
 
+  const handleHoldOrder = () => {
+    if (orderItems.length === 0) {
+      alert('السلة فارغة. أضف منتجات أولاً قبل التعليق.');
+      return;
+    }
+
+    const newHeldOrder = {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      orderItems: [...orderItems],
+      orderInfo: { ...orderInfo },
+      totalItems: orderLines.length,
+      totalAmount: orderTotal
+    };
+
+    setHeldOrders(prev => [newHeldOrder, ...prev]);
+    clearOrderAndInfo();
+  };
+
+  const handleRestoreHeldOrder = (heldOrder) => {
+    if (orderItems.length > 0) {
+      if (!confirm('السلة الحالية تحتوي على منتجات. هل أنت متأكد من استعادة هذه الفاتورة ومسح السلة الحالية؟ (يمكنك تعليق الحالية أولاً)')) {
+        return;
+      }
+    }
+    setOrderItems(heldOrder.orderItems);
+    setOrderInfo(heldOrder.orderInfo);
+    setHeldOrders(prev => prev.filter(o => o.id !== heldOrder.id));
+    setShowHeldOrdersModal(false);
+  };
+
+  const handleRemoveHeldOrder = (id) => {
+    if (!confirm('هل أنت متأكد من حذف هذه الفاتورة المعلقة نهائياً؟')) return;
+    setHeldOrders(prev => prev.filter(o => o.id !== id));
+  };
+
   const handleSaveInvoice = async () => {
     // FIX: If supervisor is reviewing a submitted order, "Save" should trigger "Export Excel & Delete"
     if (userRole === 'supervisor' && currentOrderId) {
@@ -2376,6 +2427,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       Catalog
                     </button>
                   )}
+                  <button
+                    onClick={() => setShowHeldOrdersModal(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${heldOrders.length > 0 ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-200' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    الفواتير المعلقة
+                    {heldOrders.length > 0 && (
+                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] tabular-nums shadow-sm">
+                        {heldOrders.length}
+                      </span>
+                    )}
+                  </button>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -3665,6 +3727,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <button onClick={clearOrder} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 uppercase tracking-widest transition-colors flex items-center gap-2">
                   <Trash2 size={12} /> <span>Clear Order</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={handleHoldOrder}
+                  className="text-[10px] font-bold text-amber-600 hover:text-amber-700 uppercase tracking-widest transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100"
+                >
+                  <Clock size={12} /> <span>تعليق الفاتورة</span>
+                </button>
               </div>
             </div>
           </aside>
@@ -4047,6 +4116,103 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         )
       }
+
+      {/* Held Orders Modal */}
+      {showHeldOrdersModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowHeldOrdersModal(false)}>
+          <div className="bg-white rounded-[24px] overflow-hidden w-full max-w-2xl shadow-2xl border border-white/50 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">الفواتير المعلقة</h3>
+                  <p className="text-sm text-slate-500 mt-0.5">يمكنك استعادة الفاتورة أو حذفها</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHeldOrdersModal(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 bg-white min-h-[300px]">
+              {heldOrders.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
+                  <Clock size={48} className="opacity-20" />
+                  <p className="text-lg font-medium">لا توجد فواتير معلقة حالياً</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {heldOrders.map((order) => {
+                    const dateObj = new Date(order.timestamp);
+                    const timeString = dateObj.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+                    const dateString = dateObj.toLocaleDateString('ar-SA');
+                    const firstItemNames = order.orderItems.slice(0, 2).map((i) => i.customName || i.name).join('، ');
+
+                    return (
+                      <div key={order.id} className="group flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all">
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                          <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+                            <ShoppingCart size={20} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-slate-800 flex items-center gap-1"><Clock size={14} className="text-slate-400" /> {timeString}</span>
+                              <span className="text-xs text-slate-400">• {dateString}</span>
+                            </div>
+                            <div className="text-sm text-slate-600 font-medium">
+                              {order.totalItems} أصناف <span className="text-slate-300 mx-1">|</span> الإجمالي: <span className="font-bold text-slate-800">₪{order.totalAmount?.toFixed(2) || (order.orderItems.reduce((acc, i) => acc + (i.qty * i.unitPrice), 0).toFixed(2))}</span>
+                            </div>
+                            {firstItemNames && (
+                              <div className="text-xs text-slate-500 mt-1 truncate max-w-[200px] sm:max-w-xs" title={firstItemNames}>
+                                أُضيف: {firstItemNames} {order.orderItems.length > 2 && '...'}
+                              </div>
+                            )}
+                            {(order.orderInfo?.customerNumber || order.orderInfo?.phone) && (
+                              <div className="text-xs text-indigo-500 font-medium mt-1">
+                                {order.orderInfo.merchantName || order.orderInfo.companyName || order.orderInfo.phone || ('رقم الزبون: ' + order.orderInfo.customerNumber)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
+                          <button
+                            onClick={() => handleRestoreHeldOrder(order)}
+                            className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
+                          >
+                            <ShoppingCart size={16} /> استعادة
+                          </button>
+                          <button
+                            onClick={() => handleRemoveHeldOrder(order.id)}
+                            className="p-2.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors border border-slate-200 hover:border-rose-200"
+                            title="حذف نهائياً"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50">
+              <button
+                onClick={() => setShowHeldOrdersModal(false)}
+                className="w-full py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl transition-colors"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Bottom Nav */}
       <BottomNav
         mode={mode}
