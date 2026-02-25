@@ -4688,90 +4688,103 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         </div>
       )}
 
-      {/* Presentation Mode Modal */}
+      {/* Presentation Mode Modal - Ultra Modern Redesign */}
       <AnimatePresence>
         {presentationItem && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col pt-6 pb-12 px-8 overflow-hidden"
-            onClick={() => setPresentationItem(null)} // Close when clicking background
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[100] bg-[#030305] flex flex-col items-center justify-between p-4 sm:p-8 overflow-hidden"
+            onClick={() => setPresentationItem(null)}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => setPresentationItem(null)}
-              className="absolute top-6 right-8 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors z-[110]"
-            >
-              <X size={32} />
-            </button>
+            {/* Ambient Aurora Glows */}
+            <div className="absolute top-0 left-1/4 w-[60vw] h-[60vw] bg-indigo-500/15 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
+            <div className="absolute bottom-0 right-1/4 w-[60vw] h-[60vw] bg-rose-500/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
 
-            {/* Content Container */}
-            <div
-              className="flex-1 max-w-7xl w-full mx-auto flex flex-col md:flex-row items-center gap-12 sm:gap-16"
-              onClick={(e) => e.stopPropagation()} // Prevent clicking content from closing
-            >
-              {/* Product Image */}
-              <div className="w-full md:w-1/2 flex-1 flex items-center justify-center relative min-h-[40vh] md:min-h-full">
-                {/* Decorative glow */}
-                <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none" />
-                <img
-                  src={getImageFallback(presentationItem)}
-                  alt={presentationItem.name}
-                  className="max-w-full max-h-[60vh] md:max-h-[85vh] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              </div>
+            {/* Top Bar (Close and Subtle branding/type) */}
+            <div className="w-full max-w-7xl flex justify-between items-center relative z-[110] pt-4 px-4 sm:px-8">
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                onClick={() => setPresentationItem(null)}
+                className="p-4 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-full transition-all border border-white/5 backdrop-blur-md"
+              >
+                <X size={28} />
+              </motion.button>
 
-              {/* Product Details (Arabic optimized) */}
-              <div className="w-full md:w-1/2 flex flex-col justify-center items-center md:items-start text-center md:text-right" dir="rtl">
-                {presentationItem.productType && (
-                  <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="text-2xl sm:text-3xl text-indigo-400 font-bold tracking-widest uppercase mb-4"
-                  >
-                    {presentationItem.productType}
-                  </motion.p>
-                )}
-
-                <motion.h2
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-4xl sm:text-6xl lg:text-7xl font-black text-white leading-tight mb-8"
-                >
-                  {presentationItem.name}
-                </motion.h2>
-
+              {presentationItem.productType && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.3, type: "spring" }}
-                  className="mt-4 px-8 py-4 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm shadow-2xl"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="px-6 py-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-md"
                 >
-                  <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-1 text-center md:text-right">Price</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl text-emerald-400 font-bold opacity-80">₪</span>
-                    <span className="text-7xl font-black text-emerald-400 tracking-tighter">
+                  <span className="text-sm font-bold tracking-widest uppercase text-slate-300">
+                    {presentationItem.productType}
+                  </span>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Product Image Stage */}
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+              className="flex-1 w-full flex items-center justify-center relative z-10 max-h-[55vh] mt-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={getImageFallback(presentationItem)}
+                alt={presentationItem.name}
+                className="max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.8)]"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            </motion.div>
+
+            {/* Information Glass Panel */}
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+              className="w-full max-w-5xl bg-white/[0.03] border border-white/10 backdrop-blur-3xl rounded-[2.5rem] sm:rounded-[3rem] p-8 sm:p-12 flex flex-col items-center text-center relative z-20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] mb-4 sm:mb-8"
+              onClick={(e) => e.stopPropagation()}
+              dir="rtl"
+            >
+              {/* Subtle top edge highlight */}
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-100 leading-[1.4] mb-10 max-w-4xl tracking-wide line-clamp-4">
+                {presentationItem.name}
+              </h2>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 w-full">
+
+                {/* Barcode/Metadata (Optional visual filler for premium look) */}
+                <div className="flex flex-col items-center sm:items-start text-slate-500 opacity-60">
+                  <p className="text-xs uppercase tracking-widest mb-1 font-bold">Product Code</p>
+                  <p className="font-mono text-lg">{presentationItem.barcode}</p>
+                </div>
+
+                {/* Vertical Divider (desktop only) */}
+                <div className="hidden sm:block w-px h-16 bg-white/10" />
+
+                {/* Price Display */}
+                <div className="flex flex-col items-center">
+                  <p className="text-sm text-emerald-500/80 font-bold uppercase tracking-widest mb-2">السعر للمستهلك</p>
+                  <div className="flex items-start gap-2 bg-emerald-500/10 px-8 py-3 rounded-2xl border border-emerald-500/20 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)]">
+                    <span className="text-6xl lg:text-7xl font-black text-emerald-400 tracking-tighter leading-none">
                       {Math.round(presentationItem.priceAfterDiscount ?? presentationItem.price ?? 0)}
                     </span>
+                    <span className="text-3xl text-emerald-500/80 font-bold mt-1">₪</span>
                   </div>
-                </motion.div>
+                </div>
 
-                {/* Gentle hint to close */}
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.6 }}
-                  transition={{ delay: 1 }}
-                  className="text-slate-500 mt-12 text-sm flex items-center justify-center md:justify-start gap-2"
-                >
-                  <MonitorPlay size={16} /> المس الشاشة للإغلاق
-                </motion.p>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
