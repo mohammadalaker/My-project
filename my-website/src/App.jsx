@@ -510,6 +510,8 @@ function App() {
     customerNumber: '',
     paymentMethod: '',
     checksCount: '',
+    discountType: '', // '' | 'percentage' | 'amount'
+    discountValue: '',
   }));
   const [submittedOrders, setSubmittedOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -1113,7 +1115,22 @@ function App() {
   };
   const getLineTotal = (o) =>
     Math.max(0, getLineUnitPrice(o) * (o.qty || 0));
-  const orderTotal = orderLines.reduce((s, o) => s + getLineTotal(o), 0);
+
+  const orderSubtotal = orderLines.reduce((s, o) => s + getLineTotal(o), 0);
+
+  const getOrderDiscount = (subtotal, info) => {
+    let discount = 0;
+    const val = Number(info?.discountValue) || 0;
+    if (info?.discountType === 'percentage' && val > 0) {
+      discount = subtotal * (val / 100);
+    } else if (info?.discountType === 'amount' && val > 0) {
+      discount = val;
+    }
+    return discount;
+  };
+
+  const finalOrderDiscount = getOrderDiscount(orderSubtotal, orderInfo);
+  const orderTotal = Math.max(0, orderSubtotal - finalOrderDiscount);
 
   // Broadcast Cart Updates to Customer Display
   useEffect(() => {
@@ -1148,7 +1165,11 @@ function App() {
       console.warn('Failed to broadcast to POS display', e);
     }
   }, [orderLines, orderTotal, orderInfo, customers]);
-  const itemTotalWithTax = (lines) => (lines || orderLines).reduce((s, o) => s + getLineTotal(o), 0);
+  const itemTotalWithTax = (lines) => {
+    const sub = (lines || orderLines).reduce((s, o) => s + getLineTotal(o), 0);
+    const disc = getOrderDiscount(sub, orderInfo);
+    return Math.max(0, sub - disc);
+  };
 
   const orderLinesByBox = [...orderLines].sort((a, b) =>
     String(getLineBox(a)).localeCompare(String(getLineBox(b)), undefined, {
@@ -1167,7 +1188,20 @@ function App() {
       address: orderData.customer_address || '',
       orderDate: orderData.order_date || (orderData.created_at ? new Date(orderData.created_at).toISOString().slice(0, 10) : ''),
       paymentMethod: orderData.payment_method || '',
+      discountType: orderData.details?.discountType || '',
+      discountValue: orderData.details?.discountValue || '',
     } : orderInfo;
+
+    // Calculate subtotal and discount for the print view
+    const printSubtotal = isSubmitted ? (orderData.items || []).reduce((s, o) => s + (o.total || 0), 0) : orderLines.reduce((s, o) => s + getLineTotal(o), 0);
+    let printDiscount = 0;
+    const printDiscVal = Number(currentInfo.discountValue) || 0;
+    if (currentInfo.discountType === 'percentage' && printDiscVal > 0) {
+      printDiscount = printSubtotal * (printDiscVal / 100);
+    } else if (currentInfo.discountType === 'amount' && printDiscVal > 0) {
+      printDiscount = printDiscVal;
+    }
+
     const totalAmount = isSubmitted ? (orderData.total_amount || 0) : orderTotal;
 
     const rows = (lines && lines.length > 0) ? lines
@@ -1353,7 +1387,11 @@ function App() {
   <div class="total-section">
     <div class="total-card">
       <div class="total-row-flex"><span>إجمالي كمية المنتجات</span><strong dir="ltr" lang="en">${lines.reduce((sum, l) => sum + (l.qty || 0), 0)}</strong></div>
-      <div class="total-row-main"><span>المجموع النهائي</span><span dir="ltr" lang="en">₪${Number(totalAmount).toFixed(2)}</span></div>
+      ${printDiscount > 0 ? `
+      <div class="total-row-flex"><span>المجموع قبل الخصم</span><span dir="ltr" lang="en">₪${printSubtotal.toFixed(2)}</span></div>
+      <div class="total-row-flex" style="color: #059669;"><span>الخصم الإضافي</span><span dir="ltr" lang="en">-₪${printDiscount.toFixed(2)}</span></div>
+      ` : ''}
+      <div class="total-row-main"><span>${printDiscount > 0 ? 'المجموع النهائي' : 'المجموع الكلي'}</span><span dir="ltr" lang="en">₪${Number(totalAmount).toFixed(2)}</span></div>
     </div>
   </div>
 
@@ -1600,6 +1638,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       customerNumber: '',
       paymentMethod: '',
       checksCount: '',
+      discountType: '',
+      discountValue: '',
     });
   };
 
@@ -1817,7 +1857,47 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       r++;
     });
     ws.getCell(r, 1).value = '';
-    ws.getCell(r, 6).value = excelText('المجموع الكلي');
+
+    // Check if there is an advanced discount
+    const exportSubtotal = sortedLines.reduce((s, o) => s + getLineTotal(o), 0);
+    const exportDiscVal = Number(orderInfo.discountValue) || 0;
+    let exportDiscount = 0;
+    if (orderInfo.discountType === 'percentage' && exportDiscVal > 0) {
+      exportDiscount = exportSubtotal * (exportDiscVal / 100);
+    } else if (orderInfo.discountType === 'amount' && exportDiscVal > 0) {
+      exportDiscount = exportDiscVal;
+    }
+
+    if (exportDiscount > 0) {
+      // Subtotal Line
+      ws.getCell(r, 6).value = excelText('المجموع قبل الخصم');
+      ws.getCell(r, 8).value = parseFloat(exportSubtotal.toFixed(2));
+      for (let c = 1; c <= 8; c++) {
+        const cell = ws.getCell(r, c);
+        styleCell(cell, {
+          fill: colors.light,
+          font: c >= 6 ? { color: { argb: colors.textDark } } : {},
+          alignment: c === 6 ? { horizontal: 'right', readingOrder: 1 } : c === 8 ? { horizontal: 'center' } : {},
+        });
+      }
+      r++;
+
+      // Discount Line
+      ws.getCell(r, 6).value = excelText('الخصم الإضافي');
+      ws.getCell(r, 8).value = parseFloat((-exportDiscount).toFixed(2));
+      for (let c = 1; c <= 8; c++) {
+        const cell = ws.getCell(r, c);
+        styleCell(cell, {
+          fill: colors.light,
+          font: c >= 6 ? { color: { argb: colors.successText } } : {},
+          alignment: c === 6 ? { horizontal: 'right', readingOrder: 1 } : c === 8 ? { horizontal: 'center' } : {},
+        });
+      }
+      r++;
+    }
+
+    // Final Total Line
+    ws.getCell(r, 6).value = excelText(exportDiscount > 0 ? 'المجموع النهائي' : 'المجموع الكلي');
     ws.getCell(r, 8).value = parseFloat(orderTotal.toFixed(2));
     for (let c = 1; c <= 8; c++) {
       const cell = ws.getCell(r, c);
@@ -3693,11 +3773,66 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
             </div>
 
+            {/* Discount Section */}
+            {orderLines.length > 0 && activeTab === 'items' && (
+              <div className="flex-shrink-0 bg-slate-50 border-t border-slate-200 p-4 z-10">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 mr-1">نوع الخصم إضافي</label>
+                    <select
+                      value={orderInfo.discountType || ''}
+                      onChange={(e) => {
+                        setOrderInfoField('discountType', e.target.value);
+                        if (!e.target.value) setOrderInfoField('discountValue', '');
+                      }}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    >
+                      <option value="">لا يوجد خصم</option>
+                      <option value="percentage">نسبة مئوية (%)</option>
+                      <option value="amount">مبلغ مالي (₪)</option>
+                    </select>
+                  </div>
+                  {orderInfo.discountType && (
+                    <div className="flex-1 space-y-1.5 animate-fade-in">
+                      <label className="text-[10px] font-bold text-slate-500 mr-1">قيمة الخصم</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step={orderInfo.discountType === 'percentage' ? "1" : "0.5"}
+                        value={orderInfo.discountValue}
+                        onChange={(e) => setOrderInfoField('discountValue', e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 font-mono text-left"
+                        placeholder="0"
+                        dir="ltr"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Sticky Order Totals */}
             <div className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-8 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
+
+              {/* Discount Lines */}
+              {finalOrderDiscount > 0 && (
+                <div className="flex flex-col gap-1 mb-4 border-b border-slate-100 pb-4">
+                  <div className="flex justify-between items-center text-sm text-slate-500 font-medium">
+                    <span>المجموع قبل الخصم:</span>
+                    <span className="font-mono text-slate-700">₪{orderSubtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-emerald-600 font-bold">
+                    <span>الخصم الإضافي:</span>
+                    <span className="font-mono">-₪{finalOrderDiscount.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-end mb-5">
                 <div>
-                  <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mb-1"><span>Total Amount</span></p>
+                  <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mb-1">
+                    <span>{finalOrderDiscount > 0 ? "Final Total" : "Total Amount"}</span>
+                  </p>
                   <p className="text-4xl font-black text-slate-800 tracking-tighter drop-shadow-sm">
                     <span className="text-2xl text-slate-400 mr-1">₪</span>
                     <span>{itemTotalWithTax(orderLines).toFixed(2)}</span>
