@@ -4763,7 +4763,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 w-full">
 
-                {/* Barcode/Metadata (Optional visual filler for premium look) */}
+                {/* Take Home QR Code */}
+                <div className="flex flex-col items-center justify-center p-3 bg-white/5 rounded-2xl border border-white/10 shadow-sm backdrop-blur-md">
+                  <p className="text-[10px] sm:text-xs text-indigo-300 font-bold tracking-widest mb-2 flex items-center gap-1.5">
+                    <Smartphone size={14} /> خذ التفاصيل معك
+                  </p>
+                  <div className="bg-white p-2 rounded-xl shadow-inner">
+                    <QRCodeSVG
+                      value={`https://maslamanisales.app/?barcode=${presentationItem.barcode}`}
+                      size={64}
+                      level="L"
+                      includeMargin={false}
+                    />
+                  </div>
+                </div>
+
+                {/* Vertical Divider (desktop only) */}
+                <div className="hidden sm:block w-px h-16 bg-white/10" />
+
+                {/* Barcode/Metadata */}
                 <div className="flex flex-col items-center sm:items-start text-slate-500 opacity-60">
                   <p className="text-xs uppercase tracking-widest mb-1 font-bold">Product Code</p>
                   <p className="font-mono text-lg">{presentationItem.barcode}</p>
