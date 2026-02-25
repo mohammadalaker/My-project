@@ -551,6 +551,95 @@ function App() {
   const [customers, setCustomers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerPredictions, setShowCustomerPredictions] = useState(false);
+  const [customerInsights, setCustomerInsights] = useState(null);
+  const [insightsPhone, setInsightsPhone] = useState(null);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false);
+  const [quickAddCustomerData, setQuickAddCustomerData] = useState({ name: '', phone: '' });
+
+  const fetchCustomerInsights = useCallback(async (phone) => {
+    if (!phone) {
+      setCustomerInsights(null);
+      setInsightsPhone(null);
+      return;
+    }
+    if (phone === insightsPhone) return; // already fetched
+
+    setLoadingInsights(true);
+    setInsightsPhone(phone);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('created_at, items')
+        .eq('customer_phone', phone)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const lastOrder = data[0];
+        const allItems = data.flatMap(order => order.items || []);
+
+        const brandCounts = {};
+        allItems.forEach(item => {
+          if (item.group) brandCounts[item.group] = (brandCounts[item.group] || 0) + (item.qty || 1);
+        });
+        const favoriteBrands = Object.entries(brandCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 2)
+          .map(([brand]) => brand);
+
+        const lastItemNames = (lastOrder.items || [])
+          .slice(0, 2)
+          .map(i => i.name || i.product_type)
+          .filter(Boolean);
+
+        setCustomerInsights({
+          lastPurchaseDate: new Date(lastOrder.created_at).toLocaleDateString('ar-SA'),
+          lastItems: lastItemNames,
+          favoriteBrands: favoriteBrands
+        });
+      } else {
+        setCustomerInsights(null);
+      }
+    } catch (err) {
+      console.warn('Error fetching customer insights:', err);
+      setCustomerInsights(null);
+    } finally {
+      setLoadingInsights(false);
+    }
+  }, [insightsPhone]);
+
+  const handleQuickAddCustomer = async () => {
+    if (!quickAddCustomerData.name || !quickAddCustomerData.phone) {
+      alert('يرجى إدخال الاسم ورقم الهاتف.');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.from('customers').insert([{
+        name: quickAddCustomerData.name,
+        phone: quickAddCustomerData.phone,
+        loyalty_points: 0,
+        total_spent: 0
+      }]).select();
+
+      if (error) throw error;
+
+      setOrderInfo(prev => ({
+        ...prev,
+        phone: quickAddCustomerData.phone,
+        merchantName: quickAddCustomerData.name,
+        companyName: quickAddCustomerData.name
+      }));
+      setCustomerSearch(quickAddCustomerData.phone);
+      setShowQuickAddCustomer(false);
+      fetchCustomers();
+      fetchCustomerInsights(quickAddCustomerData.phone);
+    } catch (err) {
+      console.warn('Error quick adding customer:', err);
+      alert('حدث خطأ أثناء إضافة الزبون.');
+    }
+  };
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -1641,6 +1730,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       discountType: '',
       discountValue: '',
     });
+    setCustomerInsights(null);
+    setInsightsPhone(null);
+    setCustomerSearch('');
   };
 
   const handleHoldOrder = () => {
@@ -3595,31 +3687,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </div>
 
                   <div className="space-y-4">
-                    {/* 1. اسم الشركة ( المشتري ) */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم الشركة ( المشتري ) <span className="text-rose-500">*</span></label>
-                      <input
-                        value={orderInfo.companyName}
-                        onChange={(e) => setOrderInfoField('companyName', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
-                        placeholder="أدخل اسم الشركة..."
-                        dir="rtl"
-                      />
-                    </div>
-
-                    {/* 2. اسم التاجر ( المشتري ) */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم التاجر ( المشتري ) <span className="text-rose-500">*</span></label>
-                      <input
-                        value={orderInfo.merchantName}
-                        onChange={(e) => setOrderInfoField('merchantName', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
-                        placeholder="أدخل اسم التاجر..."
-                        dir="rtl"
-                      />
-                    </div>
-
-                    {/* 3. التلفون (مع بحث تلقائي للزبائن) */}
+                    {/* 1. التلفون (مع بحث تلقائي للزبائن) */}
                     <div className="space-y-1.5 relative">
                       <label className="text-[11px] font-bold text-slate-500 mr-1 flex items-center justify-between">
                         <span>التلفون <span className="text-rose-500">*</span></span>
@@ -3637,6 +3705,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           setOrderInfoField('phone', val);
                           setCustomerSearch(val);
                           setShowCustomerPredictions(true);
+
+                          // Smart Auto-fill & Insights fetch
+                          if (val.length >= 7) {
+                            const exactMatch = customers.find(c => c.phone === val);
+                            if (exactMatch) {
+                              setOrderInfo(prev => ({
+                                ...prev,
+                                merchantName: prev.merchantName || exactMatch.name || '',
+                                companyName: prev.companyName || exactMatch.name || '',
+                                address: prev.address || exactMatch.address || '',
+                                customerNumber: prev.customerNumber || exactMatch.customer_number || '',
+                              }));
+                              fetchCustomerInsights(exactMatch.phone);
+                            } else {
+                              setCustomerInsights(null);
+                            }
+                          }
                         }}
                         onFocus={() => setShowCustomerPredictions(true)}
                         onBlur={() => setTimeout(() => setShowCustomerPredictions(false), 200)}
@@ -3651,7 +3736,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       {showCustomerPredictions && customerSearch.length >= 2 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                           {customers.filter(c => c.phone && c.phone.includes(customerSearch)).length === 0 ? (
-                            <div className="p-3 text-sm text-slate-500 text-center">زبون جديد (لم يسبق تسجيله)</div>
+                            <div className="p-3 bg-slate-50 border-b border-slate-100 text-center">
+                              <p className="text-sm text-slate-500 mb-2">زبون جديد (لم يسبق تسجيله)</p>
+                              <button
+                                type="button"
+                                onPointerDown={(e) => {
+                                  e.preventDefault(); // prevent blur
+                                  setQuickAddCustomerData({ name: orderInfo.companyName || orderInfo.merchantName || '', phone: customerSearch });
+                                  setShowQuickAddCustomer(true);
+                                  setShowCustomerPredictions(false);
+                                }}
+                                className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl transition-colors shadow-sm text-sm border border-indigo-200"
+                              >
+                                ➕ إضافة زبون جديد سريعاً
+                              </button>
+                            </div>
                           ) : (
                             customers.filter(c => c.phone && c.phone.includes(customerSearch)).map(cust => (
                               <div
@@ -3667,6 +3766,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   }));
                                   setCustomerSearch(cust.phone);
                                   setShowCustomerPredictions(false);
+                                  fetchCustomerInsights(cust.phone);
                                 }}
                                 className="p-3 hover:bg-orange-50 cursor-pointer border-b border-slate-100 last:border-0 flex items-center justify-between transition-colors"
                               >
@@ -3685,6 +3785,69 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           )}
                         </div>
                       )}
+                    </div>
+
+                    {/* Customer Insights Memory Card */}
+                    {loadingInsights ? (
+                      <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 animate-pulse flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-indigo-200"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 bg-indigo-200 rounded w-1/3"></div>
+                          <div className="h-3 bg-indigo-100 rounded w-1/2"></div>
+                        </div>
+                      </div>
+                    ) : customerInsights ? (
+                      <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 p-4 rounded-xl border border-indigo-200/60 shadow-sm relative overflow-hidden">
+                        <div className="absolute -left-4 -top-4 text-indigo-100 opacity-50">
+                          <Star size={64} fill="currentColor" />
+                        </div>
+                        <div className="relative z-10 space-y-2">
+                          <p className="text-xs font-bold text-indigo-800 flex items-center gap-1.5 mb-2">
+                            <span className="text-indigo-600">💡</span> ملاحظات الزبون السابقة
+                          </p>
+                          {customerInsights.lastPurchaseDate && (
+                            <p className="text-[11px] text-slate-600 flex items-center gap-1">
+                              <span className="font-bold">آخر شراء:</span> <span className="text-indigo-900 font-medium">{customerInsights.lastPurchaseDate}</span>
+                            </p>
+                          )}
+                          {customerInsights.lastItems && customerInsights.lastItems.length > 0 && (
+                            <p className="text-[11px] text-slate-600 flex gap-1">
+                              <span className="font-bold block w-max">اشترى مؤخراً:</span>
+                              <span className="truncate text-indigo-900 font-medium">{customerInsights.lastItems.join('، ')}</span>
+                            </p>
+                          )}
+                          {customerInsights.favoriteBrands && customerInsights.favoriteBrands.length > 0 && (
+                            <p className="text-[11px] text-slate-600 flex gap-1">
+                              <span className="font-bold">يفضل ماركات:</span>
+                              <span className="text-indigo-700 font-bold">{customerInsights.favoriteBrands.join('، ')}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* 2. اسم الشركة ( المشتري ) */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم الشركة ( المشتري ) <span className="text-rose-500">*</span></label>
+                      <input
+                        value={orderInfo.companyName}
+                        onChange={(e) => setOrderInfoField('companyName', e.target.value)}
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        placeholder="أدخل اسم الشركة..."
+                        dir="rtl"
+                      />
+                    </div>
+
+                    {/* 3. اسم التاجر ( المشتري ) */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم التاجر ( المشتري ) <span className="text-rose-500">*</span></label>
+                      <input
+                        value={orderInfo.merchantName}
+                        onChange={(e) => setOrderInfoField('merchantName', e.target.value)}
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        placeholder="أدخل اسم التاجر..."
+                        dir="rtl"
+                      />
                     </div>
 
                     {/* 4. العنوان */}
@@ -4251,6 +4414,72 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         )
       }
+
+      {/* Quick Add Customer Modal */}
+      {showQuickAddCustomer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowQuickAddCustomer(false)}>
+          <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl border border-white/50 flex flex-col transform transition-all animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-indigo-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <span className="text-lg">👤</span>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800">إضافة زبون جديد سريعاً</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">سيتم حفظ الزبون واستخدامه في الفاتورة الحالية</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQuickAddCustomer(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/50 hover:bg-slate-200 text-slate-500 transition-colors"
+              >
+                <X size={16} strokeWidth={3} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-600">رقم الهاتف</label>
+                <input
+                  type="text"
+                  value={quickAddCustomerData.phone}
+                  onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, phone: toEnglishDigits(e.target.value) })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none font-mono text-left transition-all"
+                  placeholder="05..."
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-600">الاسم (او اسم الشركة)</label>
+                <input
+                  type="text"
+                  value={quickAddCustomerData.name}
+                  onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, name: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                  placeholder="الاسم الثلاثي أو اسم الشركة..."
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="p-6 pt-0 flex gap-3">
+              <button
+                onClick={() => setShowQuickAddCustomer(false)}
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleQuickAddCustomer}
+                disabled={!quickAddCustomerData.name || !quickAddCustomerData.phone}
+                className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-600/20 text-sm"
+              >
+                حفظ واختيار
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Held Orders Modal */}
       {showHeldOrdersModal && (
