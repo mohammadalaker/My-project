@@ -3574,13 +3574,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             </div>
                           )}
                           <SwipeToDeleteItem onDelete={() => removeFromOrder(o.id)}>
-                            <div className="group relative bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:scale-[1.02]">
+                            <div className={`group relative rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count))
+                              ? 'bg-amber-50 border border-amber-300 shadow-[0_4px_20px_-4px_rgba(251,191,36,0.3)] hover:shadow-[0_8px_30px_-4px_rgba(251,191,36,0.4)]'
+                              : 'bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 hover:shadow-slate-200/50'
+                              }`}>
+                              {(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) && (
+                                <div className="absolute -top-3 -right-2 z-10 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-1 animate-pulse border-2 border-white">
+                                  <span>⚠️</span> آخر قطعة بالمخزون!
+                                </div>
+                              )}
                               <div className="flex gap-4">
-                                <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden border border-slate-100 relative pointer-events-none">
+                                <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border relative pointer-events-none ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? 'bg-amber-100/50 border-amber-200' : 'bg-slate-50 border-slate-100'
+                                  }`}>
                                   {getImage(o.item) ? (
                                     <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
                                   ) : (
-                                    <Package size={24} className="text-slate-300" />
+                                    <Package size={24} className={(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? "text-amber-400" : "text-slate-300"} />
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -4000,6 +4009,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <span className="text-2xl text-slate-400 mr-1">₪</span>
                     <span>{itemTotalWithTax(orderLines).toFixed(2)}</span>
                   </p>
+
+                  {/* The Savings Hook */}
+                  {(() => {
+                    const totalOriginalPrice = orderLines.reduce((sum, o) => sum + (getLineOriginalPrice(o) * (o.qty || 0)), 0);
+                    const totalSavings = Math.max(0, totalOriginalPrice - itemTotalWithTax(orderLines));
+                    return totalSavings > 0 ? (
+                      <p className="text-emerald-600 text-[11px] font-bold mt-1.5 flex items-center justify-start gap-1 animate-fade-in" dir="rtl">
+                        <span className="inline-block animate-bounce">🎉</span>
+                        لقد وفرت {totalSavings.toFixed(2)} ₪ في هذا الطلب!
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="text-right">
                   <p className="text-slate-500 text-[10px] font-medium uppercase tracking-widest mb-1">Items Included</p>
