@@ -3381,17 +3381,48 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       )}
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 relative">
                                       <div className="flex flex-col">
                                         <span className="text-[10px] text-slate-400 font-bold uppercase">Stock</span>
-                                        <span className={`text-xs font-bold ${getStockStatus(item) === 'In Stock' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                          {getStockStatus(item)}
-                                        </span>
+                                        {item.stock_count > 0 && item.stock_count <= 2 ? (
+                                          <span className="text-xs font-bold text-rose-500 animate-pulse flex items-center gap-1">
+                                            {item.stock_count} <span className="text-[10px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-md no-underline">قارب على الانتهاء!</span>
+                                          </span>
+                                        ) : (
+                                          <span className={`text-xs font-bold ${getStockStatus(item) === 'In Stock' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                            {getStockStatus(item)}
+                                          </span>
+                                        )}
                                       </div>
                                       <div className="flex flex-col items-end">
                                         <span className="text-[10px] text-slate-400 font-bold uppercase">Box</span>
                                         <span className="text-xs font-bold text-slate-700">{item.box || '-'}</span>
                                       </div>
+
+                                      {/* Restock Request Button Overlay */}
+                                      {item.stock_count > 0 && item.stock_count <= 2 && (
+                                        <div className="absolute top-[-36px] right-0 z-20">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              console.log(`[RESTOCK REQUEST] Item ID: ${item.id}, Barcode: ${item.barcode}, Name: ${item.name}, Current Stock: ${item.stock_count}`);
+                                              // Alert the user that it worked locally for now
+                                              const originalText = e.target.innerText;
+                                              e.target.innerHTML = '✓ تم الطلب';
+                                              e.target.className = 'bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-200 transition-all shadow-sm flex items-center gap-1';
+                                              setTimeout(() => {
+                                                e.target.innerHTML = originalText;
+                                                e.target.className = 'bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-bold px-2 py-1 rounded-lg border border-rose-200 transition-all shadow-sm flex items-center gap-1 active:scale-95';
+                                              }, 3000);
+                                            }}
+                                            className="bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-bold px-2 py-1 rounded-lg border border-rose-200 transition-all shadow-sm flex items-center gap-1 active:scale-95"
+                                            title="إرسال طلب تزويد للمخزن"
+                                          >
+                                            <span>📦</span> طلب تزويد
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
 
                                     {mode === 'catalog' ? (
