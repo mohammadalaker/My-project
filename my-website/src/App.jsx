@@ -3257,12 +3257,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         >
                           <Plus size={22} /> إنشاء عرض جديد
                         </button>
-                        <button
-                          onClick={handleForceLogoutAll}
-                          className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                        >
-                          <Power size={22} /> تسجيل خروج الجميع
-                        </button>
                         {editingOffer && (
                           <button
                             onClick={() => setEditingOffer(null)}
@@ -3409,6 +3403,32 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     )}
                   </div>
+                ) : mode === 'settings' ? (
+                  /* Settings View */
+                  <div className="max-w-3xl mx-auto py-10 px-4 animate-fade-in">
+                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center text-center space-y-6">
+                      <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mb-2">
+                        <Power size={40} />
+                      </div>
+                      <h2 className="text-3xl font-black text-slate-800">إدارة الجلسات</h2>
+                      <p className="text-slate-500 max-w-md mx-auto">
+                        من هنا يمكنك التحكم في جلسات جميع المستخدمين (المندوبين والمسؤولين). الضغط على الزر أدناه سيؤدي إلى إخراج الجميع من النظام فوراً.
+                      </p>
+
+                      {userRole === 'admin' ? (
+                        <button
+                          onClick={handleForceLogoutAll}
+                          className="mt-6 flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold text-lg shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                          <Power size={24} /> تسجيل خروج جميع الأجهزة
+                        </button>
+                      ) : (
+                        <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-sm font-bold flex items-center gap-2">
+                          <Lock size={16} /> هذه الخاصية متاحة للمدراء فقط
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ) : mode === 'submitted' ? null : (
                   <div className="space-y-12">
                     {[
@@ -3545,18 +3565,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 <div className="p-5 flex-1 flex flex-col">
                                   <div className="flex justify-between items-start gap-2 mb-1">
                                     <div className="flex flex-col mb-1 min-h-[2.5em] justify-start w-full text-right" dir="rtl">
-                                      {item.productType ? (
-                                        <h3 className="text-sm font-bold text-slate-800 leading-tight">
-                                          {item.productType}
-                                        </h3>
-                                      ) : (
-                                        <h3 className="text-sm font-bold text-slate-400 italic">
-                                          {/* Fallback if no product type is specified */}
-                                        </h3>
-                                      )}
-                                      <p className="text-xs text-slate-500 font-medium line-clamp-1 mt-0.5" title={item.name}>
+                                      <h3 className="text-sm font-bold text-slate-800 leading-tight line-clamp-2" title={item.name}>
                                         {item.name || 'Unknown Product'}
-                                      </p>
+                                      </h3>
                                     </div>
                                     {userRole === 'admin' && (
                                       <div className="flex flex-col gap-1 -mt-1 -mr-1">
@@ -3841,9 +3852,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   <div className="flex justify-between items-start gap-3">
                                     <input
                                       className="text-base font-bold text-slate-800 leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400"
-                                      value={o.customName || o.item?.group || ''}
+                                      value={o.customName || o.name || o.item?.name || ''}
                                       onChange={(e) => setOrderLineName(o.id, e.target.value)}
-                                      placeholder="Group Name"
+                                      placeholder="Product Name"
                                       onPointerDown={(e) => e.stopPropagation()}
                                     />
                                     <motion.button whileTap={{ scale: 0.8, rotate: 10 }} onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
