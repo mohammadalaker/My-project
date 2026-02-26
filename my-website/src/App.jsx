@@ -2596,7 +2596,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative ${(showOrderPanel || showCatalogPanel) ? 'rounded-3xl bg-white/40 shadow-xl border border-white/50' : ''}`}>
 
           {/* Header */}
-          <header className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'glass-panel sticky top-0 px-6 py-4'}`}>
+          <header className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'sticky top-0 px-6 py-4 backdrop-blur-xl bg-white/70 border-b border-slate-200/50 shadow-sm'}`}>
             <div className="flex flex-wrap items-center justify-between gap-4 max-w-7xl mx-auto w-full">
               <div className="flex items-center gap-4 shrink-0">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/30 rotate-3' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30 -rotate-3'}`}>
