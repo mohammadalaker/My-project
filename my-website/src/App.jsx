@@ -295,7 +295,7 @@ function App() {
   if (isCustomerDisplayMode) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
           <div className="animate-pulse text-indigo-500 flex flex-col items-center">
             <Package size={48} className="mb-4" />
             <span className="font-bold">Loading Display...</span>
@@ -311,7 +311,7 @@ function App() {
   if (isCustomerProductMode) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
           <div className="animate-pulse text-indigo-500 flex flex-col items-center">
             <Package size={48} className="mb-4" />
             <span className="font-bold">Loading Product...</span>
@@ -2568,7 +2568,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   if (!hasCheckedAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
         <div className="animate-pulse text-slate-400 text-sm font-medium">Loading…</div>
       </div>
     );
@@ -2577,7 +2577,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   if (!isAuthenticated) {
     return (
       <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
           <div className="animate-pulse text-slate-400 text-sm font-medium">Loading…</div>
         </div>
       }>
@@ -2796,7 +2796,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                       ))}
                       {!ordersLoading && submittedOrders.length === 0 && !ordersError && (
-                        <div className="text-center py-20 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                        <div className="text-center py-20 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50 rounded-3xl border border-dashed border-slate-200">
                           <Package size={48} className="mx-auto text-slate-300 mb-4" />
                           <p className="text-slate-400 font-medium">No submitted orders found.</p>
                         </div>
@@ -2832,7 +2832,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">الأصناف ({selectedOrder.items?.length || 0})</h3>
                             <div className="border border-slate-200 rounded-xl overflow-hidden">
                               <table className="w-full text-sm">
-                                <thead className="bg-slate-50">
+                                <thead className="bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
                                   <tr>
                                     <th className="text-right py-2 px-3 font-medium text-slate-600">الصنف</th>
                                     <th className="text-center py-2 px-2 font-medium text-slate-600">الكمية</th>
@@ -3048,11 +3048,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     ].map(({ key, label, count, icon: Icon, type }) => {
                       const isSelected = selectedGroup === key || (key === '__electrical__' && selectedGroup && isElectricalGroup(selectedGroup)) || (key === '__home__' && selectedGroup && !isElectricalGroup(selectedGroup));
 
-                      let activeClass = 'bg-slate-100/80 text-slate-600 hover:bg-white hover:shadow-md';
+                      let activeClass = 'bg-white/80 text-slate-600 hover:bg-white hover:shadow-md';
                       if (isSelected) {
-                        if (type === 'electrical') activeClass = 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30 scale-105';
-                        else if (type === 'household') activeClass = 'bg-gradient-to-r from-sky-400 to-cyan-500 text-white shadow-lg shadow-sky-500/30 scale-105';
-                        else activeClass = 'bg-slate-800 text-white shadow-lg scale-105';
+                        if (type === 'electrical') activeClass = 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30 scale-105 border-white/20';
+                        else if (type === 'household') activeClass = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/30 scale-105 border-white/20';
+                        else activeClass = 'bg-slate-800 text-white shadow-lg scale-105 border-white/10';
                       }
 
                       return (
@@ -3072,12 +3072,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {/* Sub-categories */}
                   {(selectedGroup === '__electrical__' || (selectedGroup && isElectricalGroup(selectedGroup))) && electricalGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => handleCategorySwitch('__electrical__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => handleCategorySwitch('__electrical__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {electricalGroupsSorted.map((g) => (
                         <button
                           key={g}
                           onClick={() => handleCategorySwitch(g)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-indigo-600'}`}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-violet-600 text-white shadow-md shadow-violet-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-violet-600'}`}
                         >
                           {g}
                         </button>
@@ -3086,12 +3086,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   )}
                   {(selectedGroup === '__home__' || (selectedGroup && selectedGroup !== '__electrical__' && !isElectricalGroup(selectedGroup))) && kitchenwareGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => handleCategorySwitch('__home__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => handleCategorySwitch('__home__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {kitchenwareGroupsSorted.map((g) => (
                         <button
                           key={g}
                           onClick={() => handleCategorySwitch(g)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-sky-600'}`}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-purple-600'}`}
                         >
                           {g}
                         </button>
@@ -3275,7 +3275,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     </div>
 
                     {customOffers.length === 0 && !editingOffer && (
-                      <div className="text-center py-20 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-200">
+                      <div className="text-center py-20 rounded-3xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-2 border-dashed border-slate-200">
                         <Gift size={64} className="mx-auto text-slate-300 mb-4" />
                         <p className="text-slate-500 font-medium">لا توجد عروض حالياً</p>
                         {userRole === 'admin' && (
@@ -3324,8 +3324,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   hidden: { opacity: 0, scale: 0.95, y: 10 },
                                   show: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
                                 }}
+                                whileHover={{
+                                  y: -6,
+                                  boxShadow: "0 20px 40px -8px rgba(0,0,0,0.12), 0 10px 20px -5px rgba(0,0,0,0.08)",
+                                  transition: { duration: 0.2, ease: "easeOut" }
+                                }}
                                 key={item.id}
-                                className="glass-card group flex flex-col h-full cursor-pointer hover:shadow-xl transition-shadow"
+                                className="glass-card group flex flex-col h-full cursor-pointer transition-colors"
                                 onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
                               >
                                 {item.group && (
@@ -3375,7 +3380,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   {mode === 'offers' && userRole === 'admin' && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); toggleOffer(item); }}
-                                      className={`absolute top-2 right-2 z-20 p-1.5 rounded-full shadow-md transition-all ${item.isOffer ? 'bg-amber-500 text-white' : 'bg-white text-slate-300 hover:bg-slate-50'}`}
+                                      className={`absolute top-2 right-2 z-20 p-1.5 rounded-full shadow-md transition-all ${item.isOffer ? 'bg-amber-500 text-white' : 'bg-white text-slate-300 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]'}`}
                                       title="Toggle Offer"
                                     >
                                       <Star size={16} fill={item.isOffer ? 'currentColor' : 'none'} />
@@ -3519,7 +3524,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         }}
                                         className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all btn-modern ${catalogItems.some((i) => i.id === item.id)
                                           ? 'bg-rose-100 text-rose-600 border border-rose-200'
-                                          : 'bg-slate-50 text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
+                                          : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
                                           }`}
                                       >
                                         {catalogItems.some((i) => i.id === item.id) ? (
@@ -3656,7 +3661,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-slate-50/50">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
 
               {/* TAB: ITEMS */}
               {activeTab === 'items' && (
@@ -3691,7 +3696,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <SwipeToDeleteItem onDelete={() => removeFromOrder(o.id)}>
                             <div className={`group relative rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count))
                               ? 'bg-amber-50 border border-amber-300 shadow-[0_4px_20px_-4px_rgba(251,191,36,0.3)] hover:shadow-[0_8px_30px_-4px_rgba(251,191,36,0.4)]'
-                              : 'bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 hover:shadow-slate-200/50'
+                              : 'bg-white hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-100 hover:border-slate-200 hover:shadow-slate-200/50'
                               }`}>
                               {(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) && (
                                 <div className="absolute -top-3 -right-2 z-10 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-1 animate-pulse border-2 border-white">
@@ -3699,7 +3704,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 </div>
                               )}
                               <div className="flex gap-4">
-                                <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border relative pointer-events-none ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? 'bg-amber-100/50 border-amber-200' : 'bg-slate-50 border-slate-100'
+                                <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border relative pointer-events-none ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? 'bg-amber-100/50 border-amber-200' : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-100'
                                   }`}>
                                   {getImage(o.item) ? (
                                     <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
@@ -3759,7 +3764,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       </div>
 
                                       {/* Card 2: Discount */}
-                                      <div className={`rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all ${getLineDiscountPercent(o) > 0 ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                      <div className={`rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all ${getLineDiscountPercent(o) > 0 ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200' : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-100 opacity-60'}`}>
                                         <span className={`text-[10px] font-bold uppercase tracking-wider ${getLineDiscountPercent(o) > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>نسبة الخصم</span>
                                         <span className={`font-bold text-sm sm:text-base font-mono ${getLineDiscountPercent(o) > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{getLineDiscountPercent(o)}%</span>
                                       </div>
@@ -3851,7 +3856,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         }}
                         onFocus={() => setShowCustomerPredictions(true)}
                         onBlur={() => setTimeout(() => setShowCustomerPredictions(false), 200)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm font-mono text-left"
+                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm font-mono text-left"
                         placeholder="05..."
                         dir="ltr"
                         lang="en"
@@ -3862,7 +3867,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       {showCustomerPredictions && customerSearch.length >= 2 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                           {customers.filter(c => c.phone && c.phone.includes(customerSearch)).length === 0 ? (
-                            <div className="p-3 bg-slate-50 border-b border-slate-100 text-center">
+                            <div className="p-3 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-b border-slate-100 text-center">
                               <p className="text-sm text-slate-500 mb-2">زبون جديد (لم يسبق تسجيله)</p>
                               <button
                                 type="button"
@@ -3958,7 +3963,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <input
                         value={orderInfo.companyName}
                         onChange={(e) => setOrderInfoField('companyName', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
                         placeholder="أدخل اسم الشركة..."
                         dir="rtl"
                       />
@@ -3970,7 +3975,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <input
                         value={orderInfo.merchantName}
                         onChange={(e) => setOrderInfoField('merchantName', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
                         placeholder="أدخل اسم التاجر..."
                         dir="rtl"
                       />
@@ -3982,7 +3987,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <input
                         value={orderInfo.address}
                         onChange={(e) => setOrderInfoField('address', e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
                         placeholder="المدينة، الشارع..."
                         dir="rtl"
                       />
@@ -3996,7 +4001,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           type="date"
                           value={orderInfo.orderDate}
                           onChange={(e) => setOrderInfoField('orderDate', e.target.value)}
-                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                          className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
                         />
                       </div>
 
@@ -4006,7 +4011,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <input
                           value={orderInfo.customerNumber}
                           onChange={(e) => setOrderInfoField('customerNumber', toEnglishDigits(e.target.value))}
-                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono text-left"
+                          className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono text-left"
                           placeholder="#"
                           dir="ltr"
                           lang="en"
@@ -4052,7 +4057,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           inputMode="numeric"
                           value={orderInfo.checksCount}
                           onChange={(e) => setOrderInfoField('checksCount', toEnglishDigits(e.target.value))}
-                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                          className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
                           placeholder="أدخل عدد الشيكات (مثلاً ٦ أو 6)..."
                         />
                       </div>
@@ -4064,7 +4069,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
             {/* Discount Section */}
             {orderLines.length > 0 && activeTab === 'items' && (
-              <div className="flex-shrink-0 bg-slate-50 border-t border-slate-200 p-4 z-10">
+              <div className="flex-shrink-0 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-t border-slate-200 p-4 z-10">
                 <div className="flex items-center gap-3">
                   <div className="flex-1 space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-500 mr-1">نوع الخصم إضافي</label>
@@ -4237,7 +4242,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <h3 className="text-lg font-bold text-slate-800">Product Details</h3>
                 <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">✕</button>
               </div>
-              <div className="aspect-square max-h-64 rounded-xl bg-slate-50 flex items-center justify-center mb-4 overflow-hidden">
+              <div className="aspect-square max-h-64 rounded-xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] flex items-center justify-center mb-4 overflow-hidden">
                 {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-6" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={80} className="text-slate-300" />}
               </div>
               {selectedItem.group && <p className="text-xs font-semibold text-indigo-600 mb-1">Group: {selectedItem.group}</p>}
@@ -4251,7 +4256,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
               <div className="flex gap-2 mt-5">
                 {userRole === 'admin' && (
-                  <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">Edit</button>
+                  <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors">Edit</button>
                 )}
                 {mode === 'catalog' ? (
                   <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`flex-1 py-3 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-rose-200 text-rose-700 hover:bg-rose-50'}`}>
@@ -4360,7 +4365,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowQuantityModal(false)}
-                    className="flex-1 py-3.5 rounded-[14px] border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-colors"
+                    className="flex-1 py-3.5 rounded-[14px] border border-slate-200 text-slate-700 font-bold text-sm hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors"
                   >
                     Cancel
                   </button>
@@ -4417,7 +4422,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
                 {/* إظهار المنتج للعملاء - داخل صفحة التعديل */}
                 {userRole === 'admin' && (
-                  <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-xl border border-slate-200 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
                     <span className="text-xs font-medium text-slate-600">إظهار المنتج للعملاء</span>
                     <button
                       type="button"
@@ -4467,7 +4472,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       />
                       <label className={`block cursor-pointer ${uploading ? 'opacity-70' : ''}`}>
                         <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={(e) => handleImageUpload(e, editingItem || { barcode: formData.barcode })} className="sr-only" />
-                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                           {uploading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Upload size={14} className="shrink-0" />}
                           {uploading ? 'Uploading...' : 'Upload'}
                         </span>
@@ -4478,7 +4483,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   <p className="text-[11px] text-slate-500">Paste an image URL above or upload from your device.</p>
                 </div>
                 <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">Cancel</button>
+                  <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] font-medium transition-colors">Cancel</button>
                   <button type="submit" className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-lg shadow-indigo-500/25 transition-all">Save</button>
                 </div>
               </form>
@@ -4504,7 +4509,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div className="flex gap-3">
                 <button
                   onClick={() => setEditingNameItem(null)}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors"
                 >
                   Cancel
                 </button>
@@ -4537,7 +4542,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div className="flex gap-3">
                 <button
                   onClick={() => setEditingTypeItem(null)}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors"
                 >
                   Cancel
                 </button>
@@ -4582,7 +4587,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   type="text"
                   value={quickAddCustomerData.phone}
                   onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, phone: toEnglishDigits(e.target.value) })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none font-mono text-left transition-all"
+                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none font-mono text-left transition-all"
                   placeholder="05..."
                   dir="ltr"
                 />
@@ -4593,7 +4598,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   type="text"
                   value={quickAddCustomerData.name}
                   onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, name: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
                   placeholder="الاسم الثلاثي أو اسم الشركة..."
                   autoFocus
                 />
@@ -4623,7 +4628,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       {showHeldOrdersModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowHeldOrdersModal(false)}>
           <div className="bg-white rounded-[24px] overflow-hidden w-full max-w-2xl shadow-2xl border border-white/50 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
                   <Clock size={20} />
@@ -4658,7 +4663,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     return (
                       <div key={order.id} className="group flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all">
                         <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] flex items-center justify-center border border-slate-100 shrink-0">
                             <ShoppingCart size={20} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
                           </div>
                           <div className="flex-1">
@@ -4690,7 +4695,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           </button>
                           <button
                             onClick={() => handleRemoveHeldOrder(order.id)}
-                            className="p-2.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors border border-slate-200 hover:border-rose-200"
+                            className="p-2.5 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors border border-slate-200 hover:border-rose-200"
                             title="حذف نهائياً"
                           >
                             <Trash2 size={18} />
@@ -4703,10 +4708,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50">
+            <div className="p-4 border-t border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
               <button
                 onClick={() => setShowHeldOrdersModal(false)}
-                className="w-full py-3 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl transition-colors"
+                className="w-full py-3 bg-white border border-slate-200 text-slate-600 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] font-bold rounded-xl transition-colors"
               >
                 إغلاق
               </button>
