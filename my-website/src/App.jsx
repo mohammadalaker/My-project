@@ -44,6 +44,8 @@ import {
   Smartphone,
   Mic,
   MonitorPlay, // For presentation mode
+  Menu,
+  User,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -192,6 +194,7 @@ const CustomerProductView = lazy(() => import('./components/CustomerProductView'
 import BottomNav from './components/BottomNav';
 import OfferCard from './components/OfferCard';
 import Dashboard from './components/Dashboard';
+import Sidebar from './components/Sidebar';
 import SmartScreensaver from './components/SmartScreensaver';
 
 function AddToOfferRow({ item, getImage, onAdd }) {
@@ -288,6 +291,8 @@ function App() {
   /* Login State */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null); // 'admin' or 'customer'
+  const [username, setUsername] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
@@ -420,17 +425,20 @@ function App() {
   useEffect(() => {
     const auth = localStorage.getItem('sales_auth');
     const role = localStorage.getItem('sales_role');
+    const storedUser = localStorage.getItem('sales_username');
     if (auth === 'true') {
       setIsAuthenticated(true);
       setUserRole(role || 'customer');
+      setUsername(storedUser || null);
     }
     setHasCheckedAuth(true);
   }, []);
 
   const handleLogin = (username, password, setError, rememberMe = true) => {
-    const loginSuccess = (role) => {
+    const loginSuccess = (role, loggedInUser = username) => {
       localStorage.setItem('sales_auth', 'true');
       localStorage.setItem('sales_role', role);
+      localStorage.setItem('sales_username', loggedInUser);
       localStorage.setItem('sales_login_time', Date.now().toString());
       if (rememberMe) {
         localStorage.setItem('sales_remember_me', 'true');
@@ -439,13 +447,15 @@ function App() {
       }
       setIsAuthenticated(true);
       setUserRole(role);
+      // We also need a state for username, which we'll add to App.jsx soon or just read from localStorage
     };
 
-    if (username === 'admin' && password === '123456') {
+    if (username === 'mohammadalaker' && password === '123456') {
+      loginSuccess('admin', 'mohammadalaker');
+    } else if (username === 'admin' && password === '123456') {
       loginSuccess('admin');
     } else if (username === 'sale' && password === '123') {
       loginSuccess('customer');
-      // Fix potential double set bug in original code
     } else if (username === 'supervisor' && password === '123') {
       loginSuccess('supervisor');
     } else {
@@ -457,10 +467,12 @@ function App() {
     if (silent || window.confirm('Are you sure you want to logout?')) {
       localStorage.removeItem('sales_auth');
       localStorage.removeItem('sales_role');
+      localStorage.removeItem('sales_username');
       localStorage.removeItem('sales_login_time');
       localStorage.removeItem('sales_remember_me');
       setIsAuthenticated(false);
       setUserRole(null);
+      setUsername(null);
     }
   };
 
@@ -2595,10 +2607,30 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       >
         <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative ${(showOrderPanel || showCatalogPanel) ? 'rounded-3xl bg-white/40 shadow-xl border border-white/50' : ''}`}>
 
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            mode={mode}
+            setMode={setMode}
+            userRole={userRole}
+            handleLogout={handleLogout}
+            username={username}
+          />
+
           {/* Header */}
           <header className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'sticky top-0 px-6 py-4 backdrop-blur-xl bg-white/70 border-b border-slate-200/50 shadow-sm'}`}>
             <div className="flex flex-wrap items-center justify-between gap-4 max-w-7xl mx-auto w-full">
               <div className="flex items-center gap-4 shrink-0">
+                {/* Full App Menu Toggle */}
+                {(userRole === 'admin' || userRole === 'supervisor') && (
+                  <button
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 transition-colors"
+                  >
+                    <Menu size={24} />
+                  </button>
+                )}
+
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/30 rotate-3' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30 -rotate-3'}`}>
                   {mode === 'catalog' ? <Grid className="text-white drop-shadow-md" size={24} /> : <Package className="text-white drop-shadow-md" size={24} />}
                 </div>
@@ -2622,63 +2654,78 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
 
               <div className="flex items-center gap-3 ml-auto shrink-0">
-                <div className="hidden sm:flex bg-slate-100/50 p-1 rounded-xl border border-white/50 backdrop-blur-sm">
-                  {userRole === 'supervisor' && (
-                    <button
-                      onClick={() => { setMode('dashboard'); setShowOrderPanel(false); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'dashboard' ? 'bg-white shadow-md text-amber-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      Dashboard
-                    </button>
-                  )}
-                  {userRole === 'supervisor' && (
-                    <button
-                      onClick={() => { setMode('submitted'); setShowOrderPanel(false); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'submitted' ? 'bg-white shadow-md text-emerald-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      Orders
-                    </button>
-                  )}
-                  <button
-                    onClick={() => { setMode('order'); setShowOrderPanel(false); }}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'order' ? 'bg-white shadow-md text-indigo-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    Sales
-                  </button>
-                  <button
-                    onClick={() => { setMode('offers'); setShowOrderPanel(false); }}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'offers' ? 'bg-white shadow-md scale-105' : ''} ${customOffers.length > 0 ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    Offers
-                  </button>
-                  {userRole !== 'customer' && (
-                    <button
-                      onClick={() => { setMode('catalog'); setShowOrderPanel(false); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'catalog' ? 'bg-white shadow-md text-rose-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      Catalog
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowHeldOrdersModal(true)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${heldOrders.length > 0 ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-200' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    الفواتير المعلقة
-                    {heldOrders.length > 0 && (
-                      <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] tabular-nums shadow-sm">
-                        {heldOrders.length}
-                      </span>
+                {username === 'mohammadalaker' ? (
+                  <div className="hidden sm:flex items-center gap-3 bg-white/60 border border-slate-200/70 p-1.5 pr-5 rounded-full shadow-sm backdrop-blur-md transition-all hover:shadow-md cursor-pointer hover:bg-white/90">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
+                      <User className="w-6 h-6 text-slate-400 mt-2" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[13px] font-bold text-slate-800 leading-tight">Mohammed Alaker</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider leading-none">Manager</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/50"></span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="hidden sm:flex bg-slate-100/50 p-1 rounded-xl border border-white/50 backdrop-blur-sm">
+                    {userRole === 'supervisor' && (
+                      <button
+                        onClick={() => { setMode('dashboard'); setShowOrderPanel(false); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'dashboard' ? 'bg-white shadow-md text-amber-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Dashboard
+                      </button>
                     )}
-                  </button>
-                </div>
+                    {userRole === 'supervisor' && (
+                      <button
+                        onClick={() => { setMode('submitted'); setShowOrderPanel(false); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'submitted' ? 'bg-white shadow-md text-emerald-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Orders
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setMode('order'); setShowOrderPanel(false); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'order' ? 'bg-white shadow-md text-indigo-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Sales
+                    </button>
+                    <button
+                      onClick={() => { setMode('offers'); setShowOrderPanel(false); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'offers' ? 'bg-white shadow-md scale-105' : ''} ${customOffers.length > 0 ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      Offers
+                    </button>
+                    {userRole !== 'customer' && (
+                      <button
+                        onClick={() => { setMode('catalog'); setShowOrderPanel(false); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'catalog' ? 'bg-white shadow-md text-rose-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Catalog
+                      </button>
+                    )}
+                  </div>
+                )}
                 <button
-                  onClick={handleLogout}
-                  className="p-3 rounded-xl bg-white/50 hover:bg-rose-100 text-slate-500 hover:text-rose-600 transition-all border border-white/60 hover:scale-105 active:scale-95"
-                  title="Logout"
+                  onClick={() => setShowHeldOrdersModal(true)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${heldOrders.length > 0 ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-200' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  <Power size={20} strokeWidth={2.5} />
+                  الفواتير المعلقة
+                  {heldOrders.length > 0 && (
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] tabular-nums shadow-sm">
+                      {heldOrders.length}
+                    </span>
+                  )}
                 </button>
               </div>
+              <button
+                onClick={handleLogout}
+                className="p-3 rounded-xl bg-white/50 hover:bg-rose-100 text-slate-500 hover:text-rose-600 transition-all border border-white/60 hover:scale-105 active:scale-95"
+                title="Logout"
+              >
+                <Power size={20} strokeWidth={2.5} />
+              </button>
             </div>
           </header>
 
@@ -3573,7 +3620,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
           </div>
         </div>
-      </div>
+      </div >
 
       {
         !showOrderPanel && mode === 'order' && (
@@ -4559,166 +4606,170 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
 
       {/* Quick Add Customer Modal */}
-      {showQuickAddCustomer && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowQuickAddCustomer(false)}>
-          <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl border border-white/50 flex flex-col transform transition-all animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-indigo-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
-                  <span className="text-lg">👤</span>
+      {
+        showQuickAddCustomer && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowQuickAddCustomer(false)}>
+            <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl border border-white/50 flex flex-col transform transition-all animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-indigo-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                    <span className="text-lg">👤</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">إضافة زبون جديد سريعاً</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">سيتم حفظ الزبون واستخدامه في الفاتورة الحالية</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-800">إضافة زبون جديد سريعاً</h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">سيتم حفظ الزبون واستخدامه في الفاتورة الحالية</p>
+                <button
+                  onClick={() => setShowQuickAddCustomer(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/50 hover:bg-slate-200 text-slate-500 transition-colors"
+                >
+                  <X size={16} strokeWidth={3} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600">رقم الهاتف</label>
+                  <input
+                    type="text"
+                    value={quickAddCustomerData.phone}
+                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, phone: toEnglishDigits(e.target.value) })}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none font-mono text-left transition-all"
+                    placeholder="05..."
+                    dir="ltr"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600">الاسم (او اسم الشركة)</label>
+                  <input
+                    type="text"
+                    value={quickAddCustomerData.name}
+                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, name: e.target.value })}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                    placeholder="الاسم الثلاثي أو اسم الشركة..."
+                    autoFocus
+                  />
                 </div>
               </div>
-              <button
-                onClick={() => setShowQuickAddCustomer(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/50 hover:bg-slate-200 text-slate-500 transition-colors"
-              >
-                <X size={16} strokeWidth={3} />
-              </button>
-            </div>
 
-            <div className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-600">رقم الهاتف</label>
-                <input
-                  type="text"
-                  value={quickAddCustomerData.phone}
-                  onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, phone: toEnglishDigits(e.target.value) })}
-                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none font-mono text-left transition-all"
-                  placeholder="05..."
-                  dir="ltr"
-                />
+              <div className="p-6 pt-0 flex gap-3">
+                <button
+                  onClick={() => setShowQuickAddCustomer(false)}
+                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleQuickAddCustomer}
+                  disabled={!quickAddCustomerData.name || !quickAddCustomerData.phone}
+                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-600/20 text-sm"
+                >
+                  حفظ واختيار
+                </button>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-600">الاسم (او اسم الشركة)</label>
-                <input
-                  type="text"
-                  value={quickAddCustomerData.name}
-                  onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, name: e.target.value })}
-                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
-                  placeholder="الاسم الثلاثي أو اسم الشركة..."
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="p-6 pt-0 flex gap-3">
-              <button
-                onClick={() => setShowQuickAddCustomer(false)}
-                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleQuickAddCustomer}
-                disabled={!quickAddCustomerData.name || !quickAddCustomerData.phone}
-                className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-600/20 text-sm"
-              >
-                حفظ واختيار
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Held Orders Modal */}
-      {showHeldOrdersModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowHeldOrdersModal(false)}>
-          <div className="bg-white rounded-[24px] overflow-hidden w-full max-w-2xl shadow-2xl border border-white/50 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-                  <Clock size={20} />
+      {
+        showHeldOrdersModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowHeldOrdersModal(false)}>
+            <div className="bg-white rounded-[24px] overflow-hidden w-full max-w-2xl shadow-2xl border border-white/50 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-800">الفواتير المعلقة</h3>
+                    <p className="text-sm text-slate-500 mt-0.5">يمكنك استعادة الفاتورة أو حذفها</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-800">الفواتير المعلقة</h3>
-                  <p className="text-sm text-slate-500 mt-0.5">يمكنك استعادة الفاتورة أو حذفها</p>
-                </div>
+                <button
+                  onClick={() => setShowHeldOrdersModal(false)}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                onClick={() => setShowHeldOrdersModal(false)}
-                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-6 bg-white min-h-[300px]">
-              {heldOrders.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
-                  <Clock size={48} className="opacity-20" />
-                  <p className="text-lg font-medium">لا توجد فواتير معلقة حالياً</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {heldOrders.map((order) => {
-                    const dateObj = new Date(order.timestamp);
-                    const timeString = dateObj.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
-                    const dateString = dateObj.toLocaleDateString('ar-SA');
-                    const firstItemNames = order.orderItems.slice(0, 2).map((i) => i.customName || i.name).join('، ');
+              <div className="flex-1 overflow-y-auto p-6 bg-white min-h-[300px]">
+                {heldOrders.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
+                    <Clock size={48} className="opacity-20" />
+                    <p className="text-lg font-medium">لا توجد فواتير معلقة حالياً</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {heldOrders.map((order) => {
+                      const dateObj = new Date(order.timestamp);
+                      const timeString = dateObj.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+                      const dateString = dateObj.toLocaleDateString('ar-SA');
+                      const firstItemNames = order.orderItems.slice(0, 2).map((i) => i.customName || i.name).join('، ');
 
-                    return (
-                      <div key={order.id} className="group flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all">
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] flex items-center justify-center border border-slate-100 shrink-0">
-                            <ShoppingCart size={20} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
+                      return (
+                        <div key={order.id} className="group flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all">
+                          <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] flex items-center justify-center border border-slate-100 shrink-0">
+                              <ShoppingCart size={20} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-slate-800 flex items-center gap-1"><Clock size={14} className="text-slate-400" /> {timeString}</span>
+                                <span className="text-xs text-slate-400">• {dateString}</span>
+                              </div>
+                              <div className="text-sm text-slate-600 font-medium">
+                                {order.totalItems} أصناف <span className="text-slate-300 mx-1">|</span> الإجمالي: <span className="font-bold text-slate-800">₪{order.totalAmount?.toFixed(2) || (order.orderItems.reduce((acc, i) => acc + (i.qty * i.unitPrice), 0).toFixed(2))}</span>
+                              </div>
+                              {firstItemNames && (
+                                <div className="text-xs text-slate-500 mt-1 truncate max-w-[200px] sm:max-w-xs" title={firstItemNames}>
+                                  أُضيف: {firstItemNames} {order.orderItems.length > 2 && '...'}
+                                </div>
+                              )}
+                              {(order.orderInfo?.customerNumber || order.orderInfo?.phone) && (
+                                <div className="text-xs text-indigo-500 font-medium mt-1">
+                                  {order.orderInfo.merchantName || order.orderInfo.companyName || order.orderInfo.phone || ('رقم الزبون: ' + order.orderInfo.customerNumber)}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-slate-800 flex items-center gap-1"><Clock size={14} className="text-slate-400" /> {timeString}</span>
-                              <span className="text-xs text-slate-400">• {dateString}</span>
-                            </div>
-                            <div className="text-sm text-slate-600 font-medium">
-                              {order.totalItems} أصناف <span className="text-slate-300 mx-1">|</span> الإجمالي: <span className="font-bold text-slate-800">₪{order.totalAmount?.toFixed(2) || (order.orderItems.reduce((acc, i) => acc + (i.qty * i.unitPrice), 0).toFixed(2))}</span>
-                            </div>
-                            {firstItemNames && (
-                              <div className="text-xs text-slate-500 mt-1 truncate max-w-[200px] sm:max-w-xs" title={firstItemNames}>
-                                أُضيف: {firstItemNames} {order.orderItems.length > 2 && '...'}
-                              </div>
-                            )}
-                            {(order.orderInfo?.customerNumber || order.orderInfo?.phone) && (
-                              <div className="text-xs text-indigo-500 font-medium mt-1">
-                                {order.orderInfo.merchantName || order.orderInfo.companyName || order.orderInfo.phone || ('رقم الزبون: ' + order.orderInfo.customerNumber)}
-                              </div>
-                            )}
+                          <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
+                            <button
+                              onClick={() => handleRestoreHeldOrder(order)}
+                              className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
+                            >
+                              <ShoppingCart size={16} /> استعادة
+                            </button>
+                            <button
+                              onClick={() => handleRemoveHeldOrder(order.id)}
+                              className="p-2.5 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors border border-slate-200 hover:border-rose-200"
+                              title="حذف نهائياً"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
-                          <button
-                            onClick={() => handleRestoreHeldOrder(order)}
-                            className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
-                          >
-                            <ShoppingCart size={16} /> استعادة
-                          </button>
-                          <button
-                            onClick={() => handleRemoveHeldOrder(order.id)}
-                            className="p-2.5 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors border border-slate-200 hover:border-rose-200"
-                            title="حذف نهائياً"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-            <div className="p-4 border-t border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
-              <button
-                onClick={() => setShowHeldOrdersModal(false)}
-                className="w-full py-3 bg-white border border-slate-200 text-slate-600 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] font-bold rounded-xl transition-colors"
-              >
-                إغلاق
-              </button>
+              <div className="p-4 border-t border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
+                <button
+                  onClick={() => setShowHeldOrdersModal(false)}
+                  className="w-full py-3 bg-white border border-slate-200 text-slate-600 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] font-bold rounded-xl transition-colors"
+                >
+                  إغلاق
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Presentation Mode Modal - Ultra Modern Redesign */}
       <AnimatePresence>
