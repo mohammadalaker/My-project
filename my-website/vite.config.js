@@ -6,9 +6,9 @@ const pwaPlugin = VitePWA({
   registerType: 'autoUpdate',
   includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
   manifest: {
-    name: 'Saneen POS',
-    short_name: 'Saneen',
-    description: 'Point of Sale System for Saneen',
+    name: 'Maslamani Sales',
+    short_name: 'Maslamani',
+    description: 'Point of Sale System for Maslamani',
     theme_color: '#ffffff',
     background_color: '#f8fafc',
     display: 'standalone',
@@ -65,7 +65,6 @@ export default defineConfig({
   base: '/',
   plugins: [
     react(),
-    // تعطيل PWA أثناء البناء (production) لتجنب خطأ terser في workbox
-    ...(process.env.NODE_ENV !== 'production' ? [pwaPlugin] : [])
+    pwaPlugin
   ],
 })
