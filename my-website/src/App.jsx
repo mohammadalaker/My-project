@@ -46,6 +46,7 @@ import {
   MonitorPlay, // For presentation mode
   Menu,
   User,
+  ChevronRight,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -3216,6 +3217,29 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-lg shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2"
                           >
                             <span>فتح الكتالوج</span>
+                            <ChevronRight size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Offers Choice */}
+                    <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-amber-900/5 border border-amber-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                      <div className="absolute top-0 right-0 p-32 bg-amber-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
+                      <div className="relative z-10 flex flex-col h-full">
+                        <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mb-6 shadow-inner">
+                          <Gift size={32} />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-800 mb-3">العروض الخاصة</h3>
+                        <p className="text-slate-500 mb-8 leading-relaxed">
+                          استعرض العروض الحصرية والباقات الترويجية لتقديم أفضل الخصومات للعملاء.
+                        </p>
+                        <div className="mt-auto">
+                          <button
+                            onClick={() => { setMode('offers'); setShowOrderPanel(false); }}
+                            className="w-full py-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center gap-2"
+                          >
+                            <span>استعراض العروض</span>
                             <ChevronRight size={20} />
                           </button>
                         </div>
