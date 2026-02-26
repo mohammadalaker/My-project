@@ -3565,11 +3565,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 <div className="p-5 flex-1 flex flex-col">
                                   <div className="flex justify-between items-start gap-2 mb-1">
                                     <div className="flex flex-col mb-1 min-h-[2.5em] justify-start w-full text-right" dir="rtl">
-                                      <h3 className="text-sm font-bold text-slate-800 leading-tight line-clamp-2" title={item.name}>
+                                      {item.productType ? (
+                                        <h3 className="text-sm font-bold text-slate-800 leading-tight">
+                                          {item.productType}
+                                        </h3>
+                                      ) : (
+                                        <h3 className="text-sm font-bold text-slate-400 italic">
+                                          {/* Fallback if no product type is specified */}
+                                        </h3>
+                                      )}
+                                      <p className="text-xs text-slate-500 font-medium line-clamp-1 mt-0.5" title={item.name}>
                                         {item.name || 'Unknown Product'}
-                                      </h3>
+                                      </p>
                                     </div>
-                                    {userRole === 'admin' && (
+                                    {userRole === 'admin' && mode !== 'order' && (
                                       <div className="flex flex-col gap-1 -mt-1 -mr-1">
                                         <button
                                           onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
@@ -3736,7 +3745,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
 
       {
-        showOrderPanel && (
+        showOrderPanel && mode === 'order' && (
           <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-white/95 backdrop-blur-2xl border-l border-slate-200 shadow-2xl z-50 transition-all duration-500 text-slate-800">
             {/* Header / Tabs */}
             <div className="flex-shrink-0 z-20">
