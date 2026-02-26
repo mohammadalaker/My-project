@@ -221,7 +221,7 @@ export default function Dashboard({ items, orders }) {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
+        <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500 bg-slate-50 min-h-screen">
 
             {/* Header / Actions */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
@@ -260,46 +260,49 @@ export default function Dashboard({ items, orders }) {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-emerald-600 shadow-inner">
                         <DollarSign size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Total Revenue</p>
+                        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Total Revenue</p>
                         <h3 className="text-3xl font-black text-slate-800">₪{Math.round(kpis.totalRevenue).toLocaleString()}</h3>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center text-indigo-600 shadow-inner">
                         <ShoppingCart size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Total Orders</p>
+                        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Total Orders</p>
                         <h3 className="text-3xl font-black text-slate-800">{kpis.totalOrders}</h3>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center text-amber-600 shadow-inner">
                         <TrendingUp size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Avg Order Value</p>
+                        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Avg Order Value</p>
                         <h3 className="text-3xl font-black text-slate-800">₪{Math.round(kpis.avgOrderValue).toLocaleString()}</h3>
                     </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 shadow-xl shadow-slate-900/20 text-white flex flex-col gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white">
+                <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-800 to-slate-900 rounded-3xl p-6 shadow-[0_8px_30px_rgb(99,102,241,0.25)] text-white flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(99,102,241,0.35)]">
+                    {/* Glass highlight effect on the dark card */}
+                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-32 h-32 bg-indigo-500 rounded-full blur-3xl opacity-30 pointer-events-none"></div>
+
+                    <div className="relative z-10 w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-indigo-300">
                         <Award size={24} strokeWidth={2.5} />
                     </div>
-                    <div>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Top Seller</p>
+                    <div className="relative z-10">
+                        <p className="text-sm font-bold text-indigo-200/80 uppercase tracking-wider mb-1">Top Seller</p>
                         <h3 className="text-lg font-bold truncate" title={topSellers[0]?.name || 'N/A'}>
                             {topSellers[0]?.name || 'N/A'}
                         </h3>
-                        <p className="text-sm text-slate-300 mt-1">{topSellers[0]?.qty || 0} units sold</p>
+                        <p className="text-sm text-indigo-200 mt-1">{topSellers[0]?.qty || 0} units sold</p>
                     </div>
                 </div>
 
@@ -309,7 +312,7 @@ export default function Dashboard({ items, orders }) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Bar Chart (7 Days) */}
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 lg:col-span-2 flex flex-col gap-6">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] lg:col-span-2 flex flex-col gap-6 transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
                     <div className="flex flex-col gap-1">
                         <h3 className="text-lg font-bold text-slate-800">Revenue (Last 7 Days)</h3>
                         <p className="text-sm text-slate-500">Daily breakdown of total sales</p>
@@ -333,7 +336,7 @@ export default function Dashboard({ items, orders }) {
                 </div>
 
                 {/* Donut Chart (Categories) */}
-                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col gap-6">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-6 transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
                     <div className="flex flex-col gap-1">
                         <h3 className="text-lg font-bold text-slate-800">Sales by Category</h3>
                         <p className="text-sm text-slate-500">Revenue distribution</p>
@@ -371,7 +374,7 @@ export default function Dashboard({ items, orders }) {
             </div>
 
             {/* Charts Row 2: Peak Hours */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col gap-6 mt-6">
+            <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-6 mt-6 transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
                 <div className="flex flex-col gap-1">
                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <Clock size={20} className="text-indigo-500" />
@@ -409,7 +412,7 @@ export default function Dashboard({ items, orders }) {
 
             {/* Low Stock Alerts */}
             {lowStockItems.length > 0 && (
-                <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 shadow-sm">
+                <div className="bg-rose-50/70 backdrop-blur-xl border border-rose-100 rounded-3xl p-6 shadow-[0_8px_30px_rgb(225,29,72,0.06)] transition-all duration-300 hover:shadow-[0_12px_40px_rgb(225,29,72,0.12)]">
                     <div className="flex items-center gap-2 mb-4 text-rose-700">
                         <AlertTriangle size={24} strokeWidth={2.5} />
                         <h3 className="text-lg font-bold">تنبيه المخزون المنخفض (أقل من 3 قطع)</h3>

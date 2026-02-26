@@ -101,7 +101,7 @@ export default function CustomerProductView() {
     const stockCount = Number(product.stock_count) || 0;
 
     return (
-        <div className="min-h-[100dvh] bg-white font-sans selection:bg-indigo-100 pb-24" dir="rtl">
+        <div className="min-h-[100dvh] bg-slate-50 font-sans selection:bg-indigo-100 pb-24" dir="rtl">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -126,7 +126,7 @@ export default function CustomerProductView() {
 
             <main className="max-w-md mx-auto w-full">
                 {/* Product Image Section */}
-                <section className="relative w-full aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-8 overflow-hidden">
+                <section className="relative w-full aspect-square bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center p-8 overflow-hidden pb-20 rounded-b-[2.5rem] shadow-sm shadow-slate-200/50">
                     {/* Subtle background decoration */}
                     <div className="absolute inset-0 bg-grid-slate-200/50 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] pointer-events-none" />
 
@@ -154,76 +154,78 @@ export default function CustomerProductView() {
                 </section>
 
                 {/* Product Info */}
-                <section className="p-6">
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                        <p className="text-xs font-mono text-slate-400 mb-2">{product.barcode}</p>
-                        <h2 className="text-2xl font-black text-slate-800 leading-snug mb-2">
-                            {product.eng_name || product.brand_group || 'منتج غير معروف'}
-                        </h2>
-                        {product.product_type && (
-                            <p className="text-sm font-bold text-indigo-500 mb-6 bg-indigo-50 inline-block px-3 py-1 rounded-lg">
-                                {product.product_type}
-                            </p>
-                        )}
-                    </motion.div>
+                <section className="px-4 relative z-30 -mt-24">
+                    <div className="bg-white/70 backdrop-blur-2xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-[2.5rem] p-6 sm:p-8">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                            <p className="text-xs font-mono text-slate-400 mb-2">{product.barcode}</p>
+                            <h2 className="text-2xl font-black text-slate-800 leading-snug mb-2">
+                                {product.eng_name || product.brand_group || 'منتج غير معروف'}
+                            </h2>
+                            {product.product_type && (
+                                <p className="text-sm font-bold text-indigo-500 mb-6 bg-indigo-50 inline-block px-3 py-1 rounded-lg">
+                                    {product.product_type}
+                                </p>
+                            )}
+                        </motion.div>
 
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex items-end gap-4 mb-8">
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">السعر</p>
-                            <div className="flex items-baseline gap-1 relative">
-                                <span className="text-lg font-bold text-slate-800">₪</span>
-                                <span className="text-5xl font-black text-slate-800 tracking-tighter">{Math.round(finalPrice)}</span>
-                                {hasDiscount && (
-                                    <div className="absolute -top-4 -right-12">
-                                        <span className="text-sm text-slate-400 line-through font-bold">₪{Math.round(price)}</span>
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex items-end gap-4 mb-8">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">السعر</p>
+                                <div className="flex items-baseline gap-1 relative">
+                                    <span className="text-lg font-bold text-slate-800">₪</span>
+                                    <span className="text-5xl font-black text-slate-800 tracking-tighter">{Math.round(finalPrice)}</span>
+                                    {hasDiscount && (
+                                        <div className="absolute -top-4 -right-12">
+                                            <span className="text-sm text-slate-400 line-through font-bold">₪{Math.round(price)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        {/* Stock Warning (Urgency) */}
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
+                            {stockCount > 0 && stockCount <= 5 ? (
+                                <div className="bg-gradient-to-r from-orange-50 to-rose-50 border border-orange-100 p-4 rounded-2xl flex items-start gap-4 mb-6 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-orange-400 to-rose-500 opacity-10 rounded-bl-full" />
+                                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                        <Flame className="text-orange-500" size={20} fill="currentColor" />
                                     </div>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
+                                    <div>
+                                        <h4 className="font-bold text-orange-800 text-sm">أسرع بالشراء!</h4>
+                                        <p className="text-xs text-orange-700/80 mt-1">
+                                            متبقي <strong className="font-black text-orange-600">{stockCount}</strong> قطع فقط في المخزون.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : stockCount === 0 ? (
+                                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center justify-center mb-6">
+                                    <p className="font-bold text-slate-500 text-sm">المنتج نفذ من المخزون حالياً</p>
+                                </div>
+                            ) : (
+                                <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 mb-6">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                        <span className="text-emerald-600 font-bold text-lg">✓</span>
+                                    </div>
+                                    <p className="font-bold text-emerald-800 text-sm">متوفر في المخزون</p>
+                                </div>
+                            )}
+                        </motion.div>
 
-                    {/* Stock Warning (Urgency) */}
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
-                        {stockCount > 0 && stockCount <= 5 ? (
-                            <div className="bg-gradient-to-r from-orange-50 to-rose-50 border border-orange-100 p-4 rounded-2xl flex items-start gap-4 mb-6 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-orange-400 to-rose-500 opacity-10 rounded-bl-full" />
-                                <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                                    <Flame className="text-orange-500" size={20} fill="currentColor" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-orange-800 text-sm">أسرع بالشراء!</h4>
-                                    <p className="text-xs text-orange-700/80 mt-1">
-                                        متبقي <strong className="font-black text-orange-600">{stockCount}</strong> قطع فقط في المخزون.
-                                    </p>
+                        <div className="space-y-3 mt-8">
+                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <ShieldCheck className="text-indigo-500" size={24} />
+                                <div className="flex-1">
+                                    <p className="font-bold text-slate-800 text-sm">كفالة مسلماني</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">ضمان على جميع الأجهزة الإلكترونية</p>
                                 </div>
                             </div>
-                        ) : stockCount === 0 ? (
-                            <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center justify-center mb-6">
-                                <p className="font-bold text-slate-500 text-sm">المنتج نفذ من المخزون حالياً</p>
-                            </div>
-                        ) : (
-                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 mb-6">
-                                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                    <span className="text-emerald-600 font-bold text-lg">✓</span>
+                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <Zap className="text-amber-500" size={24} fill="currentColor" />
+                                <div className="flex-1">
+                                    <p className="font-bold text-slate-800 text-sm">جودة عالية</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">ماركات عالمية أصلية 100%</p>
                                 </div>
-                                <p className="font-bold text-emerald-800 text-sm">متوفر في المخزون</p>
-                            </div>
-                        )}
-                    </motion.div>
-
-                    <div className="space-y-3 mt-8">
-                        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <ShieldCheck className="text-indigo-500" size={24} />
-                            <div className="flex-1">
-                                <p className="font-bold text-slate-800 text-sm">كفالة مسلماني</p>
-                                <p className="text-xs text-slate-500 mt-0.5">ضمان على جميع الأجهزة الإلكترونية</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <Zap className="text-amber-500" size={24} fill="currentColor" />
-                            <div className="flex-1">
-                                <p className="font-bold text-slate-800 text-sm">جودة عالية</p>
-                                <p className="text-xs text-slate-500 mt-0.5">ماركات عالمية أصلية 100%</p>
                             </div>
                         </div>
                     </div>
