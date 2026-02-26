@@ -17,7 +17,7 @@ export default function Sidebar({ isOpen, onClose, mode, setMode, userRole, hand
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['supervisor', 'admin'] },
         { id: 'submitted', label: 'Sale Orders', icon: FileText, roles: ['supervisor', 'admin'] },
-        { id: 'order', label: 'Sales Area', icon: ShoppingCart, roles: ['customer', 'supervisor', 'admin'] },
+        { id: 'sales_hub', label: 'Sales Area', icon: ShoppingCart, roles: ['customer', 'supervisor', 'admin'] },
         // Placeholders for future features
         { id: 'customers', label: 'Customers', icon: Users, roles: ['admin'] },
         { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin'] },

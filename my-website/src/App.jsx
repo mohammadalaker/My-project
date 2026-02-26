@@ -2707,17 +2707,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     )}
                   </div>
                 )}
-                <button
-                  onClick={() => setShowHeldOrdersModal(true)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${heldOrders.length > 0 ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-200' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  الفواتير المعلقة
-                  {heldOrders.length > 0 && (
-                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] tabular-nums shadow-sm">
-                      {heldOrders.length}
-                    </span>
-                  )}
-                </button>
               </div>
               <button
                 onClick={handleLogout}
@@ -3168,6 +3157,71 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 ) : mode === 'dashboard' ? (
                   /* Dashboard View */
                   <Dashboard items={items} orders={submittedOrders} />
+                ) : mode === 'sales_hub' ? (
+                  /* Sales Area Hub */
+                  <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center pt-10 pb-20 px-4 animate-fade-in max-w-5xl mx-auto">
+                    {/* POS Choice */}
+                    <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-indigo-900/5 border border-indigo-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                      <div className="absolute top-0 right-0 p-32 bg-indigo-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
+                      <div className="relative z-10 flex flex-col h-full">
+                        <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-6 shadow-inner">
+                          <ShoppingCart size={32} />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-800 mb-3">شاشة البيع (POS)</h3>
+                        <p className="text-slate-500 mb-8 leading-relaxed">
+                          واجهة المبيعات السريعة والعملية لإنشاء طلبات وفواتير جديدة للعملاء مباشرة.
+                        </p>
+                        <div className="mt-auto space-y-4">
+                          <button
+                            onClick={() => { setMode('order'); setShowOrderPanel(true); }}
+                            className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                          >
+                            <span>بدء البيع</span>
+                            <ChevronRight size={20} />
+                          </button>
+
+                          {/* Held Orders Button Moved Here */}
+                          <button
+                            onClick={() => setShowHeldOrdersModal(true)}
+                            className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-all border-2 ${heldOrders.length > 0
+                              ? 'border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100 shadow-sm'
+                              : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                          >
+                            <span>الفواتير المعلقة</span>
+                            {heldOrders.length > 0 && (
+                              <span className="flex items-center justify-center min-w-[24px] h-6 px-2 rounded-full bg-amber-500 text-white text-xs tabular-nums shadow-sm">
+                                {heldOrders.length}
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Catalog Choice */}
+                    <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-rose-900/5 border border-rose-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                      <div className="absolute top-0 right-0 p-32 bg-rose-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
+                      <div className="relative z-10 flex flex-col h-full">
+                        <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-6 shadow-inner">
+                          <Grid size={32} />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-800 mb-3">كتالوج المنتجات</h3>
+                        <p className="text-slate-500 mb-8 leading-relaxed">
+                          تصفح المعرض الكامل، استعرض الأسعار والمواصفات للعملاء دون الدخول في تفاصيل الفاتورة.
+                        </p>
+                        <div className="mt-auto">
+                          <button
+                            onClick={() => { setMode('catalog'); setShowOrderPanel(false); }}
+                            className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-lg shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2"
+                          >
+                            <span>فتح الكتالوج</span>
+                            <ChevronRight size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : mode === 'offers' ? (
                   /* Custom Offers - اختيار المنتجات للعروض */
                   <div className="space-y-8 animate-fade-in">
@@ -3331,7 +3385,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     )}
                   </div>
-                ) : (
+                ) : mode === 'submitted' ? null : (
                   <div className="space-y-12">
                     {[
                       { title: 'Electrical Appliances', items: filteredItems.filter((i) => isElectricalGroup(i.group)), color: 'indigo', icon: Zap },
