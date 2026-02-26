@@ -447,7 +447,7 @@ function App() {
       }
       setIsAuthenticated(true);
       setUserRole(role);
-      // We also need a state for username, which we'll add to App.jsx soon or just read from localStorage
+      setUsername(loggedInUser);
     };
 
     if (username === 'mohammadalaker' && password === '123456') {

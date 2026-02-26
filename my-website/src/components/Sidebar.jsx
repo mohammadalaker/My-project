@@ -88,10 +88,10 @@ export default function Sidebar({ isOpen, onClose, mode, setMode, userRole, hand
                                         }}
                                         disabled={isPlaceholder}
                                         className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all group ${isActive
-                                                ? 'bg-indigo-50/80 text-indigo-700 shadow-sm border border-indigo-100'
-                                                : isPlaceholder
-                                                    ? 'text-slate-400 opacity-60 cursor-not-allowed hidden' // Keeping them hidden for now or showing as disabled
-                                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                            ? 'bg-indigo-50/80 text-indigo-700 shadow-sm border border-indigo-100'
+                                            : isPlaceholder
+                                                ? 'text-slate-400 opacity-60 cursor-not-allowed' // Visible but grayed out
+                                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
