@@ -3304,13 +3304,29 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             <span className="px-2.5 py-1 rounded-full bg-slate-200/50 text-slate-500 text-xs font-bold">{sorted.length}</span>
                           </div>
 
-                          <div className="product-grid">
+                          <motion.div
+                            initial="hidden"
+                            animate="show"
+                            variants={{
+                              hidden: { opacity: 0 },
+                              show: {
+                                opacity: 1,
+                                transition: {
+                                  staggerChildren: 0.05
+                                }
+                              }
+                            }}
+                            className="product-grid"
+                          >
                             {sorted.map((item, index) => (
-                              <div
+                              <motion.div
+                                variants={{
+                                  hidden: { opacity: 0, scale: 0.95, y: 10 },
+                                  show: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+                                }}
                                 key={item.id}
                                 className="glass-card group flex flex-col h-full cursor-pointer hover:shadow-xl transition-shadow"
                                 onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
-                                style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
                               >
                                 {item.group && (
                                   <div className="absolute top-3 left-3 z-10">
@@ -3534,9 +3550,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
                                   </div>
                                 )}
-                              </div>
+                              </motion.div>
                             ))}
-                          </div>
+                          </motion.div>
                         </section>
                       );
                     })}
@@ -3700,9 +3716,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       placeholder="Group Name"
                                       onPointerDown={(e) => e.stopPropagation()}
                                     />
-                                    <button onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
+                                    <motion.button whileTap={{ scale: 0.8, rotate: 10 }} onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
                                       <Trash2 size={16} />
-                                    </button>
+                                    </motion.button>
                                   </div>
                                   <p className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2 pointer-events-none">
                                     <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">{o.item?.barcode}</span>
@@ -3712,23 +3728,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate pointer-events-none" dir="rtl">
                                     {/* Qty Control */}
                                     <div className="flex flex-col justify-center items-center bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm shrink-0 w-14 pointer-events-auto" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
-                                      <button
+                                      <motion.button
+                                        whileTap={{ scale: 0.8 }}
                                         onClick={() => setOrderQty(o.id, parseInt(o.qty || 0) + 1)}
                                         className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                       >
                                         <Plus size={18} strokeWidth={3} />
-                                      </button>
+                                      </motion.button>
                                       <input
                                         className="w-full bg-transparent text-center text-lg font-black text-slate-700 outline-none my-1"
                                         value={o.qty || ''}
                                         onChange={(e) => setOrderQty(o.id, e.target.value)}
                                       />
-                                      <button
+                                      <motion.button
+                                        whileTap={{ scale: 0.8 }}
                                         onClick={() => setOrderQty(o.id, Math.max(1, (parseInt(o.qty || 0) - 1)))}
                                         className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                       >
                                         <Minus size={18} strokeWidth={3} />
-                                      </button>
+                                      </motion.button>
                                     </div>
 
                                     {/* Pricing Squares Grid */}
