@@ -192,6 +192,7 @@ const CustomerProductView = lazy(() => import('./components/CustomerProductView'
 import BottomNav from './components/BottomNav';
 import OfferCard from './components/OfferCard';
 import Dashboard from './components/Dashboard';
+import SmartScreensaver from './components/SmartScreensaver';
 
 function AddToOfferRow({ item, getImage, onAdd }) {
   const [qty, setQty] = useState(1);
