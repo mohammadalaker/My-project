@@ -47,6 +47,9 @@ import {
   Menu,
   User,
   ChevronRight,
+  Settings,
+  LayoutDashboard,
+  LogOut,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -288,6 +291,23 @@ function App() {
 
   const isCustomerDisplayMode = typeof window !== 'undefined' && window.location.search.includes('mode=display');
   const isCustomerProductMode = typeof window !== 'undefined' && window.location.search.includes('barcode=');
+
+  /* Dropdown Menu State */
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  // Close profile menu if clicked outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   /* Login State */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -2654,68 +2674,93 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 ml-auto shrink-0">
-                {username === 'mohammadalaker' ? (
-                  <div className="hidden sm:flex items-center gap-3 bg-white/60 border border-slate-200/70 p-1.5 pr-5 rounded-full shadow-sm backdrop-blur-md transition-all hover:shadow-md cursor-pointer hover:bg-white/90">
+              <div className="flex items-center gap-3 ml-auto shrink-0 relative" ref={profileMenuRef}>
+                {username === 'mohammadalaker' || username === 'admin' || username === 'supervisor' ? (
+                  <div
+                    className="flex items-center gap-3 bg-white/60 border border-slate-200/70 p-1.5 pr-5 rounded-full shadow-sm backdrop-blur-md transition-all hover:shadow-md cursor-pointer hover:bg-white/90"
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  >
                     <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                       <User className="w-6 h-6 text-slate-400 mt-2" />
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-bold text-slate-800 leading-tight">Mohammed Alaker</span>
+                    <div className="hidden sm:flex flex-col">
+                      <span className="text-[13px] font-bold text-slate-800 leading-tight">
+                        {username === 'mohammadalaker' ? 'Mohammed Alaker' : username === 'admin' ? 'Administrator' : 'Supervisor'}
+                      </span>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider leading-none">Manager</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider leading-none">{userRole}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/50"></span>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="hidden sm:flex bg-slate-100/50 p-1 rounded-xl border border-white/50 backdrop-blur-sm">
-                    {userRole === 'supervisor' && (
-                      <button
-                        onClick={() => { setMode('dashboard'); setShowOrderPanel(false); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'dashboard' ? 'bg-white shadow-md text-amber-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        Dashboard
-                      </button>
-                    )}
-                    {userRole === 'supervisor' && (
-                      <button
-                        onClick={() => { setMode('submitted'); setShowOrderPanel(false); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'submitted' ? 'bg-white shadow-md text-emerald-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        Orders
-                      </button>
-                    )}
-                    <button
-                      onClick={() => { setMode('order'); setShowOrderPanel(false); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'order' ? 'bg-white shadow-md text-indigo-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      Sales
-                    </button>
-                    <button
-                      onClick={() => { setMode('offers'); setShowOrderPanel(false); }}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'offers' ? 'bg-white shadow-md scale-105' : ''} ${customOffers.length > 0 ? 'text-amber-500 hover:text-amber-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      Offers
-                    </button>
-                    {userRole !== 'customer' && (
-                      <button
-                        onClick={() => { setMode('catalog'); setShowOrderPanel(false); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${mode === 'catalog' ? 'bg-white shadow-md text-rose-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                      >
-                        Catalog
-                      </button>
-                    )}
+                  <div
+                    className="flex items-center justify-center p-2 bg-white/60 border border-slate-200/70 rounded-xl shadow-sm cursor-pointer hover:bg-white/90 transition-all"
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  >
+                    <User className="w-6 h-6 text-slate-500" />
                   </div>
                 )}
+
+                {/* Dropdown Menu */}
+                <AnimatePresence>
+                  {showProfileMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-16 left-0 sm:right-0 sm:left-auto mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 text-right"
+                      dir="rtl"
+                    >
+                      <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <p className="text-sm font-bold text-slate-800">{username}</p>
+                        <p className="text-xs text-slate-500 uppercase tracking-wider">{userRole}</p>
+                      </div>
+
+                      <div className="p-2 space-y-1">
+                        <button
+                          onClick={() => { setShowProfileMenu(false); setMode('settings'); }}
+                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
+                        >
+                          <Settings size={18} />
+                          إعدادات الحساب
+                        </button>
+
+                        {(userRole === 'admin' || userRole === 'supervisor') && (
+                          <>
+                            <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                            <div className="px-3 py-1 text-xs font-bold text-slate-400 mb-1">تبديل الوضع</div>
+                            <button
+                              onClick={() => { setShowProfileMenu(false); setMode('order'); }}
+                              className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 ${mode === 'order' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600'}`}
+                            >
+                              <ShoppingCart size={18} />
+                              وضع البيع (POS)
+                            </button>
+                            <button
+                              onClick={() => { setShowProfileMenu(false); setMode('dashboard'); }}
+                              className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 ${mode === 'dashboard' ? 'bg-amber-50 text-amber-700' : 'text-slate-700 hover:bg-slate-100 hover:text-amber-600'}`}
+                            >
+                              <LayoutDashboard size={18} />
+                              وضع الإدارة
+                            </button>
+                          </>
+                        )}
+
+                        <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                        <button
+                          onClick={() => { setShowProfileMenu(false); handleLogout(); }}
+                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-3"
+                        >
+                          <LogOut size={18} />
+                          تسجيل الخروج
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-              <button
-                onClick={handleLogout}
-                className="p-3 rounded-xl bg-white/50 hover:bg-rose-100 text-slate-500 hover:text-rose-600 transition-all border border-white/60 hover:scale-105 active:scale-95"
-                title="Logout"
-              >
-                <Power size={20} strokeWidth={2.5} />
-              </button>
             </div>
           </header>
 
