@@ -2,7 +2,18 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, ShoppingCart, Users, Package, FileText, Settings, X, LogOut, ChevronRight } from 'lucide-react';
 
-export default function Sidebar({ isOpen, onClose, mode, setMode, userRole, handleLogout, username }) {
+export default function Sidebar({
+    isOpen,
+    onClose,
+    mode,
+    setMode,
+    userRole,
+    handleLogout,
+    username,
+    badgeSubmitted = 0,
+    badgeLowStock = 0,
+    badgeHeld = 0,
+}) {
     const overlayVariants = {
         hidden: { opacity: 0 },
         visible: { opacity: 1, transition: { duration: 0.2 } },
@@ -15,15 +26,22 @@ export default function Sidebar({ isOpen, onClose, mode, setMode, userRole, hand
     };
 
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['supervisor', 'admin'] },
-        { id: 'submitted', label: 'Sale Orders', icon: FileText, roles: ['supervisor', 'admin'] },
-        { id: 'sales_hub', label: 'Sales Area', icon: ShoppingCart, roles: ['customer', 'supervisor', 'admin'] },
-        // Placeholders for future features
-        { id: 'customers', label: 'Customers', icon: Users, roles: ['admin'] },
-        { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin'] },
-        { id: 'reports', label: 'Reports', icon: FileText, roles: ['admin'] },
-        { id: 'settings', label: 'Settings', icon: Settings, roles: ['admin'] },
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['supervisor', 'admin'], badgeKey: null },
+        { id: 'submitted', label: 'Sale Orders', icon: FileText, roles: ['supervisor', 'admin'], badgeKey: 'submitted' },
+        { id: 'sales_hub', label: 'Sales Area', icon: ShoppingCart, roles: ['customer', 'supervisor', 'admin'], badgeKey: 'held' },
+        { id: 'customers', label: 'Customers', icon: Users, roles: ['admin'], badgeKey: null },
+        { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin'], badgeKey: 'lowStock' },
+        { id: 'reports', label: 'Reports', icon: FileText, roles: ['admin'], badgeKey: null },
+        { id: 'settings', label: 'Settings', icon: Settings, roles: ['admin'], badgeKey: null },
     ];
+
+    const getBadgeCount = (badgeKey) => {
+        if (!badgeKey) return 0;
+        if (badgeKey === 'submitted') return Math.max(0, Number(badgeSubmitted) || 0);
+        if (badgeKey === 'held') return Math.max(0, Number(badgeHeld) || 0);
+        if (badgeKey === 'lowStock') return Math.max(0, Number(badgeLowStock) || 0);
+        return 0;
+    };
 
     return (
         <AnimatePresence>
@@ -68,48 +86,63 @@ export default function Sidebar({ isOpen, onClose, mode, setMode, userRole, hand
                             </button>
                         </div>
 
-                        {/* Navigation */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1">
+                        {/* Navigation — مؤشر نشط منزلق (Framer Motion) */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1 relative">
                             {navItems.map((item) => {
                                 const isVisible = item.roles.includes(userRole);
                                 if (!isVisible) return null;
 
                                 const isActive = mode === item.id;
                                 const isPlaceholder = ['customers', 'inventory', 'reports'].includes(item.id);
+                                const badgeCount = getBadgeCount(item.badgeKey);
 
                                 return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => {
-                                            if (!isPlaceholder) {
-                                                setMode(item.id);
-                                                onClose();
-                                            }
-                                        }}
-                                        disabled={isPlaceholder}
-                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all group ${isActive
-                                            ? 'bg-indigo-50/80 text-indigo-700 shadow-sm border border-indigo-100'
-                                            : isPlaceholder
-                                                ? 'text-slate-400 opacity-60 cursor-not-allowed' // Visible but grayed out
-                                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <item.icon
-                                                size={20}
-                                                className={isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}
+                                    <div key={item.id} className="relative">
+                                        {isActive && !isPlaceholder && (
+                                            <motion.div
+                                                layoutId="sidebar-active"
+                                                className="absolute inset-0 rounded-xl bg-indigo-50/90 border border-indigo-100 shadow-sm"
+                                                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                                                style={{ zIndex: 0 }}
                                             />
-                                            <span>{item.label}</span>
-                                        </div>
-                                        {isPlaceholder && (
-                                            <span className="text-[9px] uppercase font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">
-                                                Soon
-                                            </span>
                                         )}
-                                        {!isPlaceholder && isActive && (
-                                            <ChevronRight size={16} className="text-indigo-400" />
-                                        )}
-                                    </button>
+                                        <button
+                                            onClick={() => {
+                                                if (!isPlaceholder) {
+                                                    setMode(item.id);
+                                                    onClose();
+                                                }
+                                            }}
+                                            disabled={isPlaceholder}
+                                            className={`relative z-10 w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all group ${isActive
+                                                ? 'text-indigo-700'
+                                                : isPlaceholder
+                                                    ? 'text-slate-400 opacity-60 cursor-not-allowed'
+                                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <item.icon
+                                                    size={20}
+                                                    className={isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}
+                                                />
+                                                <span>{item.label}</span>
+                                                {badgeCount > 0 && (
+                                                    <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-sm">
+                                                        {badgeCount > 99 ? '99+' : badgeCount}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {isPlaceholder && (
+                                                <span className="text-[9px] uppercase font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">
+                                                    Soon
+                                                </span>
+                                            )}
+                                            {!isPlaceholder && isActive && (
+                                                <ChevronRight size={16} className="text-indigo-400" />
+                                            )}
+                                        </button>
+                                    </div>
                                 );
                             })}
                         </div>

@@ -1078,6 +1078,15 @@ function App() {
     [filteredByGroup, search, mode, userRole]
   );
 
+  /** عدد الأصناف التي أوشكت على النفاد (0–5) للشارة في القائمة الجانبية */
+  const lowStockCount = useMemo(
+    () => items.filter((i) => {
+      const s = Number(i.stock_count ?? i.stock);
+      return !isNaN(s) && s >= 0 && s <= 5;
+    }).length,
+    [items]
+  );
+
   const allGroups = useMemo(
     () => [...new Set(items.map((i) => i.group).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))),
     [items]
@@ -2636,6 +2645,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             userRole={userRole}
             handleLogout={handleLogout}
             username={username}
+            badgeSubmitted={submittedOrders.length}
+            badgeLowStock={lowStockCount}
+            badgeHeld={heldOrders.length}
           />
 
           {/* Header */}
