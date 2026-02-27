@@ -47,23 +47,23 @@ export default function Sidebar({
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Overlay */}
+                    {/* Overlay — z-index مرتفع لضمان الظهور فوق كل العناصر */}
                     <motion.div
                         variants={overlayVariants}
                         initial="hidden"
                         animate="visible"
                         exit="hidden"
                         onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity"
+                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] transition-opacity"
                     />
 
-                    {/* Sidebar Panel — Glassmorphism + ظل ناعم (تأثير الطفو) */}
+                    {/* Sidebar Panel — z-index أعلى من الـ overlay */}
                     <motion.div
                         variants={sidebarVariants}
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="fixed top-0 left-0 bottom-0 w-72 z-50 flex flex-col overflow-hidden bg-white/75 backdrop-blur-xl border-r border-white/40 shadow-xl"
+                        className="fixed top-0 left-0 bottom-0 w-72 z-[101] flex flex-col overflow-hidden bg-white/75 backdrop-blur-xl border-r border-white/40 shadow-xl"
                     >
                         {/* Header / Brand */}
                         <div className="flex items-center justify-between p-6 border-b border-white/50 bg-white/30 backdrop-blur-sm">

@@ -313,7 +313,21 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null); // 'admin' or 'customer'
   const [username, setUsername] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('sales_sidebar_open') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const setSidebarOpen = useCallback((open) => {
+    setIsSidebarOpen(open);
+    try {
+      localStorage.setItem('sales_sidebar_open', open ? 'true' : 'false');
+    } catch (_) {}
+  }, []);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
@@ -2661,7 +2675,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
           <Sidebar
             isOpen={isSidebarOpen}
-            onClose={() => setIsSidebarOpen(false)}
+            onClose={() => setSidebarOpen(false)}
             mode={mode}
             setMode={setMode}
             userRole={userRole}
@@ -2679,7 +2693,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 {/* Full App Menu Toggle */}
                 {(userRole === 'admin' || userRole === 'supervisor') && (
                   <button
-                    onClick={() => setIsSidebarOpen(true)}
+                    onClick={() => setSidebarOpen(true)}
                     className="p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 transition-colors"
                   >
                     <Menu size={24} />
