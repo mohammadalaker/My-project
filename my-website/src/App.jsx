@@ -3611,45 +3611,45 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                   </div>
                 ) : mode === 'customers' ? (
-                  /* Customers View — إدارة العملاء */
-                  <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in flex flex-col gap-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                          <Users size={28} />
+                  /* Customers View — واجهة حديثة + عرض الأسماء بالكامل */
+                  <div className="max-w-5xl mx-auto py-6 sm:py-10 px-4 animate-fade-in flex flex-col gap-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                          <Users size={32} className="text-white" />
                         </div>
                         <div>
-                          <h2 className="text-2xl font-black text-slate-800">العملاء</h2>
-                          <p className="text-slate-500 text-sm">إدارة بيانات العملاء ونقاط الولاء</p>
+                          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">العملاء</h1>
+                          <p className="text-slate-500 text-sm sm:text-base mt-1">إدارة بيانات العملاء ونقاط الولاء</p>
                         </div>
                       </div>
                       <button
                         onClick={() => setEditingCustomer({ company_name: '', name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0 })}
-                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/30 transition-all"
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all duration-300"
                       >
-                        <Plus size={20} /> إضافة عميل
+                        <Plus size={22} /> إضافة عميل
                       </button>
                     </div>
 
                     <div className="relative">
-                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                       <input
                         type="text"
                         value={customersPageSearch}
                         onChange={(e) => setCustomersPageSearch(e.target.value)}
                         placeholder="بحث بالاسم أو اسم الشركة أو رقم الهاتف..."
-                        className="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-base"
                       />
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+                    <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
                       {customersLoading ? (
-                        <div className="p-12 flex items-center justify-center">
-                          <Loader2 size={32} className="animate-spin text-indigo-500" />
+                        <div className="p-16 flex items-center justify-center">
+                          <Loader2 size={40} className="animate-spin text-indigo-500" />
                         </div>
                       ) : (
                         <div className="p-4 sm:p-6">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                             {customers
                               .filter(c => {
                                 const q = (customersPageSearch || '').trim().toLowerCase();
@@ -3665,26 +3665,32 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   key={c.id}
                                   type="button"
                                   onClick={() => setViewingCustomer(c)}
-                                  className="text-right w-full rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5 shadow-sm hover:shadow-xl hover:border-indigo-200 hover:from-indigo-50/30 hover:to-white transition-all duration-300 group"
+                                  className="text-right w-full rounded-2xl border-2 border-slate-100 bg-white p-5 sm:p-6 shadow-sm hover:shadow-lg hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                 >
                                   <div className="flex items-start gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-xl font-black group-hover:bg-indigo-200 group-hover:scale-105 transition-transform">
+                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-xl font-black group-hover:from-indigo-200 group-hover:to-violet-200 transition-colors">
                                       {((c.company_name || c.name) || '؟').charAt(0).toUpperCase()}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <p className="font-bold text-slate-800 truncate text-lg">{c.company_name || c.name || '—'}</p>
-                                      {c.company_name && c.name && <p className="text-slate-500 text-sm truncate mt-0.5">{c.name}</p>}
-                                      <p className="text-slate-500 text-sm font-mono mt-0.5">{c.phone || '—'}</p>
-                                      <div className="flex flex-wrap gap-2 mt-3">
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-bold">
+                                      <p className="font-bold text-slate-900 text-base sm:text-lg break-words leading-snug">
+                                        {c.company_name || c.name || '—'}
+                                      </p>
+                                      {c.company_name && c.name && (
+                                        <p className="text-slate-600 text-sm break-words leading-snug mt-1">
+                                          {c.name}
+                                        </p>
+                                      )}
+                                      <p className="text-slate-500 text-sm font-mono mt-2">{c.phone || '—'}</p>
+                                      <div className="flex flex-wrap gap-2 mt-4">
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-bold">
                                           {c.loyalty_points ?? 0} نقطة
                                         </span>
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold">
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
                                           ₪{Number(c.total_spent ?? 0).toFixed(0)}
                                         </span>
                                       </div>
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 flex-shrink-0 mt-1" />
+                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 flex-shrink-0 mt-1 transition-colors" />
                                   </div>
                                 </button>
                               ))}
@@ -3700,9 +3706,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         const qNorm = q.replace(/\s/g, '');
                         return name.includes(q) || company.includes(q) || phone.includes(qNorm);
                       }).length === 0 && (
-                        <div className="p-12 text-center text-slate-500">
-                          <Users size={48} className="mx-auto text-slate-300 mb-3" />
-                          <p className="font-medium">لا يوجد عملاء مطابقون للبحث</p>
+                        <div className="p-16 text-center">
+                          <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                            <Users size={40} className="text-slate-400" />
+                          </div>
+                          <p className="text-slate-600 font-medium">لا يوجد عملاء مطابقون للبحث</p>
+                          <p className="text-slate-400 text-sm mt-1">جرّب كلمات أخرى أو أضف عميلاً جديداً</p>
                         </div>
                       )}
                     </div>
@@ -3717,8 +3726,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 {((viewingCustomer.company_name || viewingCustomer.name) || '؟').charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <h3 className="text-xl font-black text-slate-800 truncate">{viewingCustomer.company_name || viewingCustomer.name || '—'}</h3>
-                                {viewingCustomer.company_name && viewingCustomer.name && <p className="text-slate-500 text-sm mt-0.5">{viewingCustomer.name}</p>}
+                                <h3 className="text-xl font-black text-slate-800 break-words">{viewingCustomer.company_name || viewingCustomer.name || '—'}</h3>
+                                {viewingCustomer.company_name && viewingCustomer.name && <p className="text-slate-500 text-sm break-words mt-0.5">{viewingCustomer.name}</p>}
                                 <p className="text-slate-500 text-sm font-mono mt-0.5">{viewingCustomer.phone || '—'}</p>
                               </div>
                             </div>
