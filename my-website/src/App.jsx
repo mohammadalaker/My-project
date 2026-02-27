@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import {
   Search,
   Plus,
@@ -638,6 +639,16 @@ function App() {
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [customersLoading, setCustomersLoading] = useState(false);
 
+  // Sales stats (last 7 days) for Reports
+  const [salesLast7, setSalesLast7] = useState([]);
+  const [salesStatsLoading, setSalesStatsLoading] = useState(false);
+  const salesTrend = useMemo(() => {
+    if (!salesLast7 || salesLast7.length < 2) return 0;
+    const start = salesLast7[0].value || 0;
+    const end = salesLast7[salesLast7.length - 1].value || 0;
+    return end - start;
+  }, [salesLast7]);
+
   const fetchCustomerInsights = useCallback(async (phone) => {
     if (!phone) {
       setCustomerInsights(null);
@@ -735,6 +746,47 @@ function App() {
         } catch (_) { /* ignore */ }
       }
     } catch (e) { console.warn('fetchCustomers:', e); }
+  }, []);
+
+  const fetchSalesLast7 = useCallback(async () => {
+    setSalesStatsLoading(true);
+    try {
+      const from = new Date();
+      from.setDate(from.getDate() - 6);
+      const fromIso = from.toISOString();
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('created_at, total_amount')
+        .gte('created_at', fromIso)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const byDay = new Map();
+      (data || []).forEach((row) => {
+        const d = new Date(row.created_at);
+        const key = d.toISOString().slice(0, 10);
+        const prev = byDay.get(key) || 0;
+        byDay.set(key, prev + Number(row.total_amount || 0));
+      });
+
+      const points = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const label = d.toLocaleDateString('ar-SA', { weekday: 'short' });
+        points.push({ date: key, label, value: byDay.get(key) || 0 });
+      }
+
+      setSalesLast7(points);
+    } catch (e) {
+      console.warn('fetchSalesLast7:', e);
+      setSalesLast7([]);
+    } finally {
+      setSalesStatsLoading(false);
+    }
   }, []);
 
   const saveCustomerFromPage = async (payload) => {
@@ -835,6 +887,13 @@ function App() {
       localStorage.setItem('sales_custom_offers', JSON.stringify(customOffers));
     } catch (e) { console.warn('Could not save offers:', e); }
   }, [customOffers, offersLoaded]);
+
+  // Load sales stats when opening Reports
+  useEffect(() => {
+    if (mode === 'reports' && (userRole === 'admin' || userRole === 'supervisor')) {
+      fetchSalesLast7();
+    }
+  }, [mode, userRole, fetchSalesLast7]);
 
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -2915,7 +2974,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
-              {mode !== 'settings' && mode !== 'customers' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
+              {mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
@@ -3266,7 +3325,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
 
               {/* Categories */}
-              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && mode !== 'customers' && (
+              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && (
                 <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
@@ -3349,6 +3408,80 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 ) : mode === 'dashboard' ? (
                   /* Dashboard View */
                   <Dashboard items={items} orders={submittedOrders} />
+                ) : mode === 'reports' ? (
+                  /* Reports View – Sales sparkline for last 7 days */
+                  <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in flex flex-col gap-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div>
+                        <h2 className="text-2xl font-black text-slate-900">تقارير المبيعات</h2>
+                        <p className="text-slate-500 text-sm">
+                          اتجاه المبيعات خلال آخر ٧ أيام لمساعدتك في اتخاذ قرارات سريعة.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/70 border border-slate-100">
+                      <div className="flex items-center justify-between mb-4 gap-4">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">إجمالي آخر ٧ أيام</p>
+                          <p className="text-2xl font-black text-slate-900">
+                            ₪{salesLast7.reduce((sum, p) => sum + (p.value || 0), 0).toLocaleString('en-US')}
+                          </p>
+                        </div>
+                        {salesLast7.length > 1 && (
+                          <div
+                            className={`text-sm font-bold ${
+                              salesTrend > 0
+                                ? 'text-emerald-600'
+                                : salesTrend < 0
+                                  ? 'text-rose-600'
+                                  : 'text-slate-500'
+                            }`}
+                          >
+                            {salesTrend > 0
+                              ? '↑ نمو مقابل بداية الأسبوع'
+                              : salesTrend < 0
+                                ? '↓ انخفاض مقابل بداية الأسبوع'
+                                : 'مستقر هذا الأسبوع'}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="h-24">
+                        {salesStatsLoading ? (
+                          <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                            جارِ تحميل بيانات المبيعات...
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={salesLast7}>
+                              <Tooltip
+                                formatter={(v) => `₪${Number(v || 0).toLocaleString('en-US')}`}
+                                labelFormatter={() => ''}
+                                contentStyle={{ fontSize: 11, direction: 'rtl' }}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke="#4f46e5"
+                                strokeWidth={2}
+                                dot={false}
+                                activeDot={{ r: 4 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex justify-between text-[11px] text-slate-400">
+                        {salesLast7.map((p) => (
+                          <span key={p.date} className="flex-1 text-center">
+                            {p.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 ) : mode === 'sales_hub' ? (
                   /* Sales Area Hub */
                   <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center pt-10 pb-20 px-4 animate-fade-in max-w-5xl mx-auto">

@@ -31,7 +31,7 @@ function Sidebar({
         { id: 'sales_hub', label: 'Sales Area', icon: ShoppingCart, roles: ['customer', 'supervisor', 'admin'], badgeKey: 'held' },
         { id: 'customers', label: 'Customers', icon: Users, roles: ['admin'], badgeKey: null },
         { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin'], badgeKey: 'lowStock' },
-        { id: 'reports', label: 'Reports', icon: FileText, roles: ['admin'], badgeKey: null },
+        { id: 'reports', label: 'Reports', icon: FileText, roles: ['admin', 'supervisor'], badgeKey: null },
         { id: 'settings', label: 'Settings', icon: Settings, roles: ['admin'], badgeKey: null },
     ];
 
@@ -93,7 +93,7 @@ function Sidebar({
                                 if (!isVisible) return null;
 
                                 const isActive = mode === item.id;
-                                const isPlaceholder = ['inventory', 'reports'].includes(item.id);
+                                const isPlaceholder = ['inventory'].includes(item.id);
                                 const badgeCount = getBadgeCount(item.badgeKey);
 
                                 return (
