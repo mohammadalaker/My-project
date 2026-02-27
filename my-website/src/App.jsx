@@ -2767,8 +2767,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
             <div className="max-w-7xl mx-auto w-full pb-20">
 
-              {/* Hero Section */}
-              {!loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'settings' && (
+              {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب */}
+              {mode !== 'settings' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
