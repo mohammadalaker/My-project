@@ -713,17 +713,18 @@ function App() {
   }, []);
 
   const saveCustomerFromPage = async (payload) => {
-    if (!payload.name || !payload.phone) {
-      alert('الاسم ورقم الهاتف مطلوبان.');
+    if (!payload.phone || !payload.phone.trim()) {
+      alert('رقم الهاتف مطلوب.');
       return;
     }
     setCustomersLoading(true);
     try {
       const row = {
-        name: payload.name.trim(),
-        phone: String(payload.phone).trim(),
-        address: payload.address || '',
-        customer_number: payload.customer_number || '',
+        company_name: (payload.company_name || '').trim(),
+        name: (payload.name || '').trim(),
+        phone: String(payload.phone || '').trim(),
+        address: (payload.address || '').trim(),
+        customer_number: (payload.customer_number || '').trim(),
         loyalty_points: Math.max(0, Number(payload.loyalty_points) || 0),
         total_spent: Math.max(0, Number(payload.total_spent) || 0),
       };
@@ -3623,7 +3624,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                       </div>
                       <button
-                        onClick={() => setEditingCustomer({ name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0 })}
+                        onClick={() => setEditingCustomer({ company_name: '', name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0 })}
                         className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/30 transition-all"
                       >
                         <Plus size={20} /> إضافة عميل
@@ -3636,7 +3637,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         type="text"
                         value={customersPageSearch}
                         onChange={(e) => setCustomersPageSearch(e.target.value)}
-                        placeholder="بحث بالاسم أو رقم الهاتف..."
+                        placeholder="بحث بالاسم أو اسم الشركة أو رقم الهاتف..."
                         className="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
@@ -3654,9 +3655,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 const q = (customersPageSearch || '').trim().toLowerCase();
                                 if (!q) return true;
                                 const name = (c.name || '').toLowerCase();
+                                const company = (c.company_name || '').toLowerCase();
                                 const phone = (c.phone || '').replace(/\s/g, '');
                                 const qNorm = q.replace(/\s/g, '');
-                                return name.includes(q) || phone.includes(qNorm);
+                                return name.includes(q) || company.includes(q) || phone.includes(qNorm);
                               })
                               .map((c) => (
                                 <button
@@ -3667,10 +3669,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 >
                                   <div className="flex items-start gap-4">
                                     <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-xl font-black group-hover:bg-indigo-200 group-hover:scale-105 transition-transform">
-                                      {(c.name || '؟').charAt(0).toUpperCase()}
+                                      {((c.company_name || c.name) || '؟').charAt(0).toUpperCase()}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <p className="font-bold text-slate-800 truncate text-lg">{c.name || '—'}</p>
+                                      <p className="font-bold text-slate-800 truncate text-lg">{c.company_name || c.name || '—'}</p>
+                                      {c.company_name && c.name && <p className="text-slate-500 text-sm truncate mt-0.5">{c.name}</p>}
                                       <p className="text-slate-500 text-sm font-mono mt-0.5">{c.phone || '—'}</p>
                                       <div className="flex flex-wrap gap-2 mt-3">
                                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-bold">
@@ -3692,9 +3695,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         const q = (customersPageSearch || '').trim().toLowerCase();
                         if (!q) return true;
                         const name = (c.name || '').toLowerCase();
+                        const company = (c.company_name || '').toLowerCase();
                         const phone = (c.phone || '').replace(/\s/g, '');
                         const qNorm = q.replace(/\s/g, '');
-                        return name.includes(q) || phone.includes(qNorm);
+                        return name.includes(q) || company.includes(q) || phone.includes(qNorm);
                       }).length === 0 && (
                         <div className="p-12 text-center text-slate-500">
                           <Users size={48} className="mx-auto text-slate-300 mb-3" />
@@ -3710,10 +3714,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-l from-indigo-50/80 to-white">
                             <div className="flex items-center gap-3">
                               <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-2xl font-black">
-                                {(viewingCustomer.name || '؟').charAt(0).toUpperCase()}
+                                {((viewingCustomer.company_name || viewingCustomer.name) || '؟').charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <h3 className="text-xl font-black text-slate-800 truncate">{viewingCustomer.name || '—'}</h3>
+                                <h3 className="text-xl font-black text-slate-800 truncate">{viewingCustomer.company_name || viewingCustomer.name || '—'}</h3>
+                                {viewingCustomer.company_name && viewingCustomer.name && <p className="text-slate-500 text-sm mt-0.5">{viewingCustomer.name}</p>}
                                 <p className="text-slate-500 text-sm font-mono mt-0.5">{viewingCustomer.phone || '—'}</p>
                               </div>
                             </div>
@@ -3721,29 +3726,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
                             <div className="grid gap-4">
                               <div className="rounded-xl bg-slate-50 p-4">
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">الاسم</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">اسم الشركة</p>
+                                <p className="text-slate-800 font-semibold">{viewingCustomer.company_name || '—'}</p>
+                              </div>
+                              <div className="rounded-xl bg-slate-50 p-4">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">اسم التاجر</p>
                                 <p className="text-slate-800 font-semibold">{viewingCustomer.name || '—'}</p>
                               </div>
                               <div className="rounded-xl bg-slate-50 p-4">
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم الهاتف</p>
                                 <p className="text-slate-800 font-mono font-semibold">{viewingCustomer.phone || '—'}</p>
                               </div>
-                              {(viewingCustomer.address || viewingCustomer.customer_number) && (
-                                <>
-                                  {viewingCustomer.address && (
-                                    <div className="rounded-xl bg-slate-50 p-4">
-                                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">العنوان</p>
-                                      <p className="text-slate-800 font-medium">{viewingCustomer.address}</p>
-                                    </div>
-                                  )}
-                                  {viewingCustomer.customer_number && (
-                                    <div className="rounded-xl bg-slate-50 p-4">
-                                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم العميل</p>
-                                      <p className="text-slate-800 font-medium">{viewingCustomer.customer_number}</p>
-                                    </div>
-                                  )}
-                                </>
-                              )}
+                              <div className="rounded-xl bg-slate-50 p-4">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">العنوان</p>
+                                <p className="text-slate-800 font-medium">{viewingCustomer.address || '—'}</p>
+                              </div>
+                              <div className="rounded-xl bg-slate-50 p-4">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم العميل (في الشركة)</p>
+                                <p className="text-slate-800 font-medium">{viewingCustomer.customer_number || '—'}</p>
+                              </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="rounded-xl bg-amber-50 p-4 border border-amber-100">
                                   <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">نقاط الولاء</p>
@@ -3759,7 +3760,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="px-6 py-4 flex flex-wrap gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
                             <button
                               onClick={() => {
-                                setEditingCustomer({ id: viewingCustomer.id, name: viewingCustomer.name || '', phone: viewingCustomer.phone || '', address: viewingCustomer.address || '', customer_number: viewingCustomer.customer_number || '', loyalty_points: viewingCustomer.loyalty_points ?? 0, total_spent: viewingCustomer.total_spent ?? 0 });
+                                setEditingCustomer({ id: viewingCustomer.id, company_name: viewingCustomer.company_name || '', name: viewingCustomer.name || '', phone: viewingCustomer.phone || '', address: viewingCustomer.address || '', customer_number: viewingCustomer.customer_number || '', loyalty_points: viewingCustomer.loyalty_points ?? 0, total_spent: viewingCustomer.total_spent ?? 0 });
                                 setViewingCustomer(null);
                               }}
                               className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-500/30 transition-all"
@@ -3805,19 +3806,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           </div>
                           <div className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
                             <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">الاسم *</label>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">اسم الشركة</label>
                               <input
-                                value={editingCustomer.name}
+                                value={editingCustomer.company_name || ''}
+                                onChange={e => setEditingCustomer(prev => ({ ...prev, company_name: e.target.value }))}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                                placeholder="اسم الشركة"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">اسم التاجر</label>
+                              <input
+                                value={editingCustomer.name || ''}
                                 onChange={e => setEditingCustomer(prev => ({ ...prev, name: e.target.value }))}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
-                                placeholder="اسم العميل"
+                                placeholder="اسم التاجر"
                               />
                             </div>
                             <div>
                               <label className="block text-sm font-bold text-slate-700 mb-2 text-right">رقم الهاتف *</label>
                               <input
                                 type="tel"
-                                value={editingCustomer.phone}
+                                value={editingCustomer.phone || ''}
                                 onChange={e => setEditingCustomer(prev => ({ ...prev, phone: e.target.value }))}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right font-mono"
                                 placeholder="05xxxxxxxx"
@@ -3829,16 +3839,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 value={editingCustomer.address || ''}
                                 onChange={e => setEditingCustomer(prev => ({ ...prev, address: e.target.value }))}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
-                                placeholder="اختياري"
+                                placeholder="العنوان"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">رقم العميل</label>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">رقم العميل (في الشركة)</label>
                               <input
                                 value={editingCustomer.customer_number || ''}
                                 onChange={e => setEditingCustomer(prev => ({ ...prev, customer_number: e.target.value }))}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
-                                placeholder="اختياري"
+                                placeholder="رقم العميل في الشركة"
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -3868,7 +3878,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="px-6 py-4 flex gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
                             <button
                               onClick={() => saveCustomerFromPage(editingCustomer)}
-                              disabled={customersLoading || !editingCustomer.name?.trim() || !editingCustomer.phone?.trim()}
+                              disabled={customersLoading || !(editingCustomer.phone || '').trim()}
                               className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/30 transition-all"
                             >
                               {customersLoading ? <Loader2 size={18} className="animate-spin" /> : null}
