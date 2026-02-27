@@ -604,7 +604,15 @@ function App() {
   const [offersLoaded, setOffersLoaded] = useState(false);
 
   // Customers
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const s = localStorage.getItem('sales_customers_cache');
+      return s ? JSON.parse(s) : [];
+    } catch {
+      return [];
+    }
+  });
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerPredictions, setShowCustomerPredictions] = useState(false);
   const [customerInsights, setCustomerInsights] = useState(null);
@@ -615,6 +623,17 @@ function App() {
 
   // Customers page (Sidebar) state
   const [customersPageSearch, setCustomersPageSearch] = useState('');
+  const filteredCustomersPage = useMemo(() => {
+    const raw = (customersPageSearch || '').trim().toLowerCase();
+    if (!raw) return customers;
+    const qNorm = toEnglishDigits(raw.replace(/\s/g, ''));
+    return customers.filter((c) => {
+      const name = (c.name || '').toLowerCase();
+      const company = (c.company_name || '').toLowerCase();
+      const phone = (c.phone || '').replace(/\s/g, '');
+      return name.includes(raw) || company.includes(raw) || phone.includes(qNorm);
+    });
+  }, [customers, customersPageSearch]);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [customersLoading, setCustomersLoading] = useState(false);
@@ -705,9 +724,15 @@ function App() {
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, company_name, name, phone, address, customer_number, loyalty_points, total_spent, outstanding_debt, created_at')
+        .order('created_at', { ascending: false });
       if (!error && data) {
         setCustomers(data);
+        try {
+          localStorage.setItem('sales_customers_cache', JSON.stringify(data));
+        } catch (_) { /* ignore */ }
       }
     } catch (e) { console.warn('fetchCustomers:', e); }
   }, []);
@@ -3651,17 +3676,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       ) : (
                         <div className="p-4 sm:p-6">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                            {customers
-                              .filter(c => {
-                                const raw = (customersPageSearch || '').trim().toLowerCase();
-                                if (!raw) return true;
-                                const name = (c.name || '').toLowerCase();
-                                const company = (c.company_name || '').toLowerCase();
-                                const phone = (c.phone || '').replace(/\s/g, '');
-                                const qNorm = toEnglishDigits(raw.replace(/\s/g, ''));
-                                return name.includes(raw) || company.includes(raw) || phone.includes(qNorm);
-                              })
-                              .map((c) => (
+                            {filteredCustomersPage.map((c) => (
                                 <button
                                   key={c.id}
                                   type="button"
@@ -3703,15 +3718,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           </div>
                         </div>
                       )}
-                      {!customersLoading && customers.filter(c => {
-                        const raw = (customersPageSearch || '').trim().toLowerCase();
-                        if (!raw) return true;
-                        const name = (c.name || '').toLowerCase();
-                        const company = (c.company_name || '').toLowerCase();
-                        const phone = (c.phone || '').replace(/\s/g, '');
-                        const qNorm = toEnglishDigits(raw.replace(/\s/g, ''));
-                        return name.includes(raw) || company.includes(raw) || phone.includes(qNorm);
-                      }).length === 0 && (
+                      {!customersLoading && filteredCustomersPage.length === 0 && (
                         <div className="p-16 text-center">
                           <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                             <Users size={40} className="text-slate-400" />

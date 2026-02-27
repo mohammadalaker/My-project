@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, ShoppingCart, Users, Package, FileText, Settings, X, LogOut, ChevronRight } from 'lucide-react';
 
-export default function Sidebar({
+function Sidebar({
     isOpen,
     onClose,
     mode,
@@ -163,3 +163,5 @@ export default function Sidebar({
         </AnimatePresence>
     );
 }
+
+export default React.memo(Sidebar);
