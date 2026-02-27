@@ -3688,6 +3688,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
                                           ₪{Number(c.total_spent ?? 0).toFixed(0)}
                                         </span>
+                                        {Number(c.outstanding_debt ?? 0) > 0 && (
+                                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 text-xs font-bold">
+                                            رصيد سابق ₪{Number(c.outstanding_debt).toFixed(0)}
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                     <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 flex-shrink-0 mt-1 transition-colors" />
@@ -3754,7 +3759,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم العميل (في الشركة)</p>
                                 <p className="text-slate-800 font-medium">{viewingCustomer.customer_number || '—'}</p>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="rounded-xl bg-amber-50 p-4 border border-amber-100">
                                   <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">نقاط الولاء</p>
                                   <p className="text-amber-800 font-black text-lg">{viewingCustomer.loyalty_points ?? 0}</p>
@@ -3762,6 +3767,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 <div className="rounded-xl bg-slate-100 p-4 border border-slate-200">
                                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">إجمالي المشتريات</p>
                                   <p className="text-slate-800 font-black text-lg">₪{Number(viewingCustomer.total_spent ?? 0).toFixed(0)}</p>
+                                </div>
+                                <div className="rounded-xl bg-rose-50 p-4 border border-rose-200">
+                                  <p className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-1">الرصيد السابق</p>
+                                  <p className="text-rose-800 font-black text-lg">
+                                    {Number(viewingCustomer.outstanding_debt ?? 0) > 0
+                                      ? `₪${Number(viewingCustomer.outstanding_debt).toFixed(0)}`
+                                      : 'لا يوجد'}
+                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -4453,6 +4466,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           </span>
                         )}
                       </label>
+                        {orderInfo.phone && (() => {
+                          const cust = customers.find(c => c.phone === orderInfo.phone);
+                          const debt = Number(cust?.outstanding_debt ?? 0);
+                          if (!cust || debt <= 0) return null;
+                          return (
+                            <div className="mb-1.5 rounded-2xl bg-rose-50 border border-rose-200 px-3 py-2 flex items-center justify-between text-[11px] text-rose-700 font-bold">
+                              <span>تنبيه: هذا العميل لديه رصيد سابق غير مدفوع بقيمة ₪{debt.toFixed(0)}</span>
+                            </div>
+                          );
+                        })()}
                       <input
                         value={orderInfo.phone}
                         onChange={(e) => {
