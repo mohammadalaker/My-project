@@ -57,16 +57,16 @@ export default function Sidebar({
                         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity"
                     />
 
-                    {/* Sidebar Panel */}
+                    {/* Sidebar Panel — Glassmorphism + ظل ناعم (تأثير الطفو) */}
                     <motion.div
                         variants={sidebarVariants}
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="fixed top-0 left-0 bottom-0 w-72 bg-white shadow-2xl z-50 flex flex-col overflow-hidden border-r border-slate-100"
+                        className="fixed top-0 left-0 bottom-0 w-72 z-50 flex flex-col overflow-hidden bg-white/75 backdrop-blur-xl border-r border-white/40 shadow-xl"
                     >
                         {/* Header / Brand */}
-                        <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex items-center justify-between p-6 border-b border-white/50 bg-white/30 backdrop-blur-sm">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center text-white font-bold text-lg rotate-3">
                                     MS
@@ -147,8 +147,8 @@ export default function Sidebar({
                             })}
                         </div>
 
-                        {/* Footer / User Profile snippet if needed, or Logout */}
-                        <div className="p-4 border-t border-slate-100 bg-slate-50/80">
+                        {/* Footer */}
+                        <div className="p-4 border-t border-white/50 bg-white/30 backdrop-blur-sm">
                             <button
                                 onClick={handleLogout}
                                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all shadow-sm"
