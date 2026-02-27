@@ -3837,7 +3837,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <input
                                 type="tel"
                                 value={editingCustomer.phone || ''}
-                                onChange={e => setEditingCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                                onChange={e => {
+                                  const val = toEnglishDigits(e.target.value);
+                                  setEditingCustomer(prev => ({ ...prev, phone: val }));
+                                }}
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right font-mono"
                                 placeholder="05xxxxxxxx"
                               />
