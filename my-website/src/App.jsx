@@ -3652,13 +3652,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                             {customers
                               .filter(c => {
-                                const q = (customersPageSearch || '').trim().toLowerCase();
-                                if (!q) return true;
+                                const raw = (customersPageSearch || '').trim().toLowerCase();
+                                if (!raw) return true;
                                 const name = (c.name || '').toLowerCase();
                                 const company = (c.company_name || '').toLowerCase();
                                 const phone = (c.phone || '').replace(/\s/g, '');
-                                const qNorm = q.replace(/\s/g, '');
-                                return name.includes(q) || company.includes(q) || phone.includes(qNorm);
+                                const qNorm = toEnglishDigits(raw.replace(/\s/g, ''));
+                                return name.includes(raw) || company.includes(raw) || phone.includes(qNorm);
                               })
                               .map((c) => (
                                 <button
@@ -3698,13 +3698,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                       )}
                       {!customersLoading && customers.filter(c => {
-                        const q = (customersPageSearch || '').trim().toLowerCase();
-                        if (!q) return true;
+                        const raw = (customersPageSearch || '').trim().toLowerCase();
+                        if (!raw) return true;
                         const name = (c.name || '').toLowerCase();
                         const company = (c.company_name || '').toLowerCase();
                         const phone = (c.phone || '').replace(/\s/g, '');
-                        const qNorm = q.replace(/\s/g, '');
-                        return name.includes(q) || company.includes(q) || phone.includes(qNorm);
+                        const qNorm = toEnglishDigits(raw.replace(/\s/g, ''));
+                        return name.includes(raw) || company.includes(raw) || phone.includes(qNorm);
                       }).length === 0 && (
                         <div className="p-16 text-center">
                           <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
@@ -4467,8 +4467,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             if (exactMatch) {
                               setOrderInfo(prev => ({
                                 ...prev,
+                                // اسم التاجر: نملأه إذا كان فارغاً
                                 merchantName: prev.merchantName || exactMatch.name || '',
-                                companyName: prev.companyName || exactMatch.name || '',
+                                // اسم الشركة: دائماً من company_name إن وجد، وإلا من name
+                                companyName: exactMatch.company_name || exactMatch.name || prev.companyName || '',
                                 address: prev.address || exactMatch.address || '',
                                 customerNumber: prev.customerNumber || exactMatch.customer_number || '',
                               }));
