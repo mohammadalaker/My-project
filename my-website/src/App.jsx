@@ -2768,7 +2768,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section */}
-              {!loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
+              {!loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'settings' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
@@ -3119,7 +3119,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
 
               {/* Categories */}
-              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && (
+              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && (
                 <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
