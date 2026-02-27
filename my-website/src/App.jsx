@@ -934,8 +934,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (mode === 'submitted' && userRole === 'supervisor') fetchSubmittedOrders();
-    else setOrdersError(null);
+    const canViewOrders = userRole === 'supervisor' || userRole === 'admin';
+    if ((mode === 'submitted' || mode === 'dashboard') && canViewOrders) {
+      fetchSubmittedOrders();
+    } else {
+      setOrdersError(null);
+    }
   }, [mode, userRole, fetchSubmittedOrders]);
 
   useEffect(() => {
