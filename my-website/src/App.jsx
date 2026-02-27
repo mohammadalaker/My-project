@@ -1185,7 +1185,6 @@ function App() {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(50); // Haptic feedback for Add to Cart
     }
-    setShowOrderPanel(true);
     startTransition(() => {
       setOrderItems((prev) => {
         const unitPrice = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
@@ -2724,7 +2723,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section */}
-              {!loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && (
+              {!loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
@@ -3075,7 +3074,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
 
               {/* Categories */}
-              {!loading && mode !== 'submitted' && (
+              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && (
                 <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
@@ -3249,22 +3248,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 ) : mode === 'offers' ? (
                   /* Custom Offers - اختيار المنتجات للعروض */
                   <div className="space-y-8 animate-fade-in">
-                    {userRole === 'admin' && (
+                    {userRole === 'admin' && editingOffer && (
                       <div className="flex flex-wrap items-center gap-4">
                         <button
-                          onClick={createNewOffer}
-                          className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                          onClick={() => setEditingOffer(null)}
+                          className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium"
                         >
-                          <Plus size={22} /> إنشاء عرض جديد
+                          إلغاء
                         </button>
-                        {editingOffer && (
-                          <button
-                            onClick={() => setEditingOffer(null)}
-                            className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium"
-                          >
-                            إلغاء
-                          </button>
-                        )}
                       </div>
                     )}
 
