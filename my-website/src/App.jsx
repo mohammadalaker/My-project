@@ -727,6 +727,7 @@ function App() {
         customer_number: (payload.customer_number || '').trim(),
         loyalty_points: Math.max(0, Number(payload.loyalty_points) || 0),
         total_spent: Math.max(0, Number(payload.total_spent) || 0),
+        outstanding_debt: Math.max(0, Number(payload.outstanding_debt) || 0),
       };
       if (payload.id) {
         const { error } = await supabase.from('customers').update(row).eq('id', payload.id);
@@ -3624,7 +3625,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                       </div>
                       <button
-                        onClick={() => setEditingCustomer({ company_name: '', name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0 })}
+                        onClick={() => setEditingCustomer({ company_name: '', name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0, outstanding_debt: 0 })}
                         className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all duration-300"
                       >
                         <Plus size={22} /> إضافة عميل
@@ -3782,7 +3783,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="px-6 py-4 flex flex-wrap gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
                             <button
                               onClick={() => {
-                                setEditingCustomer({ id: viewingCustomer.id, company_name: viewingCustomer.company_name || '', name: viewingCustomer.name || '', phone: viewingCustomer.phone || '', address: viewingCustomer.address || '', customer_number: viewingCustomer.customer_number || '', loyalty_points: viewingCustomer.loyalty_points ?? 0, total_spent: viewingCustomer.total_spent ?? 0 });
+                                setEditingCustomer({
+                                  id: viewingCustomer.id,
+                                  company_name: viewingCustomer.company_name || '',
+                                  name: viewingCustomer.name || '',
+                                  phone: viewingCustomer.phone || '',
+                                  address: viewingCustomer.address || '',
+                                  customer_number: viewingCustomer.customer_number || '',
+                                  loyalty_points: viewingCustomer.loyalty_points ?? 0,
+                                  total_spent: viewingCustomer.total_spent ?? 0,
+                                  outstanding_debt: viewingCustomer.outstanding_debt ?? 0,
+                                });
                                 setViewingCustomer(null);
                               }}
                               className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-500/30 transition-all"
@@ -3898,6 +3909,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
                                 />
                               </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">الرصيد السابق (دين غير مدفوع) ₪</label>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={editingCustomer.outstanding_debt ?? 0}
+                                onChange={e => setEditingCustomer(prev => ({ ...prev, outstanding_debt: +e.target.value || 0 }))}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                              />
                             </div>
                           </div>
                           <div className="px-6 py-4 flex gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
