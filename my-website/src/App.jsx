@@ -1185,6 +1185,7 @@ function App() {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(50); // Haptic feedback for Add to Cart
     }
+    setShowOrderPanel(true);
     startTransition(() => {
       setOrderItems((prev) => {
         const unitPrice = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
@@ -2723,9 +2724,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section */}
-              {!loading && !showOrderPanel && mode !== 'submitted' && (
+              {!loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
-
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
                     Select items to create a new order or manage your catalog.
@@ -3174,7 +3174,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </p>
                         <div className="mt-auto space-y-4">
                           <button
-                            onClick={() => { setMode('order'); setShowOrderPanel(true); }}
+                            onClick={() => { setMode('order'); setShowOrderPanel(false); }}
                             className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
                           >
                             <span>بدء البيع</span>
@@ -3397,37 +3397,61 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <div className="text-center py-20 rounded-3xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-2 border-dashed border-slate-200">
                         <Gift size={64} className="mx-auto text-slate-300 mb-4" />
                         <p className="text-slate-500 font-medium">لا توجد عروض حالياً</p>
-                        {userRole === 'admin' && (
-                          <p className="text-sm text-slate-400 mt-2">اضغط &quot;إنشاء عرض جديد&quot; لبدء الإضافة</p>
-                        )}
                       </div>
                     )}
                   </div>
                 ) : mode === 'settings' ? (
                   /* Settings View */
-                  <div className="max-w-3xl mx-auto py-10 px-4 animate-fade-in">
-                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center text-center space-y-6">
-                      <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mb-2">
-                        <Power size={40} />
+                  <div className="max-w-3xl mx-auto py-10 px-4 animate-fade-in flex flex-col gap-6">
+
+                    {/* Offers Management */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-2">
+                        <Gift size={32} />
                       </div>
-                      <h2 className="text-3xl font-black text-slate-800">إدارة الجلسات</h2>
-                      <p className="text-slate-500 max-w-md mx-auto">
-                        من هنا يمكنك التحكم في جلسات جميع المستخدمين (المندوبين والمسؤولين). الضغط على الزر أدناه سيؤدي إلى إخراج الجميع من النظام فوراً.
+                      <h2 className="text-2xl font-black text-slate-800">إدارة العروض الخاصة</h2>
+                      <p className="text-slate-500 max-w-sm mx-auto text-sm">
+                        إنشاء وإدارة الباقات الترويجية والعروض للعملاء.
+                      </p>
+
+                      {userRole === 'admin' ? (
+                        <button
+                          onClick={() => { setMode('offers'); createNewOffer(); }}
+                          className="mt-4 flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                          <Plus size={20} /> إنشاء عرض جديد
+                        </button>
+                      ) : (
+                        <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
+                          <Lock size={14} /> خاصية إدارية
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Session Management */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mb-2">
+                        <Power size={32} />
+                      </div>
+                      <h2 className="text-2xl font-black text-slate-800">إدارة الجلسات</h2>
+                      <p className="text-slate-500 max-w-sm mx-auto text-sm">
+                        الضغط على الزر أدناه سيؤدي إلى إخراج جميع المستخدمين من النظام فوراً.
                       </p>
 
                       {userRole === 'admin' ? (
                         <button
                           onClick={handleForceLogoutAll}
-                          className="mt-6 flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold text-lg shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                          className="mt-4 flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
-                          <Power size={24} /> تسجيل خروج جميع الأجهزة
+                          <Power size={20} /> تسجيل خروج جميع الأجهزة
                         </button>
                       ) : (
-                        <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-sm font-bold flex items-center gap-2">
-                          <Lock size={16} /> هذه الخاصية متاحة للمدراء فقط
+                        <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
+                          <Lock size={14} /> خاصية إدارية
                         </div>
                       )}
                     </div>
+
                   </div>
                 ) : mode === 'submitted' ? null : (
                   <div className="space-y-12">
