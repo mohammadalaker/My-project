@@ -2628,6 +2628,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     );
   }
 
+  /* مستخدم sale: شاشة واحدة فقط — الصفحة قيد التعديل */
+  if (username === 'sale') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] p-6 text-center" dir="rtl">
+        <div className="max-w-md w-full bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/60 p-10">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-amber-100 flex items-center justify-center">
+            <Clock size={40} className="text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-800 mb-3">الصفحة قيد التعديل</h1>
+          <p className="text-slate-600 leading-relaxed">سيتم الرجوع لاحقاً. شكراً لصبركم.</p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-8 px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors"
+          >
+            تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`font-sans flex h-screen overflow-hidden text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
