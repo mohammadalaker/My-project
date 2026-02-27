@@ -93,7 +93,7 @@ export default function Sidebar({
                                 if (!isVisible) return null;
 
                                 const isActive = mode === item.id;
-                                const isPlaceholder = ['customers', 'inventory', 'reports'].includes(item.id);
+                                const isPlaceholder = ['inventory', 'reports'].includes(item.id);
                                 const badgeCount = getBadgeCount(item.badgeKey);
 
                                 return (

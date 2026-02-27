@@ -50,6 +50,8 @@ import {
   Settings,
   LayoutDashboard,
   LogOut,
+  Users,
+  Pencil,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -611,6 +613,12 @@ function App() {
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false);
   const [quickAddCustomerData, setQuickAddCustomerData] = useState({ name: '', phone: '' });
 
+  // Customers page (Sidebar) state
+  const [customersPageSearch, setCustomersPageSearch] = useState('');
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [viewingCustomer, setViewingCustomer] = useState(null);
+  const [customersLoading, setCustomersLoading] = useState(false);
+
   const fetchCustomerInsights = useCallback(async (phone) => {
     if (!phone) {
       setCustomerInsights(null);
@@ -704,6 +712,58 @@ function App() {
     } catch (e) { console.warn('fetchCustomers:', e); }
   }, []);
 
+  const saveCustomerFromPage = async (payload) => {
+    if (!payload.name || !payload.phone) {
+      alert('الاسم ورقم الهاتف مطلوبان.');
+      return;
+    }
+    setCustomersLoading(true);
+    try {
+      const row = {
+        name: payload.name.trim(),
+        phone: String(payload.phone).trim(),
+        address: payload.address || '',
+        customer_number: payload.customer_number || '',
+        loyalty_points: Math.max(0, Number(payload.loyalty_points) || 0),
+        total_spent: Math.max(0, Number(payload.total_spent) || 0),
+      };
+      if (payload.id) {
+        const { error } = await supabase.from('customers').update(row).eq('id', payload.id);
+        if (error) throw error;
+        setCustomers(prev => prev.map(c => c.id === payload.id ? { ...c, ...row, id: c.id } : c));
+        setEditingCustomer(null);
+      } else {
+        const { data, error } = await supabase.from('customers').insert([row]).select();
+        if (error) throw error;
+        if (data && data[0]) setCustomers(prev => [data[0], ...prev]);
+        setEditingCustomer(null);
+      }
+      fetchCustomers();
+    } catch (e) {
+      console.warn('saveCustomerFromPage:', e);
+      alert(e?.message || 'حدث خطأ أثناء الحفظ.');
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
+  const deleteCustomerFromPage = async (id) => {
+    if (!id || !confirm('حذف هذا العميل؟')) return;
+    setCustomersLoading(true);
+    try {
+      const { error } = await supabase.from('customers').delete().eq('id', id);
+      if (error) throw error;
+      setCustomers(prev => prev.filter(c => c.id !== id));
+      setEditingCustomer(null);
+      fetchCustomers();
+    } catch (e) {
+      console.warn('deleteCustomerFromPage:', e);
+      alert(e?.message || 'حدث خطأ أثناء الحذف.');
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
   const fetchCustomOffers = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('custom_offers').select('id, title, items, created_at').neq('id', 'SYSTEM_FORCE_LOGOUT').order('created_at', { ascending: true });
@@ -729,6 +789,18 @@ function App() {
     fetchCustomOffers();
     fetchCustomers();
   }, [fetchCustomOffers, fetchCustomers]);
+
+  useEffect(() => {
+    if (mode === 'customers' && userRole === 'admin') fetchCustomers();
+  }, [mode, userRole, fetchCustomers]);
+
+  /* منع تمرير الصفحة عند فتح مودال تعديل أو عرض العميل */
+  useEffect(() => {
+    if (!editingCustomer && !viewingCustomer) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [editingCustomer, viewingCustomer]);
 
   useEffect(() => {
     if (!offersLoaded) return;
@@ -2815,8 +2887,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
             <div className="max-w-7xl mx-auto w-full pb-20">
 
-              {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب */}
-              {mode !== 'settings' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
+              {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
+              {mode !== 'settings' && mode !== 'customers' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
@@ -3167,7 +3239,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
 
               {/* Categories */}
-              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && (
+              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && mode !== 'customers' && (
                 <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
@@ -3536,6 +3608,283 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       )}
                     </div>
 
+                  </div>
+                ) : mode === 'customers' ? (
+                  /* Customers View — إدارة العملاء */
+                  <div className="max-w-4xl mx-auto py-8 px-4 animate-fade-in flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                          <Users size={28} />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-black text-slate-800">العملاء</h2>
+                          <p className="text-slate-500 text-sm">إدارة بيانات العملاء ونقاط الولاء</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setEditingCustomer({ name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0 })}
+                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/30 transition-all"
+                      >
+                        <Plus size={20} /> إضافة عميل
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={customersPageSearch}
+                        onChange={(e) => setCustomersPageSearch(e.target.value)}
+                        placeholder="بحث بالاسم أو رقم الهاتف..."
+                        className="w-full pr-10 pl-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
+                      {customersLoading ? (
+                        <div className="p-12 flex items-center justify-center">
+                          <Loader2 size={32} className="animate-spin text-indigo-500" />
+                        </div>
+                      ) : (
+                        <div className="p-4 sm:p-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {customers
+                              .filter(c => {
+                                const q = (customersPageSearch || '').trim().toLowerCase();
+                                if (!q) return true;
+                                const name = (c.name || '').toLowerCase();
+                                const phone = (c.phone || '').replace(/\s/g, '');
+                                const qNorm = q.replace(/\s/g, '');
+                                return name.includes(q) || phone.includes(qNorm);
+                              })
+                              .map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => setViewingCustomer(c)}
+                                  className="text-right w-full rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/50 p-5 shadow-sm hover:shadow-xl hover:border-indigo-200 hover:from-indigo-50/30 hover:to-white transition-all duration-300 group"
+                                >
+                                  <div className="flex items-start gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-xl font-black group-hover:bg-indigo-200 group-hover:scale-105 transition-transform">
+                                      {(c.name || '؟').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-bold text-slate-800 truncate text-lg">{c.name || '—'}</p>
+                                      <p className="text-slate-500 text-sm font-mono mt-0.5">{c.phone || '—'}</p>
+                                      <div className="flex flex-wrap gap-2 mt-3">
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-bold">
+                                          {c.loyalty_points ?? 0} نقطة
+                                        </span>
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold">
+                                          ₪{Number(c.total_spent ?? 0).toFixed(0)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 flex-shrink-0 mt-1" />
+                                  </div>
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                      {!customersLoading && customers.filter(c => {
+                        const q = (customersPageSearch || '').trim().toLowerCase();
+                        if (!q) return true;
+                        const name = (c.name || '').toLowerCase();
+                        const phone = (c.phone || '').replace(/\s/g, '');
+                        const qNorm = q.replace(/\s/g, '');
+                        return name.includes(q) || phone.includes(qNorm);
+                      }).length === 0 && (
+                        <div className="p-12 text-center text-slate-500">
+                          <Users size={48} className="mx-auto text-slate-300 mb-3" />
+                          <p className="font-medium">لا يوجد عملاء مطابقون للبحث</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* مودال عرض تفاصيل العميل — النقر على عميل يفتح بياناته، ومنها يمكن التعديل */}
+                    {viewingCustomer && createPortal(
+                      <div className="fixed inset-0 z-[110] flex items-center justify-center min-h-screen w-full p-4 bg-slate-900/60 backdrop-blur-md" dir="rtl" onClick={() => setViewingCustomer(null)}>
+                        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-300/50 border border-slate-200/80 w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                          <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-l from-indigo-50/80 to-white">
+                            <div className="flex items-center gap-3">
+                              <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-2xl font-black">
+                                {(viewingCustomer.name || '؟').charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-xl font-black text-slate-800 truncate">{viewingCustomer.name || '—'}</h3>
+                                <p className="text-slate-500 text-sm font-mono mt-0.5">{viewingCustomer.phone || '—'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
+                            <div className="grid gap-4">
+                              <div className="rounded-xl bg-slate-50 p-4">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">الاسم</p>
+                                <p className="text-slate-800 font-semibold">{viewingCustomer.name || '—'}</p>
+                              </div>
+                              <div className="rounded-xl bg-slate-50 p-4">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم الهاتف</p>
+                                <p className="text-slate-800 font-mono font-semibold">{viewingCustomer.phone || '—'}</p>
+                              </div>
+                              {(viewingCustomer.address || viewingCustomer.customer_number) && (
+                                <>
+                                  {viewingCustomer.address && (
+                                    <div className="rounded-xl bg-slate-50 p-4">
+                                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">العنوان</p>
+                                      <p className="text-slate-800 font-medium">{viewingCustomer.address}</p>
+                                    </div>
+                                  )}
+                                  {viewingCustomer.customer_number && (
+                                    <div className="rounded-xl bg-slate-50 p-4">
+                                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">رقم العميل</p>
+                                      <p className="text-slate-800 font-medium">{viewingCustomer.customer_number}</p>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="rounded-xl bg-amber-50 p-4 border border-amber-100">
+                                  <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">نقاط الولاء</p>
+                                  <p className="text-amber-800 font-black text-lg">{viewingCustomer.loyalty_points ?? 0}</p>
+                                </div>
+                                <div className="rounded-xl bg-slate-100 p-4 border border-slate-200">
+                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">إجمالي المشتريات</p>
+                                  <p className="text-slate-800 font-black text-lg">₪{Number(viewingCustomer.total_spent ?? 0).toFixed(0)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="px-6 py-4 flex flex-wrap gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
+                            <button
+                              onClick={() => {
+                                setEditingCustomer({ id: viewingCustomer.id, name: viewingCustomer.name || '', phone: viewingCustomer.phone || '', address: viewingCustomer.address || '', customer_number: viewingCustomer.customer_number || '', loyalty_points: viewingCustomer.loyalty_points ?? 0, total_spent: viewingCustomer.total_spent ?? 0 });
+                                setViewingCustomer(null);
+                              }}
+                              className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-500/30 transition-all"
+                            >
+                              <Pencil size={18} /> تعديل
+                            </button>
+                            <button
+                              onClick={() => {
+                                deleteCustomerFromPage(viewingCustomer.id);
+                                setViewingCustomer(null);
+                              }}
+                              className="px-5 py-3 rounded-xl border-2 border-rose-200 text-rose-600 font-bold hover:bg-rose-50 transition-all flex items-center gap-2"
+                            >
+                              <Trash2 size={18} /> حذف
+                            </button>
+                            <button
+                              onClick={() => setViewingCustomer(null)}
+                              className="px-5 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-all"
+                            >
+                              إغلاق
+                            </button>
+                          </div>
+                        </div>
+                      </div>,
+                      document.body
+                    )}
+
+                    {/* Modal إضافة/تعديل عميل — يُعرض في جذر الصفحة ليكون دائماً في منتصف الشاشة */}
+                    {editingCustomer && createPortal(
+                      <div className="fixed inset-0 z-[110] flex items-center justify-center min-h-screen w-full p-4 bg-slate-900/60 backdrop-blur-md" dir="rtl" onClick={() => !customersLoading && setEditingCustomer(null)}>
+                        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-300/50 border border-slate-200/80 w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                          {/* Header بنفس أسلوب الصفحة */}
+                          <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-l from-indigo-50/80 to-white">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                                {editingCustomer.id ? <Pencil size={24} /> : <Users size={24} />}
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-black text-slate-800">{editingCustomer.id ? 'تعديل العميل' : 'إضافة عميل جديد'}</h3>
+                                <p className="text-slate-500 text-sm mt-0.5">{editingCustomer.id ? 'تحديث بيانات العميل ونقاط الولاء' : 'أدخل بيانات العميل الجديد'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">الاسم *</label>
+                              <input
+                                value={editingCustomer.name}
+                                onChange={e => setEditingCustomer(prev => ({ ...prev, name: e.target.value }))}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                                placeholder="اسم العميل"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">رقم الهاتف *</label>
+                              <input
+                                type="tel"
+                                value={editingCustomer.phone}
+                                onChange={e => setEditingCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right font-mono"
+                                placeholder="05xxxxxxxx"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">العنوان</label>
+                              <input
+                                value={editingCustomer.address || ''}
+                                onChange={e => setEditingCustomer(prev => ({ ...prev, address: e.target.value }))}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                                placeholder="اختياري"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">رقم العميل</label>
+                              <input
+                                value={editingCustomer.customer_number || ''}
+                                onChange={e => setEditingCustomer(prev => ({ ...prev, customer_number: e.target.value }))}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                                placeholder="اختياري"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2 text-right">نقاط الولاء</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={editingCustomer.loyalty_points ?? 0}
+                                  onChange={e => setEditingCustomer(prev => ({ ...prev, loyalty_points: +e.target.value || 0 }))}
+                                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2 text-right">إجمالي المشتريات ₪</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step={0.01}
+                                  value={editingCustomer.total_spent ?? 0}
+                                  onChange={e => setEditingCustomer(prev => ({ ...prev, total_spent: +e.target.value || 0 }))}
+                                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="px-6 py-4 flex gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
+                            <button
+                              onClick={() => saveCustomerFromPage(editingCustomer)}
+                              disabled={customersLoading || !editingCustomer.name?.trim() || !editingCustomer.phone?.trim()}
+                              className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-500/30 transition-all"
+                            >
+                              {customersLoading ? <Loader2 size={18} className="animate-spin" /> : null}
+                              حفظ
+                            </button>
+                            <button
+                              onClick={() => !customersLoading && setEditingCustomer(null)}
+                              className="px-5 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-all"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        </div>
+                      </div>,
+                      document.body
+                    )}
                   </div>
                 ) : mode === 'submitted' ? null : (
                   <div className="space-y-12">
