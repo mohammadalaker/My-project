@@ -626,6 +626,7 @@ function App() {
   const [customersPageSearch, setCustomersPageSearch] = useState('');
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryLowStockOnly, setInventoryLowStockOnly] = useState(false);
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('');
   const filteredCustomersPage = useMemo(() => {
     const raw = (customersPageSearch || '').trim().toLowerCase();
     if (!raw) return customers;
@@ -1286,9 +1287,10 @@ function App() {
         return name.includes(raw) || group.includes(raw) || barcode.includes(q);
       });
     }
+    if (inventoryCategoryFilter) list = list.filter((i) => (i.group || '') === inventoryCategoryFilter);
     if (inventoryLowStockOnly) list = list.filter((i) => (i.stock_count ?? i.stock ?? 0) <= 5);
     return list;
-  }, [filteredItems, inventorySearch, inventoryLowStockOnly]);
+  }, [filteredItems, inventorySearch, inventoryLowStockOnly, inventoryCategoryFilter]);
 
   /** عدد الأصناف التي أوشكت على النفاد (0–5) للشارة في القائمة الجانبية */
   const lowStockCount = useMemo(
@@ -3840,6 +3842,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base"
                         />
                       </div>
+                      <select
+                        value={inventoryCategoryFilter}
+                        onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+                        className="px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 font-semibold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base min-w-[180px]"
+                      >
+                        <option value="">كل الفئات / الشركة المصنعة</option>
+                        {allGroups.map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
                       <label className="flex items-center gap-3 cursor-pointer px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-amber-200 transition-colors">
                         <input type="checkbox" checked={inventoryLowStockOnly} onChange={(e) => setInventoryLowStockOnly(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
                         <span className="font-semibold text-slate-700">عرض المخزون المنخفض فقط (≤5)</span>
@@ -3853,6 +3865,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <table className="w-full text-right border-collapse">
                             <thead>
                               <tr className="bg-slate-50 border-b border-slate-200">
+                                <th className="px-3 py-4 font-bold text-slate-700 w-16">صورة</th>
                                 <th className="px-4 py-4 font-bold text-slate-700">الباركود</th>
                                 <th className="px-4 py-4 font-bold text-slate-700">الاسم</th>
                                 <th className="px-4 py-4 font-bold text-slate-700">الفئة</th>
@@ -3864,18 +3877,34 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             </thead>
                             <tbody>
                               {filteredInventoryItems.length === 0 ? (
-                                <tr><td colSpan={7} className="px-4 py-16 text-center text-slate-500 font-medium">{inventorySearch || inventoryLowStockOnly ? 'لا توجد نتائج مطابقة للبحث أو الفلتر.' : 'لا توجد أصناف في المخزون.'}</td></tr>
+                                <tr><td colSpan={8} className="px-4 py-16 text-center text-slate-500 font-medium">{inventorySearch || inventoryLowStockOnly || inventoryCategoryFilter ? 'لا توجد نتائج مطابقة للبحث أو الفلتر.' : 'لا توجد أصناف في المخزون.'}</td></tr>
                               ) : (
                                 filteredInventoryItems.map((item) => {
                                   const status = getStockStatus(item);
+                                  const qty = Number(item.stock_count ?? item.stock ?? 0);
+                                  const qtyColor = qty === 0 ? 'text-rose-600' : qty <= 10 ? 'text-amber-600' : 'text-slate-700';
+                                  const qtyBg = qty === 0 ? 'bg-rose-100 text-rose-700' : qty <= 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
+                                  const imgSrc = getImage(item) || getImageFallback(item);
                                   return (
                                     <tr key={item.id} className="border-b border-slate-100 hover:bg-amber-50/50 transition-colors">
+                                      <td className="px-3 py-2 align-middle">
+                                        <div className="inv-thumb w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
+                                          {imgSrc ? (
+                                            <>
+                                              <img src={imgSrc} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.target.style.display = 'none'; const wrap = e.target.closest('.inv-thumb'); if (wrap) wrap.querySelector('.inv-thumb-fallback')?.classList.remove('hidden'); }} />
+                                              <span className="inv-thumb-fallback hidden absolute inset-0 flex items-center justify-center bg-slate-100"><Package size={24} className="text-slate-300" /></span>
+                                            </>
+                                          ) : (
+                                            <Package size={24} className="text-slate-300" />
+                                          )}
+                                        </div>
+                                      </td>
                                       <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
                                       <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
                                       <td className="px-4 py-3 text-slate-600">{item.group || '—'}</td>
-                                      <td className="px-4 py-3"><span className={`font-bold ${status === 'Out of Stock' ? 'text-rose-600' : (item.stock_count ?? 0) <= 5 ? 'text-amber-600' : 'text-slate-700'}`}>{item.stock_count ?? item.stock ?? 0}</span></td>
+                                      <td className="px-4 py-3"><span className={`font-bold ${qtyColor}`}>{qty}</span></td>
                                       <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
-                                      <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${status === 'Out of Stock' ? 'bg-rose-100 text-rose-700' : (item.stock_count ?? 0) <= 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{status}</span></td>
+                                      <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${qtyBg}`}>{status}</span></td>
                                       <td className="px-4 py-3"><button type="button" onClick={() => { setEditingItem(item); setShowCatalogPanel(true); }} className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition-colors text-sm">تعديل</button></td>
                                     </tr>
                                   );
