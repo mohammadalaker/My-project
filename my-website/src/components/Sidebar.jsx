@@ -93,7 +93,7 @@ function Sidebar({
                                 if (!isVisible) return null;
 
                                 const isActive = mode === item.id;
-                                const isPlaceholder = ['inventory'].includes(item.id);
+                                const isPlaceholder = [].includes(item.id);
                                 const badgeCount = getBadgeCount(item.badgeKey);
 
                                 return (
@@ -108,17 +108,13 @@ function Sidebar({
                                         )}
                                         <button
                                             onClick={() => {
-                                                if (!isPlaceholder) {
-                                                    setMode(item.id);
-                                                    onClose();
-                                                }
+                                                setMode(item.id);
+                                                onClose();
                                             }}
-                                            disabled={isPlaceholder}
+                                            disabled={false}
                                             className={`relative z-10 w-full flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all group ${isActive
                                                 ? 'text-indigo-700'
-                                                : isPlaceholder
-                                                    ? 'text-slate-400 opacity-60 cursor-not-allowed'
-                                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
@@ -133,12 +129,7 @@ function Sidebar({
                                                     </span>
                                                 )}
                                             </div>
-                                            {isPlaceholder && (
-                                                <span className="text-[9px] uppercase font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">
-                                                    Soon
-                                                </span>
-                                            )}
-                                            {!isPlaceholder && isActive && (
+                                            {isActive && (
                                                 <ChevronRight size={16} className="text-indigo-400" />
                                             )}
                                         </button>

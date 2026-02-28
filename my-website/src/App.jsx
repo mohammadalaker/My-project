@@ -624,6 +624,8 @@ function App() {
 
   // Customers page (Sidebar) state
   const [customersPageSearch, setCustomersPageSearch] = useState('');
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryLowStockOnly, setInventoryLowStockOnly] = useState(false);
   const filteredCustomersPage = useMemo(() => {
     const raw = (customersPageSearch || '').trim().toLowerCase();
     if (!raw) return customers;
@@ -1272,6 +1274,22 @@ function App() {
     [filteredByGroup, search, mode, userRole]
   );
 
+  const filteredInventoryItems = useMemo(() => {
+    let list = filteredItems || [];
+    const raw = (inventorySearch || '').trim().toLowerCase();
+    if (raw) {
+      const q = toEnglishDigits(raw.replace(/\s/g, ''));
+      list = list.filter((i) => {
+        const name = (i.name || '').toLowerCase();
+        const group = (i.group || '').toLowerCase();
+        const barcode = String(i.barcode || '').trim();
+        return name.includes(raw) || group.includes(raw) || barcode.includes(q);
+      });
+    }
+    if (inventoryLowStockOnly) list = list.filter((i) => (i.stock_count ?? i.stock ?? 0) <= 5);
+    return list;
+  }, [filteredItems, inventorySearch, inventoryLowStockOnly]);
+
   /** عدد الأصناف التي أوشكت على النفاد (0–5) للشارة في القائمة الجانبية */
   const lowStockCount = useMemo(
     () => items.filter((i) => {
@@ -1312,7 +1330,7 @@ function App() {
 
   /** In stock if qty > 0, else Out of Stock */
   const getStockStatus = (item) => {
-    const s = item?.stock;
+    const s = item?.stock ?? item?.stock_count;
     if (s == null || s === '') return 'Out of Stock';
     const n = Number(s);
     if (isNaN(n) || n <= 0) return 'Out of Stock';
@@ -2996,7 +3014,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
-              {mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
+              {mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && mode !== 'inventory' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
                   <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
                     Explore our premium collection of electrical appliances and kitchenware.
@@ -3347,7 +3365,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
 
               {/* Categories */}
-              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && (
+              {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && mode !== 'inventory' && (
                 <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
@@ -3789,6 +3807,85 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       )}
                     </div>
 
+                  </div>
+                ) : mode === 'inventory' ? (
+                  /* شاشة المخزون */
+                  <div className="max-w-5xl mx-auto py-6 sm:py-10 px-4 animate-fade-in flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25">
+                          <Package size={32} className="text-white" />
+                        </div>
+                        <div>
+                          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">المخزون</h1>
+                          <p className="text-slate-500 text-sm sm:text-base mt-1">عرض الكميات وتعديل السعر والكمية حسب الباركود</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingItem(null); setShowCatalogPanel(true); }}
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold shadow-lg shadow-amber-500/30 transition-all duration-300"
+                      >
+                        <Plus size={22} /> إضافة صنف
+                      </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="relative flex-1">
+                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={inventorySearch}
+                          onChange={(e) => setInventorySearch(e.target.value)}
+                          placeholder="بحث بالاسم أو الباركود أو الفئة..."
+                          className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base"
+                        />
+                      </div>
+                      <label className="flex items-center gap-3 cursor-pointer px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-amber-200 transition-colors">
+                        <input type="checkbox" checked={inventoryLowStockOnly} onChange={(e) => setInventoryLowStockOnly(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
+                        <span className="font-semibold text-slate-700">عرض المخزون المنخفض فقط (≤5)</span>
+                      </label>
+                    </div>
+                    <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
+                      {loading ? (
+                        <div className="p-16 flex items-center justify-center"><Loader2 size={40} className="animate-spin text-amber-500" /></div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-right border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50 border-b border-slate-200">
+                                <th className="px-4 py-4 font-bold text-slate-700">الباركود</th>
+                                <th className="px-4 py-4 font-bold text-slate-700">الاسم</th>
+                                <th className="px-4 py-4 font-bold text-slate-700">الفئة</th>
+                                <th className="px-4 py-4 font-bold text-slate-700">الكمية</th>
+                                <th className="px-4 py-4 font-bold text-slate-700">السعر</th>
+                                <th className="px-4 py-4 font-bold text-slate-700">الحالة</th>
+                                <th className="px-4 py-4 font-bold text-slate-700">تعديل</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredInventoryItems.length === 0 ? (
+                                <tr><td colSpan={7} className="px-4 py-16 text-center text-slate-500 font-medium">{inventorySearch || inventoryLowStockOnly ? 'لا توجد نتائج مطابقة للبحث أو الفلتر.' : 'لا توجد أصناف في المخزون.'}</td></tr>
+                              ) : (
+                                filteredInventoryItems.map((item) => {
+                                  const status = getStockStatus(item);
+                                  return (
+                                    <tr key={item.id} className="border-b border-slate-100 hover:bg-amber-50/50 transition-colors">
+                                      <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
+                                      <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
+                                      <td className="px-4 py-3 text-slate-600">{item.group || '—'}</td>
+                                      <td className="px-4 py-3"><span className={`font-bold ${status === 'Out of Stock' ? 'text-rose-600' : (item.stock_count ?? 0) <= 5 ? 'text-amber-600' : 'text-slate-700'}`}>{item.stock_count ?? item.stock ?? 0}</span></td>
+                                      <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
+                                      <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${status === 'Out of Stock' ? 'bg-rose-100 text-rose-700' : (item.stock_count ?? 0) <= 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>{status}</span></td>
+                                      <td className="px-4 py-3"><button type="button" onClick={() => { setEditingItem(item); setShowCatalogPanel(true); }} className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition-colors text-sm">تعديل</button></td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : mode === 'customers' ? (
                   /* Customers View — واجهة حديثة + عرض الأسماء بالكامل */
