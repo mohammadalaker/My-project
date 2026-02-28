@@ -29,7 +29,7 @@ function Sidebar({
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['supervisor', 'admin'], badgeKey: null },
         { id: 'submitted', label: 'Sale Orders', icon: FileText, roles: ['supervisor', 'admin'], badgeKey: 'submitted' },
         { id: 'sales_hub', label: 'Sales Area', icon: ShoppingCart, roles: ['customer', 'supervisor', 'admin'], badgeKey: 'held' },
-        { id: 'customers', label: 'Customers', icon: Users, roles: ['admin'], badgeKey: null },
+        { id: 'customers', label: 'Customers', icon: Users, roles: ['admin', 'supervisor'], badgeKey: null },
         { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin'], badgeKey: 'lowStock' },
         { id: 'reports', label: 'Reports', icon: FileText, roles: ['admin', 'supervisor'], badgeKey: null },
         { id: 'settings', label: 'Settings', icon: Settings, roles: ['admin'], badgeKey: null },

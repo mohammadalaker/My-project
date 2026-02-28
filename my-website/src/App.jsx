@@ -329,7 +329,7 @@ function App() {
     setIsSidebarOpen(open);
     try {
       localStorage.setItem('sales_sidebar_open', open ? 'true' : 'false');
-    } catch (_) {}
+    } catch (_) { }
   }, []);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -734,19 +734,37 @@ function App() {
   };
 
   const fetchCustomers = useCallback(async () => {
+    setCustomersLoading(true);
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, company_name, name, phone, address, customer_number, loyalty_points, total_spent, outstanding_debt, created_at')
-        .order('created_at', { ascending: false });
-      if (!error && data) {
+        .select('id, company_name, name, phone, address, customer_number, loyalty_points, total_spent, outstanding_debt')
+        .order('id', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
         setCustomers(data);
         try {
           localStorage.setItem('sales_customers_cache', JSON.stringify(data));
         } catch (_) { /* ignore */ }
       }
-    } catch (e) { console.warn('fetchCustomers:', e); }
-  }, []);
+    } catch (e) {
+      console.warn('fetchCustomers error:', e);
+      try {
+        const cached = localStorage.getItem('sales_customers_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) setCustomers(parsed);
+        }
+      } catch (_) { /* ignore */ }
+      if (customers.length === 0) {
+        alert('تعذر تحميل بيانات العملاء. تأكد من الاتصال بالإنترنت وصلاحيات الجدول.');
+      }
+    } finally {
+      setCustomersLoading(false);
+    }
+  }, [customers.length]);
 
   const fetchSalesLast7 = useCallback(async () => {
     setSalesStatsLoading(true);
@@ -870,7 +888,7 @@ function App() {
   }, [fetchCustomOffers, fetchCustomers]);
 
   useEffect(() => {
-    if (mode === 'customers' && userRole === 'admin') fetchCustomers();
+    if (mode === 'customers' && (userRole === 'admin' || userRole === 'supervisor')) fetchCustomers();
   }, [mode, userRole, fetchCustomers]);
 
   /* منع تمرير الصفحة عند فتح مودال تعديل أو عرض العميل */
@@ -3434,13 +3452,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                         {salesLast7.length > 1 && (
                           <div
-                            className={`text-sm font-bold ${
-                              salesTrend > 0
+                            className={`text-sm font-bold ${salesTrend > 0
                                 ? 'text-emerald-600'
                                 : salesTrend < 0
                                   ? 'text-rose-600'
                                   : 'text-slate-500'
-                            }`}
+                              }`}
                           >
                             {salesTrend > 0
                               ? '↑ نمو مقابل بداية الأسبوع'
@@ -3814,44 +3831,44 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <div className="p-4 sm:p-6">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                             {filteredCustomersPage.map((c) => (
-                                <button
-                                  key={c.id}
-                                  type="button"
-                                  onClick={() => setViewingCustomer(c)}
-                                  className="text-right w-full rounded-2xl border-2 border-slate-100 bg-white p-5 sm:p-6 shadow-sm hover:shadow-lg hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                                >
-                                  <div className="flex items-start gap-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-xl font-black group-hover:from-indigo-200 group-hover:to-violet-200 transition-colors">
-                                      {((c.company_name || c.name) || '؟').charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="font-bold text-slate-900 text-base sm:text-lg break-words leading-snug">
-                                        {c.company_name || c.name || '—'}
-                                      </p>
-                                      {c.company_name && c.name && (
-                                        <p className="text-slate-600 text-sm break-words leading-snug mt-1">
-                                          {c.name}
-                                        </p>
-                                      )}
-                                      <p className="text-slate-500 text-sm font-mono mt-2">{c.phone || '—'}</p>
-                                      <div className="flex flex-wrap gap-2 mt-4">
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-bold">
-                                          {c.loyalty_points ?? 0} نقطة
-                                        </span>
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
-                                          ₪{Number(c.total_spent ?? 0).toFixed(0)}
-                                        </span>
-                                        {Number(c.outstanding_debt ?? 0) > 0 && (
-                                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 text-xs font-bold">
-                                            رصيد سابق ₪{Number(c.outstanding_debt).toFixed(0)}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 flex-shrink-0 mt-1 transition-colors" />
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => setViewingCustomer(c)}
+                                className="text-right w-full rounded-2xl border-2 border-slate-100 bg-white p-5 sm:p-6 shadow-sm hover:shadow-lg hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                              >
+                                <div className="flex items-start gap-4">
+                                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-xl font-black group-hover:from-indigo-200 group-hover:to-violet-200 transition-colors">
+                                    {((c.company_name || c.name) || '؟').charAt(0).toUpperCase()}
                                   </div>
-                                </button>
-                              ))}
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-slate-900 text-base sm:text-lg break-words leading-snug">
+                                      {c.company_name || c.name || '—'}
+                                    </p>
+                                    {c.company_name && c.name && (
+                                      <p className="text-slate-600 text-sm break-words leading-snug mt-1">
+                                        {c.name}
+                                      </p>
+                                    )}
+                                    <p className="text-slate-500 text-sm font-mono mt-2">{c.phone || '—'}</p>
+                                    <div className="flex flex-wrap gap-2 mt-4">
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-bold">
+                                        {c.loyalty_points ?? 0} نقطة
+                                      </span>
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
+                                        ₪{Number(c.total_spent ?? 0).toFixed(0)}
+                                      </span>
+                                      {Number(c.outstanding_debt ?? 0) > 0 && (
+                                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 text-xs font-bold">
+                                          رصيد سابق ₪{Number(c.outstanding_debt).toFixed(0)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 flex-shrink-0 mt-1 transition-colors" />
+                                </div>
+                              </button>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -3860,8 +3877,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
                             <Users size={40} className="text-slate-400" />
                           </div>
-                          <p className="text-slate-600 font-medium">لا يوجد عملاء مطابقون للبحث</p>
-                          <p className="text-slate-400 text-sm mt-1">جرّب كلمات أخرى أو أضف عميلاً جديداً</p>
+                          <p className="text-slate-600 font-medium">
+                            {(customersPageSearch || '').trim() ? 'لا يوجد عملاء مطابقون للبحث' : 'لا يوجد عملاء مسجلون بعد'}
+                          </p>
+                          <p className="text-slate-400 text-sm mt-1">
+                            {(customersPageSearch || '').trim() ? 'جرّب كلمات أخرى أو أضف عميلاً جديداً' : 'أضف عميلاً جديداً باستخدام الزر "إضافة عميل" أعلاه'}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -4632,16 +4653,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           </span>
                         )}
                       </label>
-                        {orderInfo.phone && (() => {
-                          const cust = customers.find(c => c.phone === orderInfo.phone);
-                          const debt = Number(cust?.outstanding_debt ?? 0);
-                          if (!cust || debt <= 0) return null;
-                          return (
-                            <div className="mb-1.5 rounded-2xl bg-rose-50 border border-rose-200 px-3 py-2 flex items-center justify-between text-[11px] text-rose-700 font-bold">
-                              <span>تنبيه: هذا العميل لديه رصيد سابق غير مدفوع بقيمة ₪{debt.toFixed(0)}</span>
-                            </div>
-                          );
-                        })()}
+                      {orderInfo.phone && (() => {
+                        const cust = customers.find(c => c.phone === orderInfo.phone);
+                        const debt = Number(cust?.outstanding_debt ?? 0);
+                        if (!cust || debt <= 0) return null;
+                        return (
+                          <div className="mb-1.5 rounded-2xl bg-rose-50 border border-rose-200 px-3 py-2 flex items-center justify-between text-[11px] text-rose-700 font-bold">
+                            <span>تنبيه: هذا العميل لديه رصيد سابق غير مدفوع بقيمة ₪{debt.toFixed(0)}</span>
+                          </div>
+                        );
+                      })()}
                       <input
                         value={orderInfo.phone}
                         onChange={(e) => {
