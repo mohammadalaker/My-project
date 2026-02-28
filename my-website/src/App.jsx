@@ -1331,7 +1331,7 @@ function App() {
     return list;
   }, [filteredItems, inventorySearch, inventoryLowStockOnly, inventoryCategoryFilter]);
 
-  /** عدد الأصناف التي أوشكت على النفاد (0–5) للشارة في القائمة الجانبية */
+  /** عدد الأصناف التي أوشكت على النفاد (0–5) للشارة بجانب "Inventory" في القائمة الجانبية */
   const lowStockCount = useMemo(
     () => items.filter((i) => {
       const s = Number(i.stock_count ?? i.stock);

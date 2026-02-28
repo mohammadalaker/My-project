@@ -124,7 +124,10 @@ function Sidebar({
                                                 />
                                                 <span>{item.label}</span>
                                                 {badgeCount > 0 && (
-                                                    <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-sm">
+                                                    <span
+                                                        title={item.badgeKey === 'lowStock' ? 'أصناف أوشكت على النفاد (كمية ≤5)' : undefined}
+                                                        className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-sm"
+                                                    >
                                                         {badgeCount > 99 ? '99+' : badgeCount}
                                                     </span>
                                                 )}
