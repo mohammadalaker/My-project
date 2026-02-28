@@ -52,8 +52,8 @@ export const BARCODE_ORDER = [
   '3045386378210',
   '3016661151668',
   '3045388688904',
-  '3016661151132',
   '3016661159053',
+  '3016661151132',
   '3045380012790',
   '3121040089774',
   '3121040088494',
@@ -282,6 +282,7 @@ export const BARCODE_ORDER = [
   '3168430332638',
   '3168430332553',
   '3168430332577',
+  '3168430332652',
   '3168430353268',
   '3168430353275',
   '3045384363294',
@@ -314,6 +315,7 @@ export const BARCODE_ORDER = [
   '3426470020114',
   '3426470020121',
   '3426470020138',
+  '3426470021975',
   '3426470023078',
   '3426470281751',
   '3426470275088',
@@ -348,6 +350,7 @@ export const BARCODE_ORDER = [
   '3137610000797',
   '5010762010655',
   '3137610000766',
+  '3137610000773',
   '3426470262293',
   '3426470262316',
   '3426470262323',
@@ -425,6 +428,7 @@ export const BARCODE_ORDER = [
   '7290109406695',
   '7290109406770',
   '7290109406824',
+  '7290109406961',
   '7290109406756',
   '7290109406787',
   '7290109406800',
@@ -772,20 +776,23 @@ export const BARCODE_ORDER = [
   '7290020124814',
   '7290020124845',
   '7290020124821',
-  '7290020124838'
+  '7290020124838',
 ];
 
-/** Sort items by barcode: first by attached list order, then by barcode value */
+/** Sort items by barcode: first by attached list order, then by barcode value. Normalizes keys for matching. */
 export const sortByBarcodeOrder = (items, barcodeOrder) => {
   const orderMap = new Map((barcodeOrder || []).map((b, i) => [String(b).trim(), i]));
-  const toKey = (item) => String(item?.barcode ?? item?.id ?? '').trim();
+  const toKey = (item) => {
+    const raw = item?.barcode ?? item?.id ?? '';
+    const s = String(raw).trim();
+    return s;
+  };
   return [...items].sort((a, b) => {
     const keyA = toKey(a);
     const keyB = toKey(b);
     const idxA = orderMap.has(keyA) ? orderMap.get(keyA) : Infinity;
     const idxB = orderMap.has(keyB) ? orderMap.get(keyB) : Infinity;
     if (idxA !== idxB) return idxA - idxB;
-    // Keep original relative order if not found, or use a stable property
     return 0;
   });
 };
