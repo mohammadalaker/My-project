@@ -627,6 +627,9 @@ function App() {
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryLowStockOnly, setInventoryLowStockOnly] = useState(false);
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('');
+  const inventoryBarcodeScanRef = useRef(null);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [activityLogsLoading, setActivityLogsLoading] = useState(false);
   const filteredCustomersPage = useMemo(() => {
     const raw = (customersPageSearch || '').trim().toLowerCase();
     if (!raw) return customers;
@@ -769,6 +772,41 @@ function App() {
     }
   }, [customers.length]);
 
+  const fetchActivityLogs = useCallback(async () => {
+    setActivityLogsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('id, created_at, username, action, entity_type, entity_id, field_name, old_value, new_value, description')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      setActivityLogs(data || []);
+    } catch (e) {
+      console.warn('fetchActivityLogs:', e);
+      setActivityLogs([]);
+    } finally {
+      setActivityLogsLoading(false);
+    }
+  }, []);
+
+  const logActivityToSupabase = useCallback(async (payload) => {
+    try {
+      await supabase.from('activity_logs').insert({
+        username: payload.username || localStorage.getItem('sales_username') || 'unknown',
+        action: payload.action || 'update',
+        entity_type: payload.entity_type || 'item',
+        entity_id: payload.entity_id ?? '',
+        field_name: payload.field_name ?? null,
+        old_value: payload.old_value != null ? String(payload.old_value) : null,
+        new_value: payload.new_value != null ? String(payload.new_value) : null,
+        description: payload.description ?? null,
+      });
+    } catch (e) {
+      console.warn('logActivityToSupabase:', e);
+    }
+  }, []);
+
   const fetchSalesLast7 = useCallback(async () => {
     setSalesStatsLoading(true);
     try {
@@ -892,7 +930,8 @@ function App() {
 
   useEffect(() => {
     if (mode === 'customers' && (userRole === 'admin' || userRole === 'supervisor')) fetchCustomers();
-  }, [mode, userRole, fetchCustomers]);
+    if (mode === 'inventory' && userRole === 'admin') fetchActivityLogs();
+  }, [mode, userRole, fetchCustomers, fetchActivityLogs]);
 
   /* منع تمرير الصفحة عند فتح مودال تعديل أو عرض العميل */
   useEffect(() => {
@@ -2398,6 +2437,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     setModalOpen(true);
   };
 
+  const handleDelete = async (barcode) => {
+    if (userRole !== 'admin') return;
+    if (!confirm('Delete this item?')) return;
+    try {
+      await supabase.from('items').delete().eq('barcode', barcode);
+      setItems((prev) => prev.filter((i) => i.barcode !== barcode));
+    } catch (err) {
+      alert(err.message || 'Delete failed');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (userRole !== 'admin') return;
@@ -2424,27 +2474,90 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       if (editingItem) {
         const { error } = await supabase.from('items').update(payload).eq('barcode', editingItem.barcode);
         if (error) throw error;
+        const uname = username || localStorage.getItem('sales_username') || 'unknown';
+        const barcodeId = editingItem.barcode;
+        const fields = [
+          { key: 'full_price', old: editingItem.price, new: payload.full_price, label: 'السعر' },
+          { key: 'price_after_disc', old: editingItem.priceAfterDiscount, new: payload.price_after_disc, label: 'سعر بعد الخصم' },
+          { key: 'stock_count', old: editingItem.stock_count ?? editingItem.stock, new: payload.stock_count, label: 'الكمية' },
+          { key: 'eng_name', old: editingItem.name, new: payload.eng_name, label: 'الاسم' },
+          { key: 'brand_group', old: editingItem.group, new: payload.brand_group, label: 'الفئة' },
+        ];
+        for (const f of fields) {
+          const ov = f.old != null ? String(f.old) : '';
+          const nv = f.new != null ? String(f.new) : '';
+          if (ov !== nv) {
+            await logActivityToSupabase({ username: uname, entity_id: barcodeId, field_name: f.key, old_value: ov, new_value: nv, description: `${f.label}: ${ov} → ${nv}` });
+          }
+        }
+        fetchActivityLogs();
       } else {
         const { error } = await supabase.from('items').insert(payload);
         if (error) throw error;
       }
       setModalOpen(false);
+      setShowCatalogPanel(false);
       fetchItems(true);
     } catch (err) {
       alert(err.message || 'Save failed');
     }
   };
 
-  const handleDelete = async (barcode) => {
-    if (userRole !== 'admin') return;
-    if (!confirm('Delete this item?')) return;
-    try {
-      await supabase.from('items').delete().eq('barcode', barcode);
-      setItems((prev) => prev.filter((i) => i.barcode !== barcode));
-    } catch (err) {
-      alert(err.message || 'Delete failed');
+  const openEditPanelFromBarcode = useCallback((barcodeStr) => {
+    const code = String(barcodeStr || '').trim();
+    if (!code) return;
+    const item = items.find((i) => String(i.barcode || '').trim() === code);
+    if (item) {
+      setEditingItem(item);
+      const stockVal = item.stock;
+      const stockDisplay = (stockVal != null && stockVal !== '') ? stockVal : 0;
+      setFormData({
+        barcode: item.barcode || '',
+        brand_group: item.group || '',
+        eng_name: item.name || '',
+        product_type: item.productType || '',
+        box_count: item.box ?? '',
+        full_price: item.price ?? '',
+        price_after_disc: item.priceAfterDiscount ?? '',
+        stock_count: stockDisplay,
+        image_url: item.image || '',
+        visible: item.visible !== false,
+      });
+      setShowCatalogPanel(true);
+      if (inventoryBarcodeScanRef.current) inventoryBarcodeScanRef.current.value = '';
+    } else {
+      alert('لم يُعثر على صنف بالباركود: ' + code);
     }
-  };
+  }, [items]);
+
+  const handleExportInventory = useCallback(async () => {
+    try {
+      const ExcelJS = (await import('exceljs')).default;
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('المخزون', { views: [{ rightToLeft: true }] });
+      const rows = [
+        ['الباركود', 'الاسم', 'الفئة', 'الكمية', 'السعر', 'الحالة'],
+        ...filteredInventoryItems.map((i) => {
+          const qty = Number(i.stock_count ?? i.stock ?? 0);
+          const status = qty === 0 ? 'نفد' : qty <= 10 ? 'منخفض' : 'متوفر';
+          return [i.barcode || '', i.name || '', i.group || '', qty, Math.round(i.priceAfterDiscount ?? i.price ?? 0), status];
+        }),
+      ];
+      ws.addRows(rows);
+      ws.getRow(1).font = { bold: true };
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `inventory_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('handleExportInventory:', err);
+      alert('فشل التصدير: ' + (err?.message || err));
+    }
+  }, [filteredInventoryItems]);
 
   /** Open printable QR sticker for customer self-scan URL (?barcode=...) */
   const handlePrintQR = (item) => {
@@ -3830,7 +3943,31 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       >
                         <Plus size={22} /> إضافة صنف
                       </button>
+                      <button
+                        type="button"
+                        onClick={handleExportInventory}
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl border-2 border-amber-500 bg-white text-amber-700 font-bold hover:bg-amber-50 transition-all duration-300"
+                      >
+                        <FileDown size={22} /> تصدير Excel
+                      </button>
                     </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-bold text-slate-600 shrink-0">مسح الباركود:</label>
+                        <input
+                          ref={inventoryBarcodeScanRef}
+                          type="text"
+                          dir="ltr"
+                          placeholder="امسح الباركود أو أدخل الرقم واضغط Enter"
+                          className="flex-1 max-w-md pr-4 pl-4 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base font-mono"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              openEditPanelFromBarcode(e.target.value);
+                            }
+                          }}
+                        />
+                      </div>
                     <div className="flex flex-col sm:flex-row gap-4">
                       <div className="relative flex-1">
                         <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
@@ -3914,6 +4051,49 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           </table>
                         </div>
                       )}
+                    </div>
+
+                    {/* سجل التغييرات */}
+                    <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
+                      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                          <Clock size={20} className="text-amber-500" />
+                          سجل التغييرات (من غيّر السعر / الكمية ومتى)
+                        </h3>
+                        <button type="button" onClick={fetchActivityLogs} disabled={activityLogsLoading} className="text-sm font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-50 flex items-center gap-1">
+                          {activityLogsLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                          تحديث
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                        {activityLogsLoading && activityLogs.length === 0 ? (
+                          <div className="p-8 flex justify-center"><Loader2 size={28} className="animate-spin text-amber-500" /></div>
+                        ) : activityLogs.length === 0 ? (
+                          <p className="p-6 text-center text-slate-500 text-sm">لا توجد سجلات تغيير. سيظهر هنا من غيّر السعر أو الكمية بعد إنشاء جدول activity_logs في Supabase.</p>
+                        ) : (
+                          <table className="w-full text-right border-collapse text-sm">
+                            <thead>
+                              <tr className="bg-slate-100 border-b border-slate-200">
+                                <th className="px-3 py-2 font-bold text-slate-600">الوقت</th>
+                                <th className="px-3 py-2 font-bold text-slate-600">المستخدم</th>
+                                <th className="px-3 py-2 font-bold text-slate-600">الباركود</th>
+                                <th className="px-3 py-2 font-bold text-slate-600">التغيير</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {activityLogs.map((log) => (
+                                <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                                  <td className="px-3 py-2 text-slate-600 font-mono text-xs">{log.created_at ? new Date(log.created_at).toLocaleString('ar-SA') : '—'}</td>
+                                  <td className="px-3 py-2 font-semibold text-slate-700">{log.username || '—'}</td>
+                                  <td className="px-3 py-2 font-mono text-slate-600">{log.entity_id || '—'}</td>
+                                  <td className="px-3 py-2 text-slate-700">{log.description || log.field_name || '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    </div>
                     </div>
                   </div>
                 ) : mode === 'customers' ? (
