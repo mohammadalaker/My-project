@@ -637,8 +637,9 @@ function App() {
   const [activityLogs, setActivityLogs] = useState([]);
   const [activityLogsLoading, setActivityLogsLoading] = useState(false);
 
-  // Reports page state
-  const [activeReportTab, setActiveReportTab] = useState('sales');
+  // Reports page state — null = شاشة اختيار "أي تقرير تريد أن تراه؟"
+  const [activeReportTab, setActiveReportTab] = useState(null);
+  const [reportSalesDays, setReportSalesDays] = useState(7); // 7 | 14 | 30 للفلتر الزمني
 
   const filteredCustomersPage = useMemo(() => {
     const raw = (customersPageSearch || '').trim().toLowerCase();
@@ -857,11 +858,12 @@ function App() {
     }
   }, []);
 
-  const fetchSalesLast7 = useCallback(async () => {
+  const fetchSalesLast7 = useCallback(async (days = 7) => {
     setSalesStatsLoading(true);
     try {
+      const totalDays = Math.min(90, Math.max(1, Number(days) || 7));
       const from = new Date();
-      from.setDate(from.getDate() - 6);
+      from.setDate(from.getDate() - (totalDays - 1));
       const fromIso = from.toISOString();
 
       const { data, error } = await supabase
@@ -881,7 +883,7 @@ function App() {
       });
 
       const points = [];
-      for (let i = 6; i >= 0; i--) {
+      for (let i = totalDays - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const key = d.toISOString().slice(0, 10);
@@ -998,13 +1000,18 @@ function App() {
     } catch (e) { console.warn('Could not save offers:', e); }
   }, [customOffers, offersLoaded]);
 
-  // Load sales stats and inventory insights when opening Reports
+  // Load sales stats and inventory insights when opening Reports (عند اختيار تقرير يتم الجلب من داخل التقرير)
   useEffect(() => {
-    if (mode === 'reports' && (userRole === 'admin' || userRole === 'supervisor')) {
-      fetchSalesLast7();
-      fetchInventoryInsights();
+    if (mode === 'reports' && (userRole === 'admin' || userRole === 'supervisor') && activeReportTab) {
+      if (activeReportTab === 'sales') fetchSalesLast7(reportSalesDays);
+      if (activeReportTab === 'inventory') fetchInventoryInsights();
     }
-  }, [mode, userRole, fetchSalesLast7, fetchInventoryInsights]);
+  }, [mode, userRole, activeReportTab, reportSalesDays, fetchSalesLast7, fetchInventoryInsights]);
+
+  // عند الخروج من صفحة التقارير نعيد شاشة الاختيار لفتحها في المرة القادمة
+  useEffect(() => {
+    if (mode !== 'reports') setActiveReportTab(null);
+  }, [mode]);
 
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -2689,6 +2696,56 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   }, [filteredInventoryItems]);
 
+  /** تصدير تقرير المخزون من صفحة التقارير (قائمة كاملة للتجرد) — Excel */
+  const handleExportReportInventory = useCallback(async () => {
+    try {
+      const ExcelJS = (await import('exceljs')).default;
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('تقرير المخزون للتجرد', { views: [{ rightToLeft: true }] });
+      const rows = [
+        ['الباركود', 'الاسم', 'الفئة', 'الكمية', 'السعر', 'الحالة'],
+        ...(items || []).map((i) => {
+          const qty = Number(i.stock_count ?? i.stock ?? 0);
+          const status = qty === 0 ? 'نفد' : qty <= 5 ? 'أوشك على النفاد' : 'متوفر';
+          return [i.barcode || '', i.name || '', i.group || '', qty, Math.round(i.priceAfterDiscount ?? i.price ?? 0), status];
+        }),
+      ];
+      ws.addRows(rows);
+      ws.getRow(1).font = { bold: true };
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `تقرير_المخزون_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('handleExportReportInventory:', err);
+      alert('فشل التصدير: ' + (err?.message || err));
+    }
+  }, [items]);
+
+  /** طباعة تقرير المخزون (PDF عبر حفظ كـ PDF من نافذة الطباعة) */
+  const handlePrintReportInventory = useCallback(() => {
+    const list = (items || []).map((i) => {
+      const qty = Number(i.stock_count ?? i.stock ?? 0);
+      const status = qty === 0 ? 'نفد' : qty <= 5 ? 'أوشك على النفاد' : 'متوفر';
+      return { barcode: i.barcode || '', name: i.name || '', group: i.group || '', qty, price: Math.round(i.priceAfterDiscount ?? i.price ?? 0), status };
+    });
+    const rowsHtml = list.map((r) => {
+      const rowClass = r.status === 'نفد' ? 'bg-red-100 text-red-800' : r.status === 'أوشك على النفاد' ? 'bg-amber-50 text-amber-800' : '';
+      return `<tr class="${rowClass}"><td class="border px-2 py-1">${String(r.barcode)}</td><td class="border px-2 py-1">${String(r.name).replace(/</g, '&lt;')}</td><td class="border px-2 py-1">${String(r.group)}</td><td class="border px-2 py-1 font-bold">${r.qty}</td><td class="border px-2 py-1">₪${r.price}</td><td class="border px-2 py-1 font-semibold">${r.status}</td></tr>`;
+    }).join('');
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير المخزون للتجرد</title>
+<style>body{font-family:Segoe UI,sans-serif;padding:16px;max-width:900px;margin:0 auto}.header{text-align:center;margin-bottom:20px;font-size:18px;font-weight:bold}table{width:100%;border-collapse:collapse}th{background:#1e293b;color:#fff;padding:8px;text-align:right}@media print{body{padding:0}}</style></head><body>
+<div class="header">تقرير المخزون للتجرد — ${new Date().toLocaleDateString('ar-SA')}</div>
+<table><thead><tr><th>الباركود</th><th>الاسم</th><th>الفئة</th><th>الكمية</th><th>السعر</th><th>الحالة</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+<p style="margin-top:16px;font-size:12px;color:#64748b">اطبع هذه الصفحة (Ctrl+P) أو احفظ كـ PDF من نافذة الطباعة.</p></body></html>`;
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (w) { w.document.write(html); w.document.close(); }
+  }, [items]);
+
   /** Open printable QR sticker for customer self-scan URL (?barcode=...) */
   const handlePrintQR = (item) => {
     if (!item?.barcode) return;
@@ -3694,110 +3751,204 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   /* Dashboard View */
                   <Dashboard items={items} orders={submittedOrders} />
                 ) : mode === 'reports' ? (
-                  /* Reports View – Tabs for Sales and Inventory */
-                  <div className="max-w-6xl mx-auto py-6 sm:py-10 px-4 animate-fade-in flex flex-col gap-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">التقارير والإحصائيات</h2>
-                        <p className="text-slate-500 text-sm mt-1">
-                          نظرة شاملة على أداء المبيعات وحالة المخزون الحالي.
-                        </p>
-                      </div>
-                      <div className="flex bg-slate-100/80 p-1.5 rounded-2xl shrink-0 border border-slate-200/60 shadow-inner">
-                        <button
-                          onClick={() => setActiveReportTab('sales')}
-                          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeReportTab === 'sales'
-                            ? 'bg-white text-indigo-700 shadow-md shadow-slate-200/50 scale-100'
-                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 scale-95'
-                            }`}
-                        >
-                          <FileText size={18} /> المبيعات
-                        </button>
-                        <button
-                          onClick={() => setActiveReportTab('inventory')}
-                          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeReportTab === 'inventory'
-                            ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-100'
-                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 scale-95'
-                            }`}
-                        >
-                          <Package size={18} /> المخزون
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="relative min-h-[400px]">
-                      <AnimatePresence mode="wait">
-                        {activeReportTab === 'sales' ? (
-                          /* Sales Report Tab */
-                          <motion.div
-                            key="sales"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
-                            className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/70 border border-slate-100"
+                  /* التقارير — الشكل الخارجي: أولاً "أي تقرير تريد أن تراه؟" ثم محتوى التقرير */
+                  <div className="max-w-6xl mx-auto animate-fade-in">
+                    {activeReportTab == null ? (
+                      /* شاشة اختيار التقرير — مثل Sales Area */
+                      <div className="flex flex-col items-center pt-10 pb-20 px-4">
+                        <div className="text-center mb-10">
+                          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">التقارير والإحصائيات</h2>
+                          <p className="text-slate-500 mt-2 text-lg">أي تقرير تريد أن تراه؟</p>
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center w-full max-w-4xl">
+                          {/* تقرير المبيعات */}
+                          <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-indigo-900/5 border border-indigo-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                            onClick={() => setActiveReportTab('sales')}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveReportTab('sales'); } }}
                           >
-                            <div className="flex items-center justify-between mb-4 gap-4">
-                              <div>
-                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">إجمالي آخر ٧ أيام</p>
-                                <p className="text-2xl font-black text-slate-900">
-                                  ₪{salesLast7.reduce((sum, p) => sum + (p.value || 0), 0).toLocaleString('en-US')}
-                                </p>
+                            <div className="absolute top-0 right-0 p-32 bg-indigo-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110" />
+                            <div className="relative z-10 flex flex-col h-full">
+                              <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-6 shadow-inner">
+                                <FileText size={32} />
                               </div>
-                              {salesLast7.length > 1 && (
-                                <div
-                                  className={`text-sm font-bold ${salesTrend > 0
-                                    ? 'text-emerald-600'
-                                    : salesTrend < 0
-                                      ? 'text-rose-600'
-                                      : 'text-slate-500'
-                                    }`}
-                                >
-                                  {salesTrend > 0
-                                    ? '↑ نمو مقابل بداية الأسبوع'
-                                    : salesTrend < 0
-                                      ? '↓ انخفاض مقابل بداية الأسبوع'
-                                      : 'مستقر هذا الأسبوع'}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="h-24">
-                              {salesStatsLoading ? (
-                                <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                                  جارِ تحميل بيانات المبيعات...
-                                </div>
-                              ) : (
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <LineChart data={salesLast7}>
-                                    <Tooltip
-                                      formatter={(v) => `₪${Number(v || 0).toLocaleString('en-US')}`}
-                                      labelFormatter={() => ''}
-                                      contentStyle={{ fontSize: 11, direction: 'rtl' }}
-                                    />
-                                    <Line
-                                      type="monotone"
-                                      dataKey="value"
-                                      stroke="#4f46e5"
-                                      strokeWidth={2}
-                                      dot={false}
-                                      activeDot={{ r: 4 }}
-                                    />
-                                  </LineChart>
-                                </ResponsiveContainer>
-                              )}
-                            </div>
-
-                            <div className="mt-3 flex justify-between text-[11px] text-slate-400">
-                              {salesLast7.map((p) => (
-                                <span key={p.date} className="flex-1 text-center">
-                                  {p.label}
+                              <h3 className="text-2xl font-black text-slate-800 mb-3">تقرير المبيعات</h3>
+                              <p className="text-slate-500 mb-8 leading-relaxed flex-1">
+                                إحصائيات المبيعات حسب الفترة، رسم بياني واتجاه النمو أو الانخفاض.
+                              </p>
+                              <div className="mt-auto">
+                                <span className="inline-flex items-center gap-2 py-3 text-indigo-600 font-bold">
+                                  <span>عرض التقرير</span>
+                                  <ChevronRight size={20} />
                                 </span>
-                              ))}
+                              </div>
                             </div>
-                          </motion.div>
-                        ) : (
-                          /* Inventory Report Tab */
+                          </div>
+
+                          {/* تقرير المخزون */}
+                          <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-amber-900/5 border border-amber-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                            onClick={() => setActiveReportTab('inventory')}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveReportTab('inventory'); } }}
+                          >
+                            <div className="absolute top-0 right-0 p-32 bg-amber-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110" />
+                            <div className="relative z-10 flex flex-col h-full">
+                              <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mb-6 shadow-inner">
+                                <Package size={32} />
+                              </div>
+                              <h3 className="text-2xl font-black text-slate-800 mb-3">تقرير المخزون</h3>
+                              <p className="text-slate-500 mb-8 leading-relaxed flex-1">
+                                حالة المخزون الحالية، تصدير Excel/PDF للتجرد، وتنبيهات الأصناف المنخفضة.
+                              </p>
+                              <div className="mt-auto">
+                                <span className="inline-flex items-center gap-2 py-3 text-amber-600 font-bold">
+                                  <span>عرض التقرير</span>
+                                  <ChevronRight size={20} />
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* محتوى التقرير المختار + زر العودة لشاشة الاختيار */
+                    <div className="bg-white/90 backdrop-blur-sm rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/50 overflow-hidden">
+                      <div className="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => setActiveReportTab(null)}
+                              className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors flex items-center gap-1"
+                              title="تغيير التقرير"
+                            >
+                              <ChevronRight size={20} className="rotate-180" />
+                              <span className="text-sm font-bold">تغيير التقرير</span>
+                            </button>
+                            <div>
+                              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                                {activeReportTab === 'sales' ? 'تقرير المبيعات' : 'تقرير المخزون'}
+                              </h2>
+                              <p className="text-slate-500 text-sm mt-1">
+                                {activeReportTab === 'sales' ? 'إحصائيات المبيعات حسب الفترة المختارة.' : 'حالة المخزون والتصدير للتجرد.'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex bg-slate-100/80 p-1.5 rounded-2xl shrink-0 border border-slate-200/60 shadow-inner">
+                            <button
+                              onClick={() => setActiveReportTab('sales')}
+                              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeReportTab === 'sales'
+                                ? 'bg-white text-indigo-700 shadow-md shadow-slate-200/50 scale-100'
+                                : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 scale-95'
+                                }`}
+                            >
+                              <FileText size={18} /> المبيعات
+                            </button>
+                            <button
+                              onClick={() => setActiveReportTab('inventory')}
+                              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeReportTab === 'inventory'
+                                ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-100'
+                                : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 scale-95'
+                                }`}
+                            >
+                              <Package size={18} /> المخزون
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-6 sm:p-8 relative min-h-[400px]">
+                        <AnimatePresence mode="wait">
+                          {activeReportTab === 'sales' ? (
+                            /* Sales Report Tab — فلتر زمني + رسم */
+                            <motion.div
+                              key="sales"
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 20 }}
+                              transition={{ duration: 0.3, ease: 'easeInOut' }}
+                              className="space-y-4"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-semibold text-slate-600">الفترة:</span>
+                                  {[7, 14, 30].map((d) => (
+                                    <button
+                                      key={d}
+                                      onClick={() => { setReportSalesDays(d); fetchSalesLast7(d); }}
+                                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${reportSalesDays === d
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                    >
+                                      آخر {d} يوم
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="bg-slate-50/80 rounded-2xl p-6 border border-slate-100">
+                                <div className="flex items-center justify-between mb-4 gap-4">
+                                  <div>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">إجمالي آخر {reportSalesDays} أيام</p>
+                                    <p className="text-2xl font-black text-slate-900">
+                                      ₪{salesLast7.reduce((sum, p) => sum + (p.value || 0), 0).toLocaleString('en-US')}
+                                    </p>
+                                  </div>
+                                  {salesLast7.length > 1 && (
+                                    <div
+                                      className={`text-sm font-bold ${salesTrend > 0
+                                        ? 'text-emerald-600'
+                                        : salesTrend < 0
+                                          ? 'text-rose-600'
+                                          : 'text-slate-500'
+                                        }`}
+                                    >
+                                      {salesTrend > 0
+                                        ? '↑ نمو مقابل بداية الفترة'
+                                        : salesTrend < 0
+                                          ? '↓ انخفاض مقابل بداية الفترة'
+                                          : 'مستقر'}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="h-24">
+                                  {salesStatsLoading ? (
+                                    <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                                      جارِ تحميل بيانات المبيعات...
+                                    </div>
+                                  ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                      <LineChart data={salesLast7}>
+                                        <Tooltip
+                                          formatter={(v) => `₪${Number(v || 0).toLocaleString('en-US')}`}
+                                          labelFormatter={() => ''}
+                                          contentStyle={{ fontSize: 11, direction: 'rtl' }}
+                                        />
+                                        <Line
+                                          type="monotone"
+                                          dataKey="value"
+                                          stroke="#4f46e5"
+                                          strokeWidth={2}
+                                          dot={false}
+                                          activeDot={{ r: 4 }}
+                                        />
+                                      </LineChart>
+                                    </ResponsiveContainer>
+                                  )}
+                                </div>
+
+                                <div className="mt-3 flex justify-between text-[11px] text-slate-400">
+                                  {salesLast7.map((p) => (
+                                    <span key={p.date} className="flex-1 text-center">
+                                      {p.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </motion.div>
+                          ) : (
+                          /* Inventory Report Tab — تصدير Excel / PDF وتنبيهات بصرية */
                           <motion.div
                             key="inventory"
                             initial={{ opacity: 0, x: 20 }}
@@ -3806,6 +3957,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             transition={{ duration: 0.3, ease: 'easeInOut' }}
                             className="space-y-6"
                           >
+                            {/* فلتر زمني اختياري للمخزون + أزرار التصدير */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50/80 border border-slate-100">
+                              <p className="text-sm text-slate-600">
+                                حالة المخزون الحالية — تاريخ التقرير: {new Date().toLocaleDateString('ar-SA')}
+                              </p>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={handleExportReportInventory}
+                                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-md hover:bg-emerald-700 transition-colors"
+                                >
+                                  <FileDown size={18} /> تصدير Excel
+                                </button>
+                                <button
+                                  onClick={handlePrintReportInventory}
+                                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-700 text-white font-bold text-sm shadow-md hover:bg-slate-800 transition-colors"
+                                >
+                                  <Printer size={18} /> طباعة / PDF
+                                </button>
+                              </div>
+                            </div>
                             {/* KPI Cards */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                               <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-5">
@@ -3950,24 +4121,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {inventoryMetrics.topValueItems.map((item, idx) => (
-                                        <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                      {inventoryMetrics.topValueItems.map((item, idx) => {
+                                        const qty = Number(item.qty ?? 0);
+                                        const rowAlert = qty === 0 ? 'bg-red-50 border-r-4 border-red-400' : qty <= 5 ? 'bg-amber-50 border-r-4 border-amber-400' : '';
+                                        return (
+                                        <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${rowAlert}`}>
                                           <td className="py-3 px-4">
                                             <div className="flex items-center gap-3">
                                               <div className="w-6 h-6 rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 flex items-center justify-center shrink-0">
                                                 {idx + 1}
                                               </div>
-                                              <div className="font-semibold text-slate-800 truncate max-w-[200px]" title={item.name}>
+                                              <div className={`font-semibold truncate max-w-[200px] ${qty === 0 ? 'text-red-800' : qty <= 5 ? 'text-amber-800' : 'text-slate-800'}`} title={item.name}>
                                                 {item.name || '—'}
                                               </div>
                                             </div>
                                           </td>
                                           <td className="py-3 px-4 font-mono text-slate-500">{item.barcode || '—'}</td>
-                                          <td className="py-3 px-4 font-bold text-slate-700 font-mono">{item.qty}</td>
+                                          <td className={`py-3 px-4 font-bold font-mono ${qty === 0 ? 'text-red-700' : qty <= 5 ? 'text-amber-700' : 'text-slate-700'}`}>{item.qty}</td>
                                           <td className="py-3 px-4 font-mono text-slate-500">₪{Math.round(item.price)}</td>
                                           <td className="py-3 px-4 font-black text-amber-600 font-mono">₪{Math.round(item.totalValue).toLocaleString()}</td>
                                         </tr>
-                                      ))}
+                                        );
+                                      })}
                                       {inventoryMetrics.topValueItems.length === 0 && (
                                         <tr>
                                           <td colSpan={5} className="py-12 text-center text-slate-400">لا توجد بيانات متاحة</td>
@@ -4095,10 +4270,71 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </div>
                             </div>
 
+                            {/* قائمة المخزون للتجرد — تنبيهات بصرية: أحمر للنفاد، برتقالي لأوشك على النفاد */}
+                            <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+                              <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600"><FileText size={18} /></div>
+                                  <h3 className="font-bold text-slate-800">قائمة المخزون للتجرد الفعلي</h3>
+                                </div>
+                                <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">
+                                  {items.length} صنف — استخدم تصدير Excel أو طباعة PDF أعلاه
+                                </span>
+                              </div>
+                              <div className="overflow-x-auto max-h-[420px] custom-scrollbar">
+                                <table className="w-full text-sm text-right whitespace-nowrap">
+                                  <thead className="bg-white sticky top-0 shadow-sm z-10 text-slate-500">
+                                    <tr>
+                                      <th className="py-3 px-4 font-semibold">الباركود</th>
+                                      <th className="py-3 px-4 font-semibold">الاسم</th>
+                                      <th className="py-3 px-4 font-semibold">الفئة</th>
+                                      <th className="py-3 px-4 font-semibold">الكمية</th>
+                                      <th className="py-3 px-4 font-semibold">السعر</th>
+                                      <th className="py-3 px-4 font-semibold">الحالة</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {(items || []).map((i, idx) => {
+                                      const qty = Number(i.stock_count ?? i.stock ?? 0);
+                                      const isOut = qty === 0;
+                                      const isLow = qty >= 1 && qty <= 5;
+                                      const rowClass = isOut ? 'bg-red-50 border-r-4 border-red-400' : isLow ? 'bg-amber-50 border-r-4 border-amber-400' : '';
+                                      const status = isOut ? 'نفد' : isLow ? 'أوشك على النفاد' : 'متوفر';
+                                      return (
+                                        <tr key={i.barcode ? String(i.barcode) : `row-${idx}`} className={`border-b border-slate-50 hover:opacity-90 transition-colors ${rowClass}`}>
+                                          <td className="py-2.5 px-4 font-mono text-slate-600">{i.barcode || '—'}</td>
+                                          <td className={`py-2.5 px-4 font-semibold ${isOut ? 'text-red-800' : isLow ? 'text-amber-800' : 'text-slate-800'}`}>{i.name || '—'}</td>
+                                          <td className="py-2.5 px-4 text-slate-600">{i.group || '—'}</td>
+                                          <td className={`py-2.5 px-4 font-bold font-mono ${isOut ? 'text-red-700' : isLow ? 'text-amber-700' : 'text-slate-700'}`}>{qty}</td>
+                                          <td className="py-2.5 px-4 font-mono text-slate-500">₪{Math.round(i.priceAfterDiscount ?? i.price ?? 0)}</td>
+                                          <td className="py-2.5 px-4">
+                                            {isOut ? (
+                                              <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded-lg">نفد</span>
+                                            ) : isLow ? (
+                                              <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-lg"><AlertTriangle size={12} /> أوشك على النفاد</span>
+                                            ) : (
+                                              <span className="text-slate-600 font-medium">{status}</span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                    {(!items || items.length === 0) && (
+                                      <tr>
+                                        <td colSpan={6} className="py-12 text-center text-slate-400">لا توجد أصناف</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
+                    </div>
+                    )}
                   </div>
                 ) : mode === 'sales_hub' ? (
                   /* Sales Area Hub */
