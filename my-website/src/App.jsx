@@ -982,8 +982,11 @@ function App() {
 
   useEffect(() => {
     if (mode === 'customers' && (userRole === 'admin' || userRole === 'supervisor')) fetchCustomers();
-    if (mode === 'inventory' && userRole === 'admin') fetchActivityLogs();
-  }, [mode, userRole, fetchCustomers, fetchActivityLogs]);
+    if (mode === 'inventory' && userRole === 'admin') {
+      fetchActivityLogs();
+      fetchInventoryInsights();
+    }
+  }, [mode, userRole, fetchCustomers, fetchActivityLogs, fetchInventoryInsights]);
 
   /* منع تمرير الصفحة عند فتح مودال تعديل أو عرض العميل */
   useEffect(() => {
@@ -2672,9 +2675,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('المخزون', { views: [{ rightToLeft: true }] });
+      const sorted = [...(filteredInventoryItems || [])].sort((a, b) => {
+        const gA = (a.group || '').trim();
+        const gB = (b.group || '').trim();
+        if (gA !== gB) return gA.localeCompare(gB, 'ar');
+        return String(a.barcode || '').localeCompare(String(b.barcode || ''), 'en');
+      });
       const rows = [
         ['الباركود', 'الاسم', 'الفئة', 'الكمية', 'السعر', 'الحالة'],
-        ...filteredInventoryItems.map((i) => {
+        ...sorted.map((i) => {
           const qty = Number(i.stock_count ?? i.stock ?? 0);
           const status = qty === 0 ? 'نفد' : qty <= 10 ? 'منخفض' : 'متوفر';
           return [i.barcode || '', i.name || '', i.group || '', qty, Math.round(i.priceAfterDiscount ?? i.price ?? 0), status];
@@ -2696,15 +2705,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   }, [filteredInventoryItems]);
 
-  /** تصدير تقرير المخزون من صفحة التقارير (قائمة كاملة للتجرد) — Excel */
+  /** تصدير تقرير المخزون من صفحة التقارير (قائمة كاملة للتجرد) — Excel مرتب حسب الفئة ثم الباركود */
   const handleExportReportInventory = useCallback(async () => {
     try {
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('تقرير المخزون للتجرد', { views: [{ rightToLeft: true }] });
+      const sorted = [...(items || [])].sort((a, b) => {
+        const gA = (a.group || '').trim();
+        const gB = (b.group || '').trim();
+        if (gA !== gB) return gA.localeCompare(gB, 'ar');
+        return String(a.barcode || '').localeCompare(String(b.barcode || ''), 'en');
+      });
       const rows = [
         ['الباركود', 'الاسم', 'الفئة', 'الكمية', 'السعر', 'الحالة'],
-        ...(items || []).map((i) => {
+        ...sorted.map((i) => {
           const qty = Number(i.stock_count ?? i.stock ?? 0);
           const status = qty === 0 ? 'نفد' : qty <= 5 ? 'أوشك على النفاد' : 'متوفر';
           return [i.barcode || '', i.name || '', i.group || '', qty, Math.round(i.priceAfterDiscount ?? i.price ?? 0), status];
@@ -2738,38 +2753,123 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       return `<tr class="${rowClass}"><td class="border px-2 py-1">${String(r.barcode)}</td><td class="border px-2 py-1">${String(r.name).replace(/</g, '&lt;')}</td><td class="border px-2 py-1">${String(r.group)}</td><td class="border px-2 py-1 font-bold">${r.qty}</td><td class="border px-2 py-1">₪${r.price}</td><td class="border px-2 py-1 font-semibold">${r.status}</td></tr>`;
     }).join('');
     const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير المخزون للتجرد</title>
-<style>body{font-family:Segoe UI,sans-serif;padding:16px;max-width:900px;margin:0 auto}.header{text-align:center;margin-bottom:20px;font-size:18px;font-weight:bold}table{width:100%;border-collapse:collapse}th{background:#1e293b;color:#fff;padding:8px;text-align:right}@media print{body{padding:0}}</style></head><body>
+<style>body{font-family:Segoe UI,sans-serif;padding:16px;max-width:900px;margin:0 auto}.header{text-align:center;margin-bottom:20px;font-size:18px;font-weight:bold}table{width:100%;border-collapse:collapse}th{background:#1e293b;color:#fff;padding:8px;text-align:right}@media print{body{padding:0}.no-print{display:none}}</style></head><body>
 <div class="header">تقرير المخزون للتجرد — ${new Date().toLocaleDateString('ar-SA')}</div>
 <table><thead><tr><th>الباركود</th><th>الاسم</th><th>الفئة</th><th>الكمية</th><th>السعر</th><th>الحالة</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-<p style="margin-top:16px;font-size:12px;color:#64748b">اطبع هذه الصفحة (Ctrl+P) أو احفظ كـ PDF من نافذة الطباعة.</p></body></html>`;
+<p class="no-print" style="margin-top:16px;font-size:12px;color:#64748b">اطبع هذه الصفحة (Ctrl+P) أو احفظ كـ PDF من نافذة الطباعة.</p>
+<script>window.onload=function(){window.print();}</script></body></html>`;
     const w = window.open('', '_blank', 'noopener,noreferrer');
-    if (w) { w.document.write(html); w.document.close(); }
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
   }, [items]);
 
-  /** Open printable QR sticker for customer self-scan URL (?barcode=...) */
+  /** Open printable QR sticker for customer self-scan URL (?barcode=...) — تصميم لصاقة أنيق */
   const handlePrintQR = (item) => {
     if (!item?.barcode) return;
     const base = typeof window !== 'undefined' ? window.location.origin + (window.location.pathname || '/') : '';
     const productUrl = `${base}${base.endsWith('/') ? '' : ''}?barcode=${encodeURIComponent(String(item.barcode).trim())}`;
-    const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&margin=8&data=${encodeURIComponent(productUrl)}`;
-    const name = (item.name || item.eng_name || item.barcode || '').slice(0, 40);
+    const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=${encodeURIComponent(productUrl)}`;
+    const name = (item.name || item.eng_name || item.barcode || '').slice(0, 36);
     const barcodeStr = String(item.barcode || '').trim();
-    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>QR - ${barcodeStr}</title>
+    const priceStr = item.priceAfterDiscount != null || item.price != null ? `₪${Math.round(item.priceAfterDiscount ?? item.price ?? 0)}` : '';
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>لصاقة - ${barcodeStr}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
-  .sticker { width: 80mm; min-height: 60mm; border: 1px dashed #e2e8f0; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
-  .sticker img { width: 180px; height: 180px; display: block; }
-  .sticker .name { font-size: 11px; font-weight: 700; color: #1e293b; text-align: center; line-height: 1.3; }
-  .sticker .barcode { font-size: 10px; font-family: monospace; color: #64748b; }
-  @media print { body { padding: 0; } .sticker { border: none; box-shadow: none; page-break-inside: avoid; } }
+  body {
+    font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+    padding: 20px;
+    min-height: 100vh;
+    background: #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+  .sticker {
+    width: 85mm;
+    min-height: 65mm;
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+  }
+  .sticker .qr-wrap {
+    width: 140px;
+    height: 140px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+  }
+  .sticker .qr-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .sticker .name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    text-align: center;
+    line-height: 1.35;
+    max-width: 100%;
+    word-break: break-word;
+  }
+  .sticker .barcode {
+    font-size: 12px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    letter-spacing: 1px;
+    color: #475569;
+    font-weight: 600;
+  }
+  .sticker .price {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #f8fafc;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+  .sticker .hint {
+    font-size: 9px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .no-print { margin-top: 12px; font-size: 12px; color: #94a3b8; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .sticker {
+      box-shadow: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      page-break-inside: avoid;
+    }
+    .no-print { display: none !important; }
+  }
 </style></head><body>
   <div class="sticker">
-    <img src="${qrApi}" alt="QR" />
-    <span class="name">${name.replace(/</g, '&lt;')}</span>
+    <span class="hint">مسح للتفاصيل</span>
+    <div class="qr-wrap"><img src="${qrApi}" alt="QR" /></div>
+    <span class="name">${name.replace(/</g, '&lt;').replace(/"/g, '&quot;')}</span>
     <span class="barcode">${barcodeStr.replace(/</g, '&lt;')}</span>
+    ${priceStr ? `<span class="price">${priceStr.replace(/</g, '&lt;')}</span>` : ''}
   </div>
-  <p style="margin-top:16px;font-size:12px;color:#94a3b8;">اطبع هذه الصفحة (Ctrl+P) ثم قص اللصاقة وضَعها على الرف</p>
+  <p class="no-print">اطبع (Ctrl+P) ثم قص اللصاقة وضَعها على الرف</p>
 </body></html>`;
     const w = window.open('', '_blank', 'noopener,noreferrer');
     if (w) {
@@ -4624,174 +4724,189 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                   </div>
                 ) : mode === 'inventory' ? (
-                  /* شاشة المخزون */
-                  <div className="max-w-5xl mx-auto py-6 sm:py-10 px-4 animate-fade-in flex flex-col gap-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25">
-                          <Package size={32} className="text-white" />
+                  /* شاشة المخزون — تصميم حديث مثل Sales Area */
+                  <div className="flex flex-col pt-10 pb-20 px-4 animate-fade-in max-w-5xl mx-auto">
+                    <div className="bg-white rounded-3xl shadow-xl shadow-amber-900/5 border border-amber-50 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-32 bg-amber-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110" />
+                      <div className="relative z-10 p-6 sm:p-8 flex flex-col gap-6">
+                        {/* Header مثل Sales Area */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-inner">
+                              <Package size={32} />
+                            </div>
+                            <div>
+                              <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">المخزون</h1>
+                              <p className="text-slate-500 mt-1">عرض الكميات، تعديل السعر والكمية، وتصدير قائمة للتجرد</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => { setEditingItem(null); setShowCatalogPanel(true); }}
+                              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-base shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center gap-2"
+                            >
+                              <Plus size={20} />
+                              <span>إضافة صنف</span>
+                              <ChevronRight size={18} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleExportInventory}
+                              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-amber-200 bg-white text-amber-700 font-bold hover:bg-amber-50 transition-all"
+                            >
+                              <FileDown size={20} />
+                              تصدير Excel
+                            </button>
+                          </div>
                         </div>
-                        <div>
-                          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">المخزون</h1>
-                          <p className="text-slate-500 text-sm sm:text-base mt-1">عرض الكميات وتعديل السعر والكمية حسب الباركود</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setEditingItem(null); setShowCatalogPanel(true); }}
-                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold shadow-lg shadow-amber-500/30 transition-all duration-300"
-                      >
-                        <Plus size={22} /> إضافة صنف
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleExportInventory}
-                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl border-2 border-amber-500 bg-white text-amber-700 font-bold hover:bg-amber-50 transition-all duration-300"
-                      >
-                        <FileDown size={22} /> تصدير Excel
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm font-bold text-slate-600 shrink-0">مسح الباركود:</label>
-                        <input
-                          ref={inventoryBarcodeScanRef}
-                          type="text"
-                          dir="ltr"
-                          placeholder="امسح الباركود أو أدخل الرقم واضغط Enter"
-                          className="flex-1 max-w-md pr-4 pl-4 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base font-mono"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              openEditPanelFromBarcode(e.target.value);
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="relative flex-1">
-                          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+
+                        {/* مسح الباركود — شريط واحد واضح */}
+                        <div className="rounded-2xl bg-slate-50/80 border border-slate-100 p-4">
+                          <label className="block text-sm font-bold text-slate-600 mb-2">مسح الباركود</label>
                           <input
+                            ref={inventoryBarcodeScanRef}
                             type="text"
-                            value={inventorySearch}
-                            onChange={(e) => setInventorySearch(e.target.value)}
-                            placeholder="بحث بالاسم أو الباركود أو الفئة..."
-                            className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base"
+                            dir="ltr"
+                            placeholder="امسح الباركود أو أدخل الرقم واضغط Enter"
+                            className="w-full max-w-md pr-4 pl-4 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base font-mono"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                openEditPanelFromBarcode(e.target.value);
+                              }
+                            }}
                           />
                         </div>
-                        <select
-                          value={inventoryCategoryFilter}
-                          onChange={(e) => setInventoryCategoryFilter(e.target.value)}
-                          className="px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 font-semibold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base min-w-[180px]"
-                        >
-                          <option value="">كل الفئات / الشركة المصنعة</option>
-                          {allGroups.map((g) => (
-                            <option key={g} value={g}>{g}</option>
-                          ))}
-                        </select>
-                        <label className="flex items-center gap-3 cursor-pointer px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-amber-200 transition-colors">
-                          <input type="checkbox" checked={inventoryLowStockOnly} onChange={(e) => setInventoryLowStockOnly(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
-                          <span className="font-semibold text-slate-700">عرض المخزون المنخفض فقط (≤5)</span>
-                        </label>
-                      </div>
-                      <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
-                        {loading ? (
-                          <div className="p-16 flex items-center justify-center"><Loader2 size={40} className="animate-spin text-amber-500" /></div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-right border-collapse">
-                              <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                  <th className="px-3 py-4 font-bold text-slate-700 w-16">صورة</th>
-                                  <th className="px-4 py-4 font-bold text-slate-700">الباركود</th>
-                                  <th className="px-4 py-4 font-bold text-slate-700">الاسم</th>
-                                  <th className="px-4 py-4 font-bold text-slate-700">الفئة</th>
-                                  <th className="px-4 py-4 font-bold text-slate-700">الكمية</th>
-                                  <th className="px-4 py-4 font-bold text-slate-700">السعر</th>
-                                  <th className="px-4 py-4 font-bold text-slate-700">الحالة</th>
-                                  <th className="px-4 py-4 font-bold text-slate-700">تعديل</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {filteredInventoryItems.length === 0 ? (
-                                  <tr><td colSpan={8} className="px-4 py-16 text-center text-slate-500 font-medium">{inventorySearch || inventoryLowStockOnly || inventoryCategoryFilter ? 'لا توجد نتائج مطابقة للبحث أو الفلتر.' : 'لا توجد أصناف في المخزون.'}</td></tr>
-                                ) : (
-                                  filteredInventoryItems.map((item) => {
-                                    const status = getStockStatus(item);
-                                    const qty = Number(item.stock_count ?? item.stock ?? 0);
-                                    const qtyColor = qty === 0 ? 'text-rose-600' : qty <= 10 ? 'text-amber-600' : 'text-slate-700';
-                                    const qtyBg = qty === 0 ? 'bg-rose-100 text-rose-700' : qty <= 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
-                                    const imgSrc = getImage(item) || getImageFallback(item);
-                                    return (
-                                      <tr key={item.id} className="border-b border-slate-100 hover:bg-amber-50/50 transition-colors">
-                                        <td className="px-3 py-2 align-middle">
-                                          <div className="inv-thumb w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
-                                            {imgSrc ? (
-                                              <>
-                                                <img src={imgSrc} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.target.style.display = 'none'; const wrap = e.target.closest('.inv-thumb'); if (wrap) wrap.querySelector('.inv-thumb-fallback')?.classList.remove('hidden'); }} />
-                                                <span className="inv-thumb-fallback hidden absolute inset-0 flex items-center justify-center bg-slate-100"><Package size={24} className="text-slate-300" /></span>
-                                              </>
-                                            ) : (
-                                              <Package size={24} className="text-slate-300" />
-                                            )}
-                                          </div>
-                                        </td>
-                                        <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
-                                        <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
-                                        <td className="px-4 py-3 text-slate-600">{item.group || '—'}</td>
-                                        <td className="px-4 py-3"><span className={`font-bold ${qtyColor}`}>{qty}</span></td>
-                                        <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
-                                        <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${qtyBg}`}>{status}</span></td>
-                                        <td className="px-4 py-3"><button type="button" onClick={() => { setEditingItem(item); setShowCatalogPanel(true); }} className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition-colors text-sm">تعديل</button></td>
-                                      </tr>
-                                    );
-                                  })
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
 
-                      {/* سجل التغييرات */}
-                      <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <Clock size={20} className="text-amber-500" />
-                            سجل التغييرات (من غيّر السعر / الكمية ومتى)
-                          </h3>
-                          <button type="button" onClick={fetchActivityLogs} disabled={activityLogsLoading} className="text-sm font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-50 flex items-center gap-1">
-                            {activityLogsLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-                            تحديث
-                          </button>
+                        {/* فلترة وبحث — في صف واحد أنيق */}
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <div className="relative flex-1">
+                            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={inventorySearch}
+                              onChange={(e) => setInventorySearch(e.target.value)}
+                              placeholder="بحث بالاسم أو الباركود أو الفئة..."
+                              className="w-full pr-12 pl-5 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base"
+                            />
+                          </div>
+                          <select
+                            value={inventoryCategoryFilter}
+                            onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+                            className="px-5 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-800 font-semibold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base min-w-[180px]"
+                          >
+                            <option value="">كل الفئات</option>
+                            {allGroups.map((g) => (
+                              <option key={g} value={g}>{g}</option>
+                            ))}
+                          </select>
+                          <label className="flex items-center gap-3 cursor-pointer px-5 py-3 rounded-xl border-2 border-slate-200 bg-white hover:border-amber-200 transition-colors shrink-0">
+                            <input type="checkbox" checked={inventoryLowStockOnly} onChange={(e) => setInventoryLowStockOnly(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
+                            <span className="font-semibold text-slate-700">المخزون المنخفض فقط (≤5)</span>
+                          </label>
                         </div>
-                        <div className="overflow-x-auto max-h-64 overflow-y-auto">
-                          {activityLogsLoading && activityLogs.length === 0 ? (
-                            <div className="p-8 flex justify-center"><Loader2 size={28} className="animate-spin text-amber-500" /></div>
-                          ) : activityLogs.length === 0 ? (
-                            <p className="p-6 text-center text-slate-500 text-sm">لا توجد سجلات تغيير. سيظهر هنا من غيّر السعر أو الكمية بعد إنشاء جدول activity_logs في Supabase.</p>
+
+                        {/* جدول المخزون — داخل بطاقة فرعية */}
+                        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+                          {loading ? (
+                            <div className="p-16 flex items-center justify-center"><Loader2 size={40} className="animate-spin text-amber-500" /></div>
                           ) : (
-                            <table className="w-full text-right border-collapse text-sm">
-                              <thead>
-                                <tr className="bg-slate-100 border-b border-slate-200">
-                                  <th className="px-3 py-2 font-bold text-slate-600">الوقت</th>
-                                  <th className="px-3 py-2 font-bold text-slate-600">المستخدم</th>
-                                  <th className="px-3 py-2 font-bold text-slate-600">الباركود</th>
-                                  <th className="px-3 py-2 font-bold text-slate-600">التغيير</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {activityLogs.map((log) => (
-                                  <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                                    <td className="px-3 py-2 text-slate-600 font-mono text-xs">{log.created_at ? new Date(log.created_at).toLocaleString('ar-SA') : '—'}</td>
-                                    <td className="px-3 py-2 font-semibold text-slate-700">{log.username || '—'}</td>
-                                    <td className="px-3 py-2 font-mono text-slate-600">{log.entity_id || '—'}</td>
-                                    <td className="px-3 py-2 text-slate-700">{log.description || log.field_name || '—'}</td>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-right border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-50/80 border-b border-slate-100">
+                                    <th className="px-3 py-4 font-bold text-slate-600 w-16">صورة</th>
+                                    <th className="px-4 py-4 font-bold text-slate-600">الباركود</th>
+                                    <th className="px-4 py-4 font-bold text-slate-600">الاسم</th>
+                                    <th className="px-4 py-4 font-bold text-slate-600">الفئة</th>
+                                    <th className="px-4 py-4 font-bold text-slate-600">الكمية</th>
+                                    <th className="px-4 py-4 font-bold text-slate-600">السعر</th>
+                                    <th className="px-4 py-4 font-bold text-slate-600">الحالة</th>
+                                    <th className="px-4 py-4 font-bold text-slate-600">تعديل</th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                                </thead>
+                                <tbody>
+                                  {filteredInventoryItems.length === 0 ? (
+                                    <tr><td colSpan={8} className="px-4 py-16 text-center text-slate-500 font-medium">{inventorySearch || inventoryLowStockOnly || inventoryCategoryFilter ? 'لا توجد نتائج مطابقة للبحث أو الفلتر.' : 'لا توجد أصناف في المخزون.'}</td></tr>
+                                  ) : (
+                                    filteredInventoryItems.map((item) => {
+                                      const status = getStockStatus(item);
+                                      const qty = Number(item.stock_count ?? item.stock ?? 0);
+                                      const qtyColor = qty === 0 ? 'text-rose-600' : qty <= 10 ? 'text-amber-600' : 'text-slate-700';
+                                      const qtyBg = qty === 0 ? 'bg-rose-100 text-rose-700' : qty <= 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
+                                      const imgSrc = getImage(item) || getImageFallback(item);
+                                      return (
+                                        <tr key={item.id} className="border-b border-slate-50 hover:bg-amber-50/30 transition-colors">
+                                          <td className="px-3 py-2 align-middle">
+                                            <div className="inv-thumb w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
+                                              {imgSrc ? (
+                                                <>
+                                                  <img src={imgSrc} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.target.style.display = 'none'; const wrap = e.target.closest('.inv-thumb'); if (wrap) wrap.querySelector('.inv-thumb-fallback')?.classList.remove('hidden'); }} />
+                                                  <span className="inv-thumb-fallback hidden absolute inset-0 flex items-center justify-center bg-slate-100"><Package size={24} className="text-slate-300" /></span>
+                                                </>
+                                              ) : (
+                                                <Package size={24} className="text-slate-300" />
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
+                                          <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
+                                          <td className="px-4 py-3 text-slate-600">{item.group || '—'}</td>
+                                          <td className="px-4 py-3"><span className={`font-bold ${qtyColor}`}>{qty}</span></td>
+                                          <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
+                                          <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${qtyBg}`}>{status}</span></td>
+                                          <td className="px-4 py-3"><button type="button" onClick={() => { setEditingItem(item); setShowCatalogPanel(true); }} className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition-colors text-sm">تعديل</button></td>
+                                        </tr>
+                                      );
+                                    })
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
                           )}
+                        </div>
+
+                        {/* سجل التغييرات — بطاقة فرعية بنفس الأسلوب */}
+                        <div className="rounded-2xl border border-slate-100 bg-slate-50/30 overflow-hidden">
+                          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                              <Clock size={18} className="text-amber-500" />
+                              سجل التغييرات
+                            </h3>
+                            <button type="button" onClick={fetchActivityLogs} disabled={activityLogsLoading} className="text-sm font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-50 flex items-center gap-1">
+                              {activityLogsLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                              تحديث
+                            </button>
+                          </div>
+                          <div className="overflow-x-auto max-h-56 overflow-y-auto">
+                            {activityLogsLoading && activityLogs.length === 0 ? (
+                              <div className="p-8 flex justify-center"><Loader2 size={28} className="animate-spin text-amber-500" /></div>
+                            ) : activityLogs.length === 0 ? (
+                              <p className="p-6 text-center text-slate-500 text-sm">لا توجد سجلات. سيظهر هنا من غيّر السعر أو الكمية بعد إنشاء جدول activity_logs في Supabase.</p>
+                            ) : (
+                              <table className="w-full text-right border-collapse text-sm">
+                                <thead>
+                                  <tr className="bg-white/80 border-b border-slate-100">
+                                    <th className="px-3 py-2 font-bold text-slate-600">الوقت</th>
+                                    <th className="px-3 py-2 font-bold text-slate-600">المستخدم</th>
+                                    <th className="px-3 py-2 font-bold text-slate-600">الباركود</th>
+                                    <th className="px-3 py-2 font-bold text-slate-600">التغيير</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {activityLogs.map((log) => (
+                                    <tr key={log.id} className="border-b border-slate-50 hover:bg-white/50">
+                                      <td className="px-3 py-2 text-slate-600 font-mono text-xs">{log.created_at ? new Date(log.created_at).toLocaleString('ar-SA') : '—'}</td>
+                                      <td className="px-3 py-2 font-semibold text-slate-700">{log.username || '—'}</td>
+                                      <td className="px-3 py-2 font-mono text-slate-600">{log.entity_id || '—'}</td>
+                                      <td className="px-3 py-2 text-slate-700">{log.description || log.field_name || '—'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
