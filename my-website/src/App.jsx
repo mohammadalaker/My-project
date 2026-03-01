@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import {
   Search,
   Plus,
@@ -53,6 +53,12 @@ import {
   LogOut,
   Users,
   Pencil,
+  Banknote,
+  Layers,
+  AlertOctagon,
+  AlertTriangle,
+  PieChart as PieChartIcon,
+  TrendingUp,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -630,6 +636,10 @@ function App() {
   const inventoryBarcodeScanRef = useRef(null);
   const [activityLogs, setActivityLogs] = useState([]);
   const [activityLogsLoading, setActivityLogsLoading] = useState(false);
+
+  // Reports page state
+  const [activeReportTab, setActiveReportTab] = useState('sales');
+
   const filteredCustomersPage = useMemo(() => {
     const raw = (customersPageSearch || '').trim().toLowerCase();
     if (!raw) return customers;
@@ -654,6 +664,46 @@ function App() {
     const end = salesLast7[salesLast7.length - 1].value || 0;
     return end - start;
   }, [salesLast7]);
+
+  const [inventoryInsights, setInventoryInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+
+  const fetchInventoryInsights = useCallback(async () => {
+    setInsightsLoading(true);
+    try {
+      const from = new Date();
+      from.setDate(from.getDate() - 90); // Look back 90 days for aging stock
+      const fromIso = from.toISOString();
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('created_at, items')
+        .gte('created_at', fromIso);
+
+      if (error) throw error;
+
+      const salesData = {};
+      (data || []).forEach(order => {
+        const orderDate = new Date(order.created_at);
+        (order.items || []).forEach(item => {
+          if (!item.barcode) return;
+          if (!salesData[item.barcode]) {
+            salesData[item.barcode] = { unitsSold: 0, lastSoldDate: orderDate };
+          }
+          salesData[item.barcode].unitsSold += (item.qty || 1);
+          if (orderDate > salesData[item.barcode].lastSoldDate) {
+            salesData[item.barcode].lastSoldDate = orderDate;
+          }
+        });
+      });
+
+      setInventoryInsights(salesData);
+    } catch (err) {
+      console.warn('Error fetching inventory insights:', err);
+    } finally {
+      setInsightsLoading(false);
+    }
+  }, []);
 
   const fetchCustomerInsights = useCallback(async (phone) => {
     if (!phone) {
@@ -948,12 +998,13 @@ function App() {
     } catch (e) { console.warn('Could not save offers:', e); }
   }, [customOffers, offersLoaded]);
 
-  // Load sales stats when opening Reports
+  // Load sales stats and inventory insights when opening Reports
   useEffect(() => {
     if (mode === 'reports' && (userRole === 'admin' || userRole === 'supervisor')) {
       fetchSalesLast7();
+      fetchInventoryInsights();
     }
-  }, [mode, userRole, fetchSalesLast7]);
+  }, [mode, userRole, fetchSalesLast7, fetchInventoryInsights]);
 
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
@@ -1375,8 +1426,87 @@ function App() {
     if (s == null || s === '') return 'Out of Stock';
     const n = Number(s);
     if (isNaN(n) || n <= 0) return 'Out of Stock';
-    return 'In Stock';
+    return n <= 10 ? 'Low Stock' : 'In Stock';
   };
+
+  /** Calculate Inventory Report Metrics */
+  const inventoryMetrics = useMemo(() => {
+    let totalValue = 0;
+    let totalItemsCount = 0;
+    let outOfStockCount = 0;
+    let lowStockItemsCount = 0;
+    const categoryBreakdown = {};
+    const topItems = [];
+    const bestSellers = [];
+    const agingStock = [];
+    const now = new Date();
+
+    items.forEach((item) => {
+      const qty = Number(item.stock_count ?? item.stock ?? 0);
+      const price = Number(item.priceAfterDiscount ?? item.price ?? 0);
+      const value = qty * price;
+
+      totalValue += value;
+      totalItemsCount += qty;
+
+      if (qty <= 0) outOfStockCount++;
+      else if (qty <= 5) lowStockItemsCount++;
+
+      const group = item.group || 'غير مصنف';
+      if (!categoryBreakdown[group]) {
+        categoryBreakdown[group] = { value: 0, count: 0 };
+      }
+      categoryBreakdown[group].value += value;
+      categoryBreakdown[group].count += qty;
+
+      topItems.push({ ...item, totalValue: value, qty, price });
+
+      // Insights calculations
+      let unitsSold = 0;
+      let lastSoldDate = null;
+      let daysSinceLastSale = null;
+
+      if (inventoryInsights && item.barcode && inventoryInsights[item.barcode]) {
+        unitsSold = inventoryInsights[item.barcode].unitsSold || 0;
+        lastSoldDate = inventoryInsights[item.barcode].lastSoldDate;
+        if (lastSoldDate) {
+          const diffTime = Math.abs(now - lastSoldDate);
+          daysSinceLastSale = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+      }
+
+      const insightItem = { ...item, unitsSold, lastSoldDate, daysSinceLastSale, qty, price };
+
+      if (unitsSold > 0) {
+        bestSellers.push(insightItem);
+      }
+
+      // Aging Stock: Has stock (>0) but hasn't sold in the last 30 days (or never sold in the 90 day window)
+      if (qty > 0) {
+        if (!lastSoldDate || daysSinceLastSale > 30) {
+          agingStock.push(insightItem);
+        }
+      }
+    });
+
+    topItems.sort((a, b) => b.totalValue - a.totalValue);
+    bestSellers.sort((a, b) => b.unitsSold - a.unitsSold);
+    agingStock.sort((a, b) => (b.daysSinceLastSale || 999) - (a.daysSinceLastSale || 999));
+
+    return {
+      totalValue,
+      totalItemsCount,
+      uniqueSKUs: items.length,
+      outOfStockCount,
+      lowStockItemsCount,
+      categoryBreakdown: Object.entries(categoryBreakdown)
+        .sort(([, a], [, b]) => b.value - a.value)
+        .map(([group, stats]) => ({ group, ...stats })),
+      topValueItems: topItems.slice(0, 10),
+      bestSellers: bestSellers.slice(0, 50),
+      agingStock: agingStock.slice(0, 50),
+    };
+  }, [items, inventoryInsights]);
 
   const getStockByBoxes = (item) => {
     const s = item?.stock;
@@ -3564,76 +3694,410 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   /* Dashboard View */
                   <Dashboard items={items} orders={submittedOrders} />
                 ) : mode === 'reports' ? (
-                  /* Reports View – Sales sparkline for last 7 days */
-                  <div className="max-w-4xl mx-auto py-10 px-4 animate-fade-in flex flex-col gap-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  /* Reports View – Tabs for Sales and Inventory */
+                  <div className="max-w-6xl mx-auto py-6 sm:py-10 px-4 animate-fade-in flex flex-col gap-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <h2 className="text-2xl font-black text-slate-900">تقارير المبيعات</h2>
-                        <p className="text-slate-500 text-sm">
-                          اتجاه المبيعات خلال آخر ٧ أيام لمساعدتك في اتخاذ قرارات سريعة.
+                        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">التقارير والإحصائيات</h2>
+                        <p className="text-slate-500 text-sm mt-1">
+                          نظرة شاملة على أداء المبيعات وحالة المخزون الحالي.
                         </p>
+                      </div>
+                      <div className="flex bg-slate-100/80 p-1.5 rounded-2xl shrink-0 border border-slate-200/60 shadow-inner">
+                        <button
+                          onClick={() => setActiveReportTab('sales')}
+                          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeReportTab === 'sales'
+                            ? 'bg-white text-indigo-700 shadow-md shadow-slate-200/50 scale-100'
+                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 scale-95'
+                            }`}
+                        >
+                          <FileText size={18} /> المبيعات
+                        </button>
+                        <button
+                          onClick={() => setActiveReportTab('inventory')}
+                          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeReportTab === 'inventory'
+                            ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-100'
+                            : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 scale-95'
+                            }`}
+                        >
+                          <Package size={18} /> المخزون
+                        </button>
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/70 border border-slate-100">
-                      <div className="flex items-center justify-between mb-4 gap-4">
-                        <div>
-                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">إجمالي آخر ٧ أيام</p>
-                          <p className="text-2xl font-black text-slate-900">
-                            ₪{salesLast7.reduce((sum, p) => sum + (p.value || 0), 0).toLocaleString('en-US')}
-                          </p>
-                        </div>
-                        {salesLast7.length > 1 && (
-                          <div
-                            className={`text-sm font-bold ${salesTrend > 0
-                                ? 'text-emerald-600'
-                                : salesTrend < 0
-                                  ? 'text-rose-600'
-                                  : 'text-slate-500'
-                              }`}
+                    <div className="relative min-h-[400px]">
+                      <AnimatePresence mode="wait">
+                        {activeReportTab === 'sales' ? (
+                          /* Sales Report Tab */
+                          <motion.div
+                            key="sales"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/70 border border-slate-100"
                           >
-                            {salesTrend > 0
-                              ? '↑ نمو مقابل بداية الأسبوع'
-                              : salesTrend < 0
-                                ? '↓ انخفاض مقابل بداية الأسبوع'
-                                : 'مستقر هذا الأسبوع'}
-                          </div>
-                        )}
-                      </div>
+                            <div className="flex items-center justify-between mb-4 gap-4">
+                              <div>
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">إجمالي آخر ٧ أيام</p>
+                                <p className="text-2xl font-black text-slate-900">
+                                  ₪{salesLast7.reduce((sum, p) => sum + (p.value || 0), 0).toLocaleString('en-US')}
+                                </p>
+                              </div>
+                              {salesLast7.length > 1 && (
+                                <div
+                                  className={`text-sm font-bold ${salesTrend > 0
+                                    ? 'text-emerald-600'
+                                    : salesTrend < 0
+                                      ? 'text-rose-600'
+                                      : 'text-slate-500'
+                                    }`}
+                                >
+                                  {salesTrend > 0
+                                    ? '↑ نمو مقابل بداية الأسبوع'
+                                    : salesTrend < 0
+                                      ? '↓ انخفاض مقابل بداية الأسبوع'
+                                      : 'مستقر هذا الأسبوع'}
+                                </div>
+                              )}
+                            </div>
 
-                      <div className="h-24">
-                        {salesStatsLoading ? (
-                          <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                            جارِ تحميل بيانات المبيعات...
-                          </div>
+                            <div className="h-24">
+                              {salesStatsLoading ? (
+                                <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                                  جارِ تحميل بيانات المبيعات...
+                                </div>
+                              ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <LineChart data={salesLast7}>
+                                    <Tooltip
+                                      formatter={(v) => `₪${Number(v || 0).toLocaleString('en-US')}`}
+                                      labelFormatter={() => ''}
+                                      contentStyle={{ fontSize: 11, direction: 'rtl' }}
+                                    />
+                                    <Line
+                                      type="monotone"
+                                      dataKey="value"
+                                      stroke="#4f46e5"
+                                      strokeWidth={2}
+                                      dot={false}
+                                      activeDot={{ r: 4 }}
+                                    />
+                                  </LineChart>
+                                </ResponsiveContainer>
+                              )}
+                            </div>
+
+                            <div className="mt-3 flex justify-between text-[11px] text-slate-400">
+                              {salesLast7.map((p) => (
+                                <span key={p.date} className="flex-1 text-center">
+                                  {p.label}
+                                </span>
+                              ))}
+                            </div>
+                          </motion.div>
                         ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={salesLast7}>
-                              <Tooltip
-                                formatter={(v) => `₪${Number(v || 0).toLocaleString('en-US')}`}
-                                labelFormatter={() => ''}
-                                contentStyle={{ fontSize: 11, direction: 'rtl' }}
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="value"
-                                stroke="#4f46e5"
-                                strokeWidth={2}
-                                dot={false}
-                                activeDot={{ r: 4 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
+                          /* Inventory Report Tab */
+                          <motion.div
+                            key="inventory"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="space-y-6"
+                          >
+                            {/* KPI Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                  <span className="font-bold text-2xl">₪</span>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">إجمالي قيمة المخزون</p>
+                                  <p className="text-2xl font-black text-slate-900 mt-1 truncate">₪{Math.round(inventoryMetrics.totalValue).toLocaleString()}</p>
+                                </div>
+                              </div>
 
-                      <div className="mt-3 flex justify-between text-[11px] text-slate-400">
-                        {salesLast7.map((p) => (
-                          <span key={p.date} className="flex-1 text-center">
-                            {p.label}
-                          </span>
-                        ))}
-                      </div>
+                              <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                                  <Package size={28} />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">إجمالي القطع المتوفرة</p>
+                                  <p className="text-2xl font-black text-slate-900 mt-1">{inventoryMetrics.totalItemsCount.toLocaleString()}</p>
+                                </div>
+                              </div>
+
+                              <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                                  <Grid size={28} />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">أنواع المنتجات (SKUs)</p>
+                                  <p className="text-2xl font-black text-slate-900 mt-1">{inventoryMetrics.uniqueSKUs.toLocaleString()}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-4">
+                                <div className="bg-white rounded-3xl p-4 shadow-xl shadow-rose-200/40 border border-rose-100 flex items-center gap-4 flex-1">
+                                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                                    <X size={20} />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] font-bold text-rose-600 uppercase tracking-wide">نواقص تامة (كمية 0)</p>
+                                    <p className="text-xl font-black text-rose-700 leading-tight">{inventoryMetrics.outOfStockCount.toLocaleString()}</p>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded-3xl p-4 shadow-xl shadow-amber-200/40 border border-amber-100 flex items-center gap-4 flex-1">
+                                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                                    <AlertTriangle size={20} />
+                                  </div>
+                                  <div>
+                                    <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wide">أوشكت على النفاد (≤5)</p>
+                                    <p className="text-xl font-black text-amber-700 leading-tight">{inventoryMetrics.lowStockItemsCount.toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid lg:grid-cols-3 gap-6">
+                              {/* Category Breakdown */}
+                              <div className="lg:col-span-1 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[400px]">
+                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-sky-100 text-sky-600"><PieChartIcon size={18} /></div>
+                                    <h3 className="font-bold text-slate-800">توزيع المخزون حسب الفئة</h3>
+                                  </div>
+                                  <div className="text-xs font-semibold text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">
+                                    {inventoryMetrics.categoryBreakdown.length} فئات نشطة
+                                  </div>
+                                </div>
+                                <div className="p-4 flex-1 flex flex-col md:flex-row items-center justify-center relative min-h-[300px]">
+                                  {inventoryMetrics.categoryBreakdown.length > 0 ? (
+                                    <>
+                                      <div className="w-full h-[250px] relative">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                          <PieChart>
+                                            <Pie
+                                              data={inventoryMetrics.categoryBreakdown}
+                                              dataKey="value"
+                                              nameKey="group"
+                                              cx="50%"
+                                              cy="50%"
+                                              innerRadius={60}
+                                              outerRadius={90}
+                                              paddingAngle={5}
+                                            >
+                                              {inventoryMetrics.categoryBreakdown.map((entry, index) => {
+                                                const colors = ['#6366f1', '#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6', '#10b981'];
+                                                return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="rgba(255,255,255,0.5)" strokeWidth={2} />;
+                                              })}
+                                            </Pie>
+                                            <Tooltip
+                                              formatter={(value) => `₪${Math.round(value).toLocaleString()}`}
+                                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontWeight: 'bold' }}
+                                              itemStyle={{ color: '#0f172a' }}
+                                            />
+                                          </PieChart>
+                                        </ResponsiveContainer>
+                                        {/* Center Label */}
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                          <span className="text-xs font-semibold text-slate-400">الإجمالي</span>
+                                          <span className="text-sm font-black text-slate-700">₪{Math.round(inventoryMetrics.totalValue).toLocaleString()}</span>
+                                        </div>
+                                      </div>
+                                      {/* Legend */}
+                                      <div className="w-full mt-4 flex flex-wrap justify-center gap-2 custom-scrollbar overflow-y-auto max-h-[120px] px-2 p-1">
+                                        {inventoryMetrics.categoryBreakdown.map((cat, idx) => {
+                                          const colors = ['#6366f1', '#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6', '#10b981'];
+                                          const percent = ((cat.value / inventoryMetrics.totalValue) * 100).toFixed(1);
+                                          return (
+                                            <div key={cat.group} className="flex items-center gap-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition-colors shadow-sm whitespace-nowrap">
+                                              <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: colors[idx % colors.length] }}></div>
+                                              <span className="text-xs font-bold text-slate-700 truncate max-w-[100px]" title={cat.group}>{cat.group}</span>
+                                              <span className="text-xs font-mono font-medium text-slate-500 bg-white px-1.5 rounded-md border border-slate-100">{percent}%</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="flex flex-col items-center justify-center text-slate-400 h-full">
+                                      <PieChartIcon size={40} className="mb-3 opacity-20" />
+                                      <p>لا توجد بيانات متاحة</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Top 10 Value Items */}
+                              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[400px]">
+                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-amber-100 text-amber-600"><TrendingUp size={18} /></div>
+                                    <h3 className="font-bold text-slate-800">أعلى 10 أصناف قيمةً في المخزن</h3>
+                                  </div>
+                                </div>
+                                <div className="overflow-x-auto flex-1 custom-scrollbar border-t border-transparent">
+                                  <table className="w-full text-sm text-right whitespace-nowrap">
+                                    <thead className="bg-white sticky top-0 shadow-sm z-10 text-slate-500">
+                                      <tr>
+                                        <th className="py-3 px-4 font-semibold">الصنف</th>
+                                        <th className="py-3 px-4 font-semibold">الباركود</th>
+                                        <th className="py-3 px-4 font-semibold">الكمية</th>
+                                        <th className="py-3 px-4 font-semibold">السعر</th>
+                                        <th className="py-3 px-4 font-semibold text-amber-700">إجمالي القيمة</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {inventoryMetrics.topValueItems.map((item, idx) => (
+                                        <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                          <td className="py-3 px-4">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-6 h-6 rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 flex items-center justify-center shrink-0">
+                                                {idx + 1}
+                                              </div>
+                                              <div className="font-semibold text-slate-800 truncate max-w-[200px]" title={item.name}>
+                                                {item.name || '—'}
+                                              </div>
+                                            </div>
+                                          </td>
+                                          <td className="py-3 px-4 font-mono text-slate-500">{item.barcode || '—'}</td>
+                                          <td className="py-3 px-4 font-bold text-slate-700 font-mono">{item.qty}</td>
+                                          <td className="py-3 px-4 font-mono text-slate-500">₪{Math.round(item.price)}</td>
+                                          <td className="py-3 px-4 font-black text-amber-600 font-mono">₪{Math.round(item.totalValue).toLocaleString()}</td>
+                                        </tr>
+                                      ))}
+                                      {inventoryMetrics.topValueItems.length === 0 && (
+                                        <tr>
+                                          <td colSpan={5} className="py-12 text-center text-slate-400">لا توجد بيانات متاحة</td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Best Sellers and Aging Stock Tables */}
+                            <div className="grid lg:grid-cols-2 gap-6">
+                              {/* Best Sellers vs Stock */}
+                              <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[400px]">
+                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-emerald-100 text-emerald-600"><TrendingUp size={18} /></div>
+                                    <h3 className="font-bold text-slate-800">الأكثر مبيعاً مقابل المتوفر</h3>
+                                  </div>
+                                  <div className="text-xs font-semibold text-slate-500">
+                                    (آخر 90 يوماً)
+                                  </div>
+                                </div>
+                                <div className="overflow-x-auto flex-1 custom-scrollbar border-t border-transparent">
+                                  <table className="w-full text-sm text-right whitespace-nowrap">
+                                    <thead className="bg-white sticky top-0 shadow-sm z-10 text-slate-500">
+                                      <tr>
+                                        <th className="py-3 px-4 font-semibold">الصنف</th>
+                                        <th className="py-3 px-4 font-semibold text-emerald-600">المبيعات</th>
+                                        <th className="py-3 px-4 font-semibold">متوفر</th>
+                                        <th className="py-3 px-4 font-semibold">الحالة</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {inventoryMetrics.bestSellers.map((item) => {
+                                        const needsRestock = item.qty < item.unitsSold * 0.5; // Example arbitrary condition
+                                        return (
+                                          <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                            <td className="py-3 px-4">
+                                              <div className="font-semibold text-slate-800 truncate max-w-[150px]" title={item.name}>
+                                                {item.name || '—'}
+                                              </div>
+                                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.barcode}</div>
+                                            </td>
+                                            <td className="py-3 px-4 font-black text-emerald-600 font-mono text-center">
+                                              {item.unitsSold}
+                                            </td>
+                                            <td className="py-3 px-4 font-bold text-slate-700 font-mono text-center">
+                                              {item.qty}
+                                            </td>
+                                            <td className="py-3 px-4 text-center">
+                                              {needsRestock ? (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-md">
+                                                  <AlertTriangle size={12} /> اطلب كمية
+                                                </span>
+                                              ) : (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
+                                                  آمن
+                                                </span>
+                                              )}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                      {(!inventoryMetrics.bestSellers || inventoryMetrics.bestSellers.length === 0) && (
+                                        <tr>
+                                          <td colSpan={4} className="py-12 text-center text-slate-400">لا توجد بيانات / لم تكتمل تزامن الطلبات</td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+
+                              {/* Aging Stock (Boda'a Rakeda) */}
+                              <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[400px]">
+                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-rose-100 text-rose-600"><Clock size={18} /></div>
+                                    <h3 className="font-bold text-slate-800">البضاعة الراكدة (لم تُباع)</h3>
+                                  </div>
+                                  <div className="text-xs font-semibold text-slate-500">
+                                    (أكثر من 30 يوماً / أكثر كمية)
+                                  </div>
+                                </div>
+                                <div className="overflow-x-auto flex-1 custom-scrollbar border-t border-transparent">
+                                  <table className="w-full text-sm text-right whitespace-nowrap">
+                                    <thead className="bg-white sticky top-0 shadow-sm z-10 text-slate-500">
+                                      <tr>
+                                        <th className="py-3 px-4 font-semibold">الصنف</th>
+                                        <th className="py-3 px-4 font-semibold">تاريخ آخر بيع</th>
+                                        <th className="py-3 px-4 font-semibold text-rose-600">كم يوم راكد؟</th>
+                                        <th className="py-3 px-4 font-semibold">كمية محتجزة</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {inventoryMetrics.agingStock.map((item) => (
+                                        <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                          <td className="py-3 px-4">
+                                            <div className="font-semibold text-slate-800 truncate max-w-[150px]" title={item.name}>
+                                              {item.name || '—'}
+                                            </div>
+                                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.barcode}</div>
+                                          </td>
+                                          <td className="py-3 px-4 font-mono text-slate-500 text-xs">
+                                            {item.lastSoldDate ? new Date(item.lastSoldDate).toLocaleDateString() : '—'}
+                                          </td>
+                                          <td className="py-3 px-4 font-black text-rose-600 font-mono text-center">
+                                            {item.daysSinceLastSale ? `${item.daysSinceLastSale} يوم` : 'غير مباع'}
+                                          </td>
+                                          <td className="py-3 px-4 font-bold text-slate-700 font-mono text-center bg-slate-50/50">
+                                            {item.qty}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      {(!inventoryMetrics.agingStock || inventoryMetrics.agingStock.length === 0) && (
+                                        <tr>
+                                          <td colSpan={4} className="py-12 text-center text-slate-400">لا توجد بضاعة راكدة حالياً</td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
                 ) : mode === 'sales_hub' ? (
@@ -3968,132 +4432,132 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           }}
                         />
                       </div>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <div className="relative flex-1">
-                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                        <input
-                          type="text"
-                          value={inventorySearch}
-                          onChange={(e) => setInventorySearch(e.target.value)}
-                          placeholder="بحث بالاسم أو الباركود أو الفئة..."
-                          className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base"
-                        />
-                      </div>
-                      <select
-                        value={inventoryCategoryFilter}
-                        onChange={(e) => setInventoryCategoryFilter(e.target.value)}
-                        className="px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 font-semibold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base min-w-[180px]"
-                      >
-                        <option value="">كل الفئات / الشركة المصنعة</option>
-                        {allGroups.map((g) => (
-                          <option key={g} value={g}>{g}</option>
-                        ))}
-                      </select>
-                      <label className="flex items-center gap-3 cursor-pointer px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-amber-200 transition-colors">
-                        <input type="checkbox" checked={inventoryLowStockOnly} onChange={(e) => setInventoryLowStockOnly(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
-                        <span className="font-semibold text-slate-700">عرض المخزون المنخفض فقط (≤5)</span>
-                      </label>
-                    </div>
-                    <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
-                      {loading ? (
-                        <div className="p-16 flex items-center justify-center"><Loader2 size={40} className="animate-spin text-amber-500" /></div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-right border-collapse">
-                            <thead>
-                              <tr className="bg-slate-50 border-b border-slate-200">
-                                <th className="px-3 py-4 font-bold text-slate-700 w-16">صورة</th>
-                                <th className="px-4 py-4 font-bold text-slate-700">الباركود</th>
-                                <th className="px-4 py-4 font-bold text-slate-700">الاسم</th>
-                                <th className="px-4 py-4 font-bold text-slate-700">الفئة</th>
-                                <th className="px-4 py-4 font-bold text-slate-700">الكمية</th>
-                                <th className="px-4 py-4 font-bold text-slate-700">السعر</th>
-                                <th className="px-4 py-4 font-bold text-slate-700">الحالة</th>
-                                <th className="px-4 py-4 font-bold text-slate-700">تعديل</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredInventoryItems.length === 0 ? (
-                                <tr><td colSpan={8} className="px-4 py-16 text-center text-slate-500 font-medium">{inventorySearch || inventoryLowStockOnly || inventoryCategoryFilter ? 'لا توجد نتائج مطابقة للبحث أو الفلتر.' : 'لا توجد أصناف في المخزون.'}</td></tr>
-                              ) : (
-                                filteredInventoryItems.map((item) => {
-                                  const status = getStockStatus(item);
-                                  const qty = Number(item.stock_count ?? item.stock ?? 0);
-                                  const qtyColor = qty === 0 ? 'text-rose-600' : qty <= 10 ? 'text-amber-600' : 'text-slate-700';
-                                  const qtyBg = qty === 0 ? 'bg-rose-100 text-rose-700' : qty <= 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
-                                  const imgSrc = getImage(item) || getImageFallback(item);
-                                  return (
-                                    <tr key={item.id} className="border-b border-slate-100 hover:bg-amber-50/50 transition-colors">
-                                      <td className="px-3 py-2 align-middle">
-                                        <div className="inv-thumb w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
-                                          {imgSrc ? (
-                                            <>
-                                              <img src={imgSrc} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.target.style.display = 'none'; const wrap = e.target.closest('.inv-thumb'); if (wrap) wrap.querySelector('.inv-thumb-fallback')?.classList.remove('hidden'); }} />
-                                              <span className="inv-thumb-fallback hidden absolute inset-0 flex items-center justify-center bg-slate-100"><Package size={24} className="text-slate-300" /></span>
-                                            </>
-                                          ) : (
-                                            <Package size={24} className="text-slate-300" />
-                                          )}
-                                        </div>
-                                      </td>
-                                      <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
-                                      <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
-                                      <td className="px-4 py-3 text-slate-600">{item.group || '—'}</td>
-                                      <td className="px-4 py-3"><span className={`font-bold ${qtyColor}`}>{qty}</span></td>
-                                      <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
-                                      <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${qtyBg}`}>{status}</span></td>
-                                      <td className="px-4 py-3"><button type="button" onClick={() => { setEditingItem(item); setShowCatalogPanel(true); }} className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition-colors text-sm">تعديل</button></td>
-                                    </tr>
-                                  );
-                                })
-                              )}
-                            </tbody>
-                          </table>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
+                          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                          <input
+                            type="text"
+                            value={inventorySearch}
+                            onChange={(e) => setInventorySearch(e.target.value)}
+                            placeholder="بحث بالاسم أو الباركود أو الفئة..."
+                            className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base"
+                          />
                         </div>
-                      )}
-                    </div>
-
-                    {/* سجل التغييرات */}
-                    <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
-                      <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                          <Clock size={20} className="text-amber-500" />
-                          سجل التغييرات (من غيّر السعر / الكمية ومتى)
-                        </h3>
-                        <button type="button" onClick={fetchActivityLogs} disabled={activityLogsLoading} className="text-sm font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-50 flex items-center gap-1">
-                          {activityLogsLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-                          تحديث
-                        </button>
+                        <select
+                          value={inventoryCategoryFilter}
+                          onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+                          className="px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 font-semibold focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-base min-w-[180px]"
+                        >
+                          <option value="">كل الفئات / الشركة المصنعة</option>
+                          {allGroups.map((g) => (
+                            <option key={g} value={g}>{g}</option>
+                          ))}
+                        </select>
+                        <label className="flex items-center gap-3 cursor-pointer px-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-amber-200 transition-colors">
+                          <input type="checkbox" checked={inventoryLowStockOnly} onChange={(e) => setInventoryLowStockOnly(e.target.checked)} className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
+                          <span className="font-semibold text-slate-700">عرض المخزون المنخفض فقط (≤5)</span>
+                        </label>
                       </div>
-                      <div className="overflow-x-auto max-h-64 overflow-y-auto">
-                        {activityLogsLoading && activityLogs.length === 0 ? (
-                          <div className="p-8 flex justify-center"><Loader2 size={28} className="animate-spin text-amber-500" /></div>
-                        ) : activityLogs.length === 0 ? (
-                          <p className="p-6 text-center text-slate-500 text-sm">لا توجد سجلات تغيير. سيظهر هنا من غيّر السعر أو الكمية بعد إنشاء جدول activity_logs في Supabase.</p>
+                      <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
+                        {loading ? (
+                          <div className="p-16 flex items-center justify-center"><Loader2 size={40} className="animate-spin text-amber-500" /></div>
                         ) : (
-                          <table className="w-full text-right border-collapse text-sm">
-                            <thead>
-                              <tr className="bg-slate-100 border-b border-slate-200">
-                                <th className="px-3 py-2 font-bold text-slate-600">الوقت</th>
-                                <th className="px-3 py-2 font-bold text-slate-600">المستخدم</th>
-                                <th className="px-3 py-2 font-bold text-slate-600">الباركود</th>
-                                <th className="px-3 py-2 font-bold text-slate-600">التغيير</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {activityLogs.map((log) => (
-                                <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                                  <td className="px-3 py-2 text-slate-600 font-mono text-xs">{log.created_at ? new Date(log.created_at).toLocaleString('ar-SA') : '—'}</td>
-                                  <td className="px-3 py-2 font-semibold text-slate-700">{log.username || '—'}</td>
-                                  <td className="px-3 py-2 font-mono text-slate-600">{log.entity_id || '—'}</td>
-                                  <td className="px-3 py-2 text-slate-700">{log.description || log.field_name || '—'}</td>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-right border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                  <th className="px-3 py-4 font-bold text-slate-700 w-16">صورة</th>
+                                  <th className="px-4 py-4 font-bold text-slate-700">الباركود</th>
+                                  <th className="px-4 py-4 font-bold text-slate-700">الاسم</th>
+                                  <th className="px-4 py-4 font-bold text-slate-700">الفئة</th>
+                                  <th className="px-4 py-4 font-bold text-slate-700">الكمية</th>
+                                  <th className="px-4 py-4 font-bold text-slate-700">السعر</th>
+                                  <th className="px-4 py-4 font-bold text-slate-700">الحالة</th>
+                                  <th className="px-4 py-4 font-bold text-slate-700">تعديل</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {filteredInventoryItems.length === 0 ? (
+                                  <tr><td colSpan={8} className="px-4 py-16 text-center text-slate-500 font-medium">{inventorySearch || inventoryLowStockOnly || inventoryCategoryFilter ? 'لا توجد نتائج مطابقة للبحث أو الفلتر.' : 'لا توجد أصناف في المخزون.'}</td></tr>
+                                ) : (
+                                  filteredInventoryItems.map((item) => {
+                                    const status = getStockStatus(item);
+                                    const qty = Number(item.stock_count ?? item.stock ?? 0);
+                                    const qtyColor = qty === 0 ? 'text-rose-600' : qty <= 10 ? 'text-amber-600' : 'text-slate-700';
+                                    const qtyBg = qty === 0 ? 'bg-rose-100 text-rose-700' : qty <= 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
+                                    const imgSrc = getImage(item) || getImageFallback(item);
+                                    return (
+                                      <tr key={item.id} className="border-b border-slate-100 hover:bg-amber-50/50 transition-colors">
+                                        <td className="px-3 py-2 align-middle">
+                                          <div className="inv-thumb w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 relative">
+                                            {imgSrc ? (
+                                              <>
+                                                <img src={imgSrc} alt="" className="w-full h-full object-contain" loading="lazy" onError={(e) => { e.target.style.display = 'none'; const wrap = e.target.closest('.inv-thumb'); if (wrap) wrap.querySelector('.inv-thumb-fallback')?.classList.remove('hidden'); }} />
+                                                <span className="inv-thumb-fallback hidden absolute inset-0 flex items-center justify-center bg-slate-100"><Package size={24} className="text-slate-300" /></span>
+                                              </>
+                                            ) : (
+                                              <Package size={24} className="text-slate-300" />
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
+                                        <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
+                                        <td className="px-4 py-3 text-slate-600">{item.group || '—'}</td>
+                                        <td className="px-4 py-3"><span className={`font-bold ${qtyColor}`}>{qty}</span></td>
+                                        <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
+                                        <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${qtyBg}`}>{status}</span></td>
+                                        <td className="px-4 py-3"><button type="button" onClick={() => { setEditingItem(item); setShowCatalogPanel(true); }} className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition-colors text-sm">تعديل</button></td>
+                                      </tr>
+                                    );
+                                  })
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
                         )}
                       </div>
-                    </div>
+
+                      {/* سجل التغييرات */}
+                      <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
+                        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <Clock size={20} className="text-amber-500" />
+                            سجل التغييرات (من غيّر السعر / الكمية ومتى)
+                          </h3>
+                          <button type="button" onClick={fetchActivityLogs} disabled={activityLogsLoading} className="text-sm font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-50 flex items-center gap-1">
+                            {activityLogsLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                            تحديث
+                          </button>
+                        </div>
+                        <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                          {activityLogsLoading && activityLogs.length === 0 ? (
+                            <div className="p-8 flex justify-center"><Loader2 size={28} className="animate-spin text-amber-500" /></div>
+                          ) : activityLogs.length === 0 ? (
+                            <p className="p-6 text-center text-slate-500 text-sm">لا توجد سجلات تغيير. سيظهر هنا من غيّر السعر أو الكمية بعد إنشاء جدول activity_logs في Supabase.</p>
+                          ) : (
+                            <table className="w-full text-right border-collapse text-sm">
+                              <thead>
+                                <tr className="bg-slate-100 border-b border-slate-200">
+                                  <th className="px-3 py-2 font-bold text-slate-600">الوقت</th>
+                                  <th className="px-3 py-2 font-bold text-slate-600">المستخدم</th>
+                                  <th className="px-3 py-2 font-bold text-slate-600">الباركود</th>
+                                  <th className="px-3 py-2 font-bold text-slate-600">التغيير</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {activityLogs.map((log) => (
+                                  <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                                    <td className="px-3 py-2 text-slate-600 font-mono text-xs">{log.created_at ? new Date(log.created_at).toLocaleString('ar-SA') : '—'}</td>
+                                    <td className="px-3 py-2 font-semibold text-slate-700">{log.username || '—'}</td>
+                                    <td className="px-3 py-2 font-mono text-slate-600">{log.entity_id || '—'}</td>
+                                    <td className="px-3 py-2 text-slate-700">{log.description || log.field_name || '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : mode === 'customers' ? (
