@@ -340,6 +340,13 @@ function App() {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
+  // إدارة المستخدمين وكلمات المرور (من الإعدادات → إدارة الجلسات)
+  const [salesUsers, setSalesUsers] = useState([]);
+  const [salesUsersLoading, setSalesUsersLoading] = useState(false);
+  const [editingPasswordUser, setEditingPasswordUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
+
   // Return Customer Display Early
   if (isCustomerDisplayMode) {
     return (
@@ -474,11 +481,12 @@ function App() {
       setIsAuthenticated(true);
       setUserRole(role || 'customer');
       setUsername(storedUser || null);
+      if (role === 'customer') setMode('order');
     }
     setHasCheckedAuth(true);
   }, []);
 
-  const handleLogin = (username, password, setError, rememberMe = true) => {
+  const handleLogin = async (username, password, setError, rememberMe = true) => {
     const loginSuccess = (role, loggedInUser = username) => {
       localStorage.setItem('sales_auth', 'true');
       localStorage.setItem('sales_role', role);
@@ -492,7 +500,16 @@ function App() {
       setIsAuthenticated(true);
       setUserRole(role);
       setUsername(loggedInUser);
+      if (role === 'customer') setMode('order');
     };
+
+    try {
+      const { data, error } = await supabase.from('sales_users').select('username, password, role').eq('username', username.trim()).maybeSingle();
+      if (!error && data && String(data.password) === String(password)) {
+        loginSuccess(data.role || 'customer', data.username);
+        return;
+      }
+    } catch (_) { /* جدول غير موجود أو خطأ — نكمل للقائمة الثابتة */ }
 
     if (username === 'mohammadalaker' && password === '123456') {
       loginSuccess('admin', 'mohammadalaker');
@@ -503,7 +520,7 @@ function App() {
     } else if (username === 'supervisor' && password === '123') {
       loginSuccess('supervisor');
     } else {
-      setError('Invalid username or password');
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
     }
   };
 
@@ -546,6 +563,40 @@ function App() {
       alert('خطأ: ' + e.message);
     }
   };
+
+  const fetchSalesUsers = useCallback(async () => {
+    setSalesUsersLoading(true);
+    try {
+      const { data, error } = await supabase.from('sales_users').select('id, username, role').order('username');
+      if (error) throw error;
+      setSalesUsers(data || []);
+    } catch (e) {
+      console.warn('fetchSalesUsers:', e);
+      setSalesUsers([]);
+    } finally {
+      setSalesUsersLoading(false);
+    }
+  }, []);
+
+  const handleUpdateUserPassword = useCallback(async (userId, password) => {
+    if (!password || password.length < 3) {
+      alert('كلمة المرور يجب أن تكون 3 أحرف على الأقل.');
+      return;
+    }
+    setPasswordUpdateLoading(true);
+    try {
+      const { error } = await supabase.from('sales_users').update({ password }).eq('id', userId);
+      if (error) throw error;
+      setEditingPasswordUser(null);
+      setNewPassword('');
+      alert('تم تحديث كلمة المرور.');
+    } catch (e) {
+      console.warn('handleUpdateUserPassword:', e);
+      alert('فشل التحديث: ' + (e?.message || e));
+    } finally {
+      setPasswordUpdateLoading(false);
+    }
+  }, []);
 
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState('items'); // 'items' | 'customer'
@@ -986,7 +1037,8 @@ function App() {
       fetchActivityLogs();
       fetchInventoryInsights();
     }
-  }, [mode, userRole, fetchCustomers, fetchActivityLogs, fetchInventoryInsights]);
+    if (mode === 'settings' && userRole === 'admin') fetchSalesUsers();
+  }, [mode, userRole, fetchCustomers, fetchActivityLogs, fetchInventoryInsights, fetchSalesUsers]);
 
   /* منع تمرير الصفحة عند فتح مودال تعديل أو عرض العميل */
   useEffect(() => {
@@ -3242,28 +3294,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     );
   }
 
-  /* مستخدم sale: شاشة واحدة فقط — الصفحة قيد التعديل */
-  if (username === 'sale') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] p-6 text-center" dir="rtl">
-        <div className="max-w-md w-full bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/60 p-10">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-amber-100 flex items-center justify-center">
-            <Clock size={40} className="text-amber-600" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-800 mb-3">الصفحة قيد التعديل</h1>
-          <p className="text-slate-600 leading-relaxed">سيتم الرجوع لاحقاً. شكراً لصبركم.</p>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-8 px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors"
-          >
-            تسجيل الخروج
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={`font-sans flex h-screen overflow-hidden text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
@@ -4437,8 +4467,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     )}
                   </div>
                 ) : mode === 'sales_hub' ? (
-                  /* Sales Area Hub */
-                  <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center pt-10 pb-20 px-4 animate-fade-in max-w-5xl mx-auto">
+                  /* Sales Area Hub — لمستخدم البيع (customer) نعرض فقط: بدء البيع + الفواتير المعلقة */
+                  <div className={`flex flex-col gap-6 items-stretch justify-center pt-10 pb-20 px-4 animate-fade-in max-w-5xl mx-auto ${userRole === 'customer' ? 'md:flex-row max-w-2xl' : 'md:flex-row'}`}>
                     {/* POS Choice */}
                     <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-indigo-900/5 border border-indigo-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
                       <div className="absolute top-0 right-0 p-32 bg-indigo-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
@@ -4478,6 +4508,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     </div>
 
+                    {/* Catalog + Offers — تظهر فقط لغير مستخدم البيع (مشرف / أدمن) */}
+                    {userRole !== 'customer' && (
+                      <>
                     {/* Catalog Choice */}
                     <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-rose-900/5 border border-rose-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
                       <div className="absolute top-0 right-0 p-32 bg-rose-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
@@ -4523,6 +4556,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                       </div>
                     </div>
+                      </>
+                    )}
                   </div>
                 ) : mode === 'offers' ? (
                   /* Custom Offers - اختيار المنتجات للعروض */
@@ -4698,29 +4733,111 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       )}
                     </div>
 
-                    {/* Session Management */}
-                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center text-center space-y-4">
-                      <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mb-2">
-                        <Power size={32} />
-                      </div>
-                      <h2 className="text-2xl font-black text-slate-800">إدارة الجلسات</h2>
-                      <p className="text-slate-500 max-w-sm mx-auto text-sm">
-                        الضغط على الزر أدناه سيؤدي إلى إخراج جميع المستخدمين من النظام فوراً.
-                      </p>
-
-                      {userRole === 'admin' ? (
-                        <button
-                          onClick={handleForceLogoutAll}
-                          className="mt-4 flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                        >
-                          <Power size={20} /> تسجيل خروج جميع الأجهزة
-                        </button>
-                      ) : (
-                        <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
-                          <Lock size={14} /> خاصية إدارية
+                    {/* Session Management + إدارة المستخدمين وكلمات المرور */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-6">
+                      <div className="flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mb-2">
+                          <Power size={32} />
                         </div>
-                      )}
+                        <h2 className="text-2xl font-black text-slate-800">إدارة الجلسات</h2>
+                        <p className="text-slate-500 max-w-sm mx-auto text-sm">
+                          تسجيل خروج الجميع، وإدارة المستخدمين وتغيير كلمات المرور من هنا.
+                        </p>
+
+                        {userRole === 'admin' ? (
+                          <>
+                            <button
+                              onClick={handleForceLogoutAll}
+                              className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                            >
+                              <Power size={20} /> تسجيل خروج جميع الأجهزة
+                            </button>
+
+                            {/* إدارة المستخدمين وكلمات المرور */}
+                            <div className="w-full mt-8 text-right border-t border-slate-100 pt-6">
+                              <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <Users size={20} /> إدارة المستخدمين وكلمات المرور
+                              </h3>
+                              {salesUsersLoading ? (
+                                <div className="flex items-center justify-center py-8"><Loader2 size={28} className="animate-spin text-rose-500" /></div>
+                              ) : salesUsers.length === 0 ? (
+                                <p className="text-slate-500 text-sm py-4">لا يوجد جدول مستخدمين. أنشئ جدول <code className="bg-slate-100 px-1 rounded">sales_users</code> في Supabase (انظر USERS_SUPABASE.md) ثم حدّث الصفحة.</p>
+                              ) : (
+                                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                  <table className="w-full text-sm text-right">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                      <tr>
+                                        <th className="px-4 py-3 font-bold text-slate-600">اسم المستخدم</th>
+                                        <th className="px-4 py-3 font-bold text-slate-600">الدور</th>
+                                        <th className="px-4 py-3 font-bold text-slate-600">تغيير كلمة المرور</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {salesUsers.map((u) => (
+                                        <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                                          <td className="px-4 py-3 font-semibold text-slate-800">{u.username}</td>
+                                          <td className="px-4 py-3 text-slate-600">{u.role === 'admin' ? 'أدمن' : u.role === 'supervisor' ? 'مشرف' : 'بيع'}</td>
+                                          <td className="px-4 py-3">
+                                            <button
+                                              type="button"
+                                              onClick={() => { setEditingPasswordUser(u); setNewPassword(''); }}
+                                              className="px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 font-bold hover:bg-indigo-200 transition-colors text-xs flex items-center gap-1"
+                                            >
+                                              <Lock size={14} /> تغيير
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
+                            <Lock size={14} /> خاصية إدارية
+                          </div>
+                        )}
+                      </div>
                     </div>
+
+                    {/* مودال تغيير كلمة المرور */}
+                    {editingPasswordUser && userRole === 'admin' && createPortal(
+                      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" dir="rtl" onClick={() => { setEditingPasswordUser(null); setNewPassword(''); }}>
+                        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+                          <h3 className="text-lg font-bold text-slate-800 mb-2">تغيير كلمة المرور — {editingPasswordUser.username}</h3>
+                          <p className="text-slate-500 text-sm mb-4">أدخل كلمة المرور الجديدة (يُستحسن 6 أحرف أو أكثر).</p>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="كلمة المرور الجديدة"
+                            className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-slate-800 mb-4"
+                            autoFocus
+                          />
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => { setEditingPasswordUser(null); setNewPassword(''); }}
+                              className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                            >
+                              إلغاء
+                            </button>
+                            <button
+                              type="button"
+                              disabled={passwordUpdateLoading || newPassword.length < 3}
+                              onClick={() => handleUpdateUserPassword(editingPasswordUser.id, newPassword)}
+                              className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              {passwordUpdateLoading ? <Loader2 size={18} className="animate-spin" /> : null}
+                              حفظ
+                            </button>
+                          </div>
+                        </div>
+                      </div>,
+                      document.body
+                    )}
 
                   </div>
                 ) : mode === 'inventory' ? (

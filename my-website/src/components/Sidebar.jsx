@@ -92,10 +92,10 @@ function Sidebar({
                                 const isVisible = item.roles.includes(userRole);
                                 if (!isVisible) return null;
 
-                                const isActive = mode === item.id;
+                                const isActive = mode === item.id || (userRole === 'customer' && item.id === 'sales_hub' && mode === 'order');
                                 const isPlaceholder = [].includes(item.id);
                                 const badgeCount = getBadgeCount(item.badgeKey);
-
+                                const effectiveMode = (userRole === 'customer' && item.id === 'sales_hub') ? 'order' : item.id;
                                 return (
                                     <div key={item.id} className="relative">
                                         {isActive && !isPlaceholder && (
@@ -108,7 +108,7 @@ function Sidebar({
                                         )}
                                         <button
                                             onClick={() => {
-                                                setMode(item.id);
+                                                setMode(effectiveMode);
                                                 onClose();
                                             }}
                                             disabled={false}
