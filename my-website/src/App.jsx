@@ -1191,7 +1191,12 @@ function App() {
   });
   const [uploading, setUploading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [productDetailQty, setProductDetailQty] = useState(1);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
+
+  useEffect(() => {
+    if (selectedItem) setProductDetailQty(1);
+  }, [selectedItem]);
 
   // Quantity Modal State
   const [showQuantityModal, setShowQuantityModal] = useState(false);
@@ -6565,34 +6570,105 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       {
         selectedItem && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90svh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Product Details</h3>
-                <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">✕</button>
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90svh] overflow-hidden shadow-2xl border border-slate-100 flex flex-col" onClick={(e) => e.stopPropagation()} dir="rtl">
+              {/* Breadcrumb + Close */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+                <p className="text-sm text-slate-500">
+                  <span className="hover:text-slate-700">المنتجات</span>
+                  {selectedItem.group && <><span className="mx-1">/</span><span className="text-slate-700">{selectedItem.group}</span></>}
+                  <span className="mx-1">/</span>
+                  <span className="text-slate-800 font-semibold">{selectedItem.productType || selectedItem.name || '—'}</span>
+                </p>
+                <button onClick={() => setSelectedItem(null)} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" aria-label="إغلاق">✕</button>
               </div>
-              <div className="aspect-square max-h-64 rounded-xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] flex items-center justify-center mb-4 overflow-hidden">
-                {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-6" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={80} className="text-slate-300" />}
-              </div>
-              {selectedItem.group && <p className="text-xs font-semibold text-indigo-600 mb-1">Group: {selectedItem.group}</p>}
-              <p className="text-slate-800 font-bold text-sm mb-3 leading-snug">{selectedItem.name}</p>
-              <div className="space-y-2 text-sm">
-                <p className="text-slate-600">Price: <span dir="ltr" className="font-bold text-slate-800 text-base">₪{selectedItem.price ?? 0}</span></p>
-                <p className="text-slate-600">Discounted: <span dir="ltr" className="font-bold text-emerald-600 text-lg">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
-                <p className="text-slate-600">Box: <span className="font-bold text-slate-800 text-base">{selectedItem.box || '—'}</span></p>
-                <p className="text-slate-600">Stock: <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(selectedItem)}</span></p>
-                <p className="text-slate-600 font-mono text-xs break-all">Barcode: <span dir="ltr" className="font-bold text-slate-800">{selectedItem.barcode || '—'}</span></p>
-              </div>
-              <div className="flex gap-2 mt-5">
-                {userRole === 'admin' && (
-                  <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors">Edit</button>
-                )}
-                {mode === 'catalog' ? (
-                  <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`flex-1 py-3 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-rose-200 text-rose-700 hover:bg-rose-50'}`}>
-                    {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove from Catalog' : 'Add to Catalog'}
-                  </button>
-                ) : (
-                  <button onClick={() => { handleOpenQuantityModal(selectedItem); setSelectedItem(null); }} className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all">إضافة إلى السلة</button>
-                )}
+
+              <div className="flex-1 overflow-y-auto">
+                <div className="grid md:grid-cols-2 gap-8 p-6">
+                  {/* Left: Image */}
+                  <div className="aspect-square max-h-[400px] rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center overflow-hidden">
+                    {getImage(selectedItem) ? (
+                      <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-8" onError={(e) => (e.target.style.display = 'none')} />
+                    ) : (
+                      <Package size={120} className="text-slate-300" />
+                    )}
+                  </div>
+
+                  {/* Right: Details */}
+                  <div className="flex flex-col">
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">{selectedItem.productType || selectedItem.name}</h2>
+                    <p className="text-xl font-bold text-amber-600 mb-4" dir="ltr">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</p>
+                    <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                      {selectedItem.name && selectedItem.name !== (selectedItem.productType || '') ? selectedItem.name : ''}
+                      {selectedItem.group && <span className="block mt-1 text-slate-500">الفئة: {selectedItem.group}</span>}
+                    </p>
+
+                    {/* Quantity */}
+                    <div className="mb-6">
+                      <label className="block text-sm font-bold text-slate-800 mb-2">الكمية</label>
+                      <div className="flex items-center gap-2 w-fit">
+                        <button
+                          type="button"
+                          onClick={() => setProductDetailQty((q) => Math.max(1, (q || 1) - 1))}
+                          className="w-11 h-11 flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+                        >
+                          <Minus size={18} strokeWidth={2.5} />
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          value={productDetailQty}
+                          onChange={(e) => setProductDetailQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                          className="w-20 h-11 text-center text-lg font-bold rounded-xl border-2 border-slate-200 text-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setProductDetailQty((q) => (q || 1) + 1)}
+                          className="w-11 h-11 flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+                        >
+                          <Plus size={18} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Add to cart / Actions */}
+                    <div className="flex flex-wrap gap-3 mt-auto">
+                      {mode !== 'catalog' && (
+                        <button
+                          onClick={() => {
+                            addToOrder(selectedItem, productDetailQty);
+                            setSelectedItem(null);
+                          }}
+                          className="px-8 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition-colors"
+                        >
+                          إضافة إلى السلة
+                        </button>
+                      )}
+                      {mode === 'catalog' && (
+                        <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`px-8 py-3.5 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+                          {catalogItems.some((i) => i.id === selectedItem.id) ? 'إزالة من الكتالوج' : 'إضافة إلى الكتالوج'}
+                        </button>
+                      )}
+                      {userRole === 'admin' && (
+                        <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="px-6 py-3.5 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">تعديل</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabs: Description / Additional info */}
+                <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50">
+                  <div className="flex gap-6 border-b border-slate-200 pb-2">
+                    <span className="text-sm font-bold text-slate-800 border-b-2 border-slate-900 pb-2">الوصف</span>
+                    <span className="text-sm font-semibold text-slate-500">معلومات إضافية</span>
+                  </div>
+                  <div className="pt-4 text-sm text-slate-600 leading-relaxed">
+                    <p><span className="font-semibold text-slate-700">السعر للمستهلك:</span> <span dir="ltr" className="font-bold text-slate-900">₪{selectedItem.price ?? 0}</span></p>
+                    <p className="mt-1"><span className="font-semibold text-slate-700">بعد الخصم:</span> <span dir="ltr" className="font-bold text-emerald-600">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
+                    <p className="mt-1"><span className="font-semibold text-slate-700">الصندوق:</span> {selectedItem.box || '—'}</p>
+                    <p className="mt-1"><span className="font-semibold text-slate-700">المخزون:</span> <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(selectedItem)}</span></p>
+                    <p className="mt-1 font-mono text-xs"><span className="font-semibold text-slate-700">الباركود:</span> <span dir="ltr">{selectedItem.barcode || '—'}</span></p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
