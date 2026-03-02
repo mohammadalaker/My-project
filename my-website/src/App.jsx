@@ -723,30 +723,45 @@ function App() {
   const fetchInventoryInsights = useCallback(async () => {
     setInsightsLoading(true);
     try {
-      const from = new Date();
-      from.setDate(from.getDate() - 90); // Look back 90 days for aging stock
-      const fromIso = from.toISOString();
+      const now = new Date();
+      const from90 = new Date(now);
+      from90.setDate(from90.getDate() - 90);
+      const from30 = new Date(now);
+      from30.setDate(from30.getDate() - 30);
+      const from90Iso = from90.toISOString();
 
       const { data, error } = await supabase
         .from('orders')
         .select('created_at, items')
-        .gte('created_at', fromIso);
+        .gte('created_at', from90Iso);
 
       if (error) throw error;
 
       const salesData = {};
       (data || []).forEach(order => {
         const orderDate = new Date(order.created_at);
+        const isLast30 = orderDate >= from30;
         (order.items || []).forEach(item => {
           if (!item.barcode) return;
           if (!salesData[item.barcode]) {
-            salesData[item.barcode] = { unitsSold: 0, lastSoldDate: orderDate };
+            salesData[item.barcode] = { unitsSold: 0, unitsSoldLast30: 0, lastSoldDate: orderDate };
           }
-          salesData[item.barcode].unitsSold += (item.qty || 1);
+          const q = item.qty || 1;
+          salesData[item.barcode].unitsSold += q;
+          if (isLast30) salesData[item.barcode].unitsSoldLast30 += q;
           if (orderDate > salesData[item.barcode].lastSoldDate) {
             salesData[item.barcode].lastSoldDate = orderDate;
           }
         });
+      });
+
+      // معدل سرعة البيع: قطعة/يوم (بناءً على آخر 30 يوماً)
+      const VELOCITY_DAYS = 30;
+      Object.keys(salesData).forEach(barcode => {
+        const rec = salesData[barcode];
+        rec.salesVelocity = rec.unitsSoldLast30 > 0
+          ? rec.unitsSoldLast30 / VELOCITY_DAYS
+          : 0;
       });
 
       setInventoryInsights(salesData);
@@ -1501,6 +1516,7 @@ function App() {
     const topItems = [];
     const bestSellers = [];
     const agingStock = [];
+    const depletionForecast = [];
     const now = new Date();
 
     items.forEach((item) => {
@@ -1527,17 +1543,25 @@ function App() {
       let unitsSold = 0;
       let lastSoldDate = null;
       let daysSinceLastSale = null;
+      let salesVelocity = 0;
+      let daysUntilDepletion = null;
 
       if (inventoryInsights && item.barcode && inventoryInsights[item.barcode]) {
-        unitsSold = inventoryInsights[item.barcode].unitsSold || 0;
-        lastSoldDate = inventoryInsights[item.barcode].lastSoldDate;
+        const ins = inventoryInsights[item.barcode];
+        unitsSold = ins.unitsSold || 0;
+        lastSoldDate = ins.lastSoldDate;
+        salesVelocity = ins.salesVelocity ?? 0;
         if (lastSoldDate) {
           const diffTime = Math.abs(now - lastSoldDate);
           daysSinceLastSale = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         }
+        // تاريخ النفاد المتوقع: الكمية الحالية ÷ معدل البيع اليومي (أيام حتى النفاد)
+        if (salesVelocity > 0 && qty > 0) {
+          daysUntilDepletion = Math.ceil(qty / salesVelocity);
+        }
       }
 
-      const insightItem = { ...item, unitsSold, lastSoldDate, daysSinceLastSale, qty, price };
+      const insightItem = { ...item, unitsSold, lastSoldDate, daysSinceLastSale, salesVelocity, daysUntilDepletion, qty, price };
 
       if (unitsSold > 0) {
         bestSellers.push(insightItem);
@@ -1549,11 +1573,18 @@ function App() {
           agingStock.push(insightItem);
         }
       }
+
+      // للتنبؤ الذكي: أصناف لديها معدل بيع وكمية — تُدرج في depletionForecast أدناه
+      if (qty > 0 && salesVelocity > 0 && daysUntilDepletion != null) {
+        depletionForecast.push(insightItem);
+      }
     });
 
     topItems.sort((a, b) => b.totalValue - a.totalValue);
     bestSellers.sort((a, b) => b.unitsSold - a.unitsSold);
     agingStock.sort((a, b) => (b.daysSinceLastSale || 999) - (a.daysSinceLastSale || 999));
+    // الأقرب للنفاد أولاً (حسب عدد الأيام المتوقع حتى النفاد)
+    depletionForecast.sort((a, b) => (a.daysUntilDepletion ?? 999) - (b.daysUntilDepletion ?? 999));
 
     return {
       totalValue,
@@ -1567,6 +1598,7 @@ function App() {
       topValueItems: topItems.slice(0, 10),
       bestSellers: bestSellers.slice(0, 50),
       agingStock: agingStock.slice(0, 50),
+      depletionForecast: depletionForecast.slice(0, 50),
     };
   }, [items, inventoryInsights]);
 
@@ -4304,12 +4336,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         <th className="py-3 px-4 font-semibold">الصنف</th>
                                         <th className="py-3 px-4 font-semibold text-emerald-600">المبيعات</th>
                                         <th className="py-3 px-4 font-semibold">متوفر</th>
+                                        <th className="py-3 px-4 font-semibold text-sky-600">معدل البيع/يوم</th>
+                                        <th className="py-3 px-4 font-semibold text-amber-600">ينفد بعد</th>
                                         <th className="py-3 px-4 font-semibold">الحالة</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {inventoryMetrics.bestSellers.map((item) => {
                                         const needsRestock = item.qty < item.unitsSold * 0.5; // Example arbitrary condition
+                                        const velocityStr = item.salesVelocity > 0 ? (item.salesVelocity < 0.1 ? item.salesVelocity.toFixed(2) : item.salesVelocity.toFixed(1)) : '—';
+                                        const depletionStr = item.daysUntilDepletion != null ? `≈ ${item.daysUntilDepletion} يوم` : '—';
                                         return (
                                           <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                             <td className="py-3 px-4">
@@ -4323,6 +4359,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                             </td>
                                             <td className="py-3 px-4 font-bold text-slate-700 font-mono text-center">
                                               {item.qty}
+                                            </td>
+                                            <td className="py-3 px-4 font-mono text-sky-600 text-center" title="قطعة/يوم (آخر 30 يوماً)">
+                                              {velocityStr}
+                                            </td>
+                                            <td className="py-3 px-4 font-mono text-amber-700 text-center font-semibold" title="تاريخ النفاد المتوقع">
+                                              {depletionStr}
                                             </td>
                                             <td className="py-3 px-4 text-center">
                                               {needsRestock ? (
@@ -4340,7 +4382,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       })}
                                       {(!inventoryMetrics.bestSellers || inventoryMetrics.bestSellers.length === 0) && (
                                         <tr>
-                                          <td colSpan={4} className="py-12 text-center text-slate-400">لا توجد بيانات / لم تكتمل تزامن الطلبات</td>
+                                          <td colSpan={6} className="py-12 text-center text-slate-400">لا توجد بيانات / لم تكتمل تزامن الطلبات</td>
                                         </tr>
                                       )}
                                     </tbody>
@@ -4400,6 +4442,57 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </div>
                             </div>
 
+                            {/* التنبؤ الذكي بالمخزون: معدل سرعة البيع + تاريخ النفاد المتوقع */}
+                            <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+                              <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 rounded-lg bg-sky-100 text-sky-600"><TrendingUp size={18} /></div>
+                                  <h3 className="font-bold text-slate-800">التنبؤ الذكي بالمخزون</h3>
+                                </div>
+                                <div className="text-xs font-semibold text-slate-500">
+                                  معدل البيع (آخر 30 يوماً) — طلب بضاعة قبل النفاد
+                                </div>
+                              </div>
+                              <div className="overflow-x-auto max-h-[400px] custom-scrollbar border-t border-transparent">
+                                <table className="w-full text-sm text-right whitespace-nowrap">
+                                  <thead className="bg-white sticky top-0 shadow-sm z-10 text-slate-500">
+                                    <tr>
+                                      <th className="py-3 px-4 font-semibold">الصنف</th>
+                                      <th className="py-3 px-4 font-semibold">الباركود</th>
+                                      <th className="py-3 px-4 font-semibold">الكمية الحالية</th>
+                                      <th className="py-3 px-4 font-semibold text-sky-600">معدل البيع (قطعة/يوم)</th>
+                                      <th className="py-3 px-4 font-semibold text-amber-600">ينفد بعد (تقريباً)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {inventoryMetrics.depletionForecast && inventoryMetrics.depletionForecast.length > 0 ? (
+                                      inventoryMetrics.depletionForecast.map((item) => {
+                                        const velocityStr = item.salesVelocity < 0.1 ? item.salesVelocity.toFixed(2) : item.salesVelocity.toFixed(1);
+                                        const isUrgent = item.daysUntilDepletion != null && item.daysUntilDepletion <= 14;
+                                        const rowClass = isUrgent ? 'bg-amber-50 border-r-4 border-amber-400' : '';
+                                        return (
+                                          <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${rowClass}`}>
+                                            <td className="py-3 px-4 font-semibold text-slate-800 truncate max-w-[180px]" title={item.name}>{item.name || '—'}</td>
+                                            <td className="py-3 px-4 font-mono text-slate-500">{item.barcode || '—'}</td>
+                                            <td className="py-3 px-4 font-bold font-mono text-slate-700">{item.qty}</td>
+                                            <td className="py-3 px-4 font-mono text-sky-600 font-semibold">{velocityStr}</td>
+                                            <td className="py-3 px-4 font-mono font-bold text-amber-700">
+                                              ≈ {item.daysUntilDepletion} يوم
+                                              {isUrgent && <span className="mr-1 text-[10px] text-amber-600">(يُنصح بالطلب قريباً)</span>}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })
+                                    ) : (
+                                      <tr>
+                                        <td colSpan={5} className="py-12 text-center text-slate-400">لا توجد بيانات تنبؤ (مطلوب مبيعات في آخر 30 يوماً)</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
                             {/* قائمة المخزون للتجرد — تنبيهات بصرية: أحمر للنفاد، برتقالي لأوشك على النفاد */}
                             <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
                               <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
@@ -4420,16 +4513,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       <th className="py-3 px-4 font-semibold">الفئة</th>
                                       <th className="py-3 px-4 font-semibold">الكمية</th>
                                       <th className="py-3 px-4 font-semibold">السعر</th>
+                                      <th className="py-3 px-4 font-semibold text-sky-600">معدل البيع/يوم</th>
+                                      <th className="py-3 px-4 font-semibold text-amber-600">ينفد بعد</th>
                                       <th className="py-3 px-4 font-semibold">الحالة</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {(items || []).map((i, idx) => {
                                       const qty = Number(i.stock_count ?? i.stock ?? 0);
+                                      const insight = inventoryInsights && i.barcode ? inventoryInsights[i.barcode] : null;
+                                      const velocity = insight?.salesVelocity ?? 0;
+                                      const daysUntilDepletion = velocity > 0 && qty > 0 ? Math.ceil(qty / velocity) : null;
                                       const isOut = qty === 0;
                                       const isLow = qty >= 1 && qty <= 5;
                                       const rowClass = isOut ? 'bg-red-50 border-r-4 border-red-400' : isLow ? 'bg-amber-50 border-r-4 border-amber-400' : '';
                                       const status = isOut ? 'نفد' : isLow ? 'أوشك على النفاد' : 'متوفر';
+                                      const velocityStr = velocity > 0 ? (velocity < 0.1 ? velocity.toFixed(2) : velocity.toFixed(1)) : '—';
+                                      const depletionStr = daysUntilDepletion != null ? `≈ ${daysUntilDepletion} يوم` : '—';
                                       return (
                                         <tr key={i.barcode ? String(i.barcode) : `row-${idx}`} className={`border-b border-slate-50 hover:opacity-90 transition-colors ${rowClass}`}>
                                           <td className="py-2.5 px-4 font-mono text-slate-600">{i.barcode || '—'}</td>
@@ -4437,6 +4537,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           <td className="py-2.5 px-4 text-slate-600">{i.group || '—'}</td>
                                           <td className={`py-2.5 px-4 font-bold font-mono ${isOut ? 'text-red-700' : isLow ? 'text-amber-700' : 'text-slate-700'}`}>{qty}</td>
                                           <td className="py-2.5 px-4 font-mono text-slate-500">₪{Math.round(i.priceAfterDiscount ?? i.price ?? 0)}</td>
+                                          <td className="py-2.5 px-4 font-mono text-sky-600 text-xs">{velocityStr}</td>
+                                          <td className="py-2.5 px-4 font-mono text-amber-700 text-xs font-semibold">{depletionStr}</td>
                                           <td className="py-2.5 px-4">
                                             {isOut ? (
                                               <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded-lg">نفد</span>
@@ -4451,7 +4553,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     })}
                                     {(!items || items.length === 0) && (
                                       <tr>
-                                        <td colSpan={6} className="py-12 text-center text-slate-400">لا توجد أصناف</td>
+                                        <td colSpan={8} className="py-12 text-center text-slate-400">لا توجد أصناف</td>
                                       </tr>
                                     )}
                                   </tbody>
