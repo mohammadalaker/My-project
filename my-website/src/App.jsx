@@ -339,6 +339,7 @@ function App() {
   }, []);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
   // إدارة المستخدمين وكلمات المرور (من الإعدادات → إدارة الجلسات)
   const [salesUsers, setSalesUsers] = useState([]);
@@ -1325,6 +1326,22 @@ function App() {
     setLoading(true);
     let allItems = [];
 
+    // عند عدم الاتصال: تحميل من الكاش المحلي فوراً دون انتظار فشل Supabase
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      try {
+        allItems = await getLocalProducts();
+        const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
+        const sorted = sortByBarcodeOrder(normalized, BARCODE_ORDER);
+        setItems(sorted);
+        setHasMore(false);
+        setLoading(false);
+        setLoadingMore(false);
+        return;
+      } catch (idbErr) {
+        console.warn('Offline: no local cache', idbErr);
+      }
+    }
+
     try {
       const { data, error } = await supabase
         .from('items')
@@ -1373,7 +1390,10 @@ function App() {
   const syncOfflineOrders = useCallback(async () => {
     try {
       const pendingOrders = await getSyncQueue();
-      if (pendingOrders.length === 0) return;
+      if (pendingOrders.length === 0) {
+        setPendingSyncCount(0);
+        return;
+      }
 
       console.log(`Attempting to sync ${pendingOrders.length} offline orders...`);
       for (const order of pendingOrders) {
@@ -1389,19 +1409,34 @@ function App() {
           console.error(`Failed to sync offline order ${order.id}:`, error);
         }
       }
+      // تحديث عدد الطلبات المعلقة بعد المزامنة
+      const remaining = await getSyncQueue();
+      setPendingSyncCount(remaining.length);
     } catch (err) {
       console.error('Offline sync failed:', err);
     }
   }, []);
 
+  const refreshPendingSyncCount = useCallback(async () => {
+    try {
+      const q = await getSyncQueue();
+      setPendingSyncCount(q.length);
+    } catch (_) { }
+  }, []);
+
   useEffect(() => {
     fetchItems();
     syncOfflineOrders();
+    refreshPendingSyncCount();
 
     // Listen to online events to trigger background sync immediately
     window.addEventListener('online', syncOfflineOrders);
-    return () => window.removeEventListener('online', syncOfflineOrders);
-  }, [fetchItems, syncOfflineOrders]);
+    window.addEventListener('online', refreshPendingSyncCount);
+    return () => {
+      window.removeEventListener('online', syncOfflineOrders);
+      window.removeEventListener('online', refreshPendingSyncCount);
+    };
+  }, [fetchItems, syncOfflineOrders, refreshPendingSyncCount]);
 
   // Removed pagination and server-side search effects
   const loadMore = () => { };
@@ -2235,6 +2270,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       details: orderInfo
     };
 
+    // أوفلاين: حفظ محلياً فوراً ومزامنة لاحقاً عند عودة الاتصال
+    if (!isOnline) {
+      try {
+        await addToSyncQueue(orderData);
+        setPendingSyncCount(prev => prev + 1);
+        alert('🌐 لا يوجد اتصال بالإنترنت. تم حفظ الطلب محلياً وستتم المزامنة تلقائياً فور عودة الاتصال.');
+        return true;
+      } catch (idbErr) {
+        console.error('Failed to save order offline:', idbErr);
+        alert('تعذر حفظ الطلب محلياً. جرّب مرة أخرى أو تحقق من الاتصال.');
+        return false;
+      }
+    }
+
     try {
       const { error } = await supabase.from('orders').insert([orderData]);
       if (error) throw error;
@@ -2283,6 +2332,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       console.warn('Error saving order online, queueing offline:', err);
       try {
         await addToSyncQueue(orderData);
+        setPendingSyncCount(prev => prev + 1);
         alert('🌐 لا يوجد اتصال بالإنترنت. تم حفظ الطلب محلياً وستتم المزامنة تلقائياً فور عودة الاتصال.');
         return true; // Return true to allow PDF/Excel generation to continue offline
       } catch (idbErr) {
@@ -3374,7 +3424,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full" title="غير متصل - سيتم المزامنة لاحقاً">
-                        <CloudOff size={12} /> أوفلاين
+                        <CloudOff size={12} />
                       </div>
                     )}
                   </div>
@@ -3473,6 +3523,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
             </div>
           </header>
+
+          {/* شريط الطلبات المعلقة (أوفلاين) — يظهر عند وجود طلبات محفوظة محلياً بانتظار المزامنة */}
+          {pendingSyncCount > 0 && (
+            <div className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm font-bold">
+              <CloudOff size={16} className="shrink-0" />
+              <span>{pendingSyncCount} طلب/طلبات محفوظة محلياً — ستُزامن تلقائياً عند عودة الاتصال</span>
+              {isOnline && (
+                <button
+                  type="button"
+                  onClick={() => { syncOfflineOrders(); }}
+                  className="shrink-0 rounded-lg bg-amber-200 hover:bg-amber-300 px-3 py-1 text-xs font-bold text-amber-900"
+                >
+                  مزامنة الآن
+                </button>
+              )}
+            </div>
+          )}
 
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
             <div className="max-w-7xl mx-auto w-full pb-20">
@@ -5780,7 +5847,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     ) : (
                       <div className="flex items-center gap-1 text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full" title="غير متصل - سيتم المزامنة لاحقاً">
-                        <CloudOff size={12} /> أوفلاين
+                        <CloudOff size={12} />
                       </div>
                     )}
                   </h2>

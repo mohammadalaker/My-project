@@ -65,7 +65,7 @@ export default defineConfig({
   base: '/',
   plugins: [
     react(),
-    // تعطيل PWA أثناء البناء (production) لتجنب خطأ terser في workbox — الموقع يعمل بدون وضع عدم الاتصال
-    ...(process.env.NODE_ENV !== 'production' ? [pwaPlugin] : [])
+    // PWA في التطوير فقط (البناء للإنتاج يفشل بسبب terser في workbox). العمل دون اتصال يعمل عبر IndexedDB + مزامنة الطلبات.
+    ...(process.env.NODE_ENV !== 'production' ? [pwaPlugin] : []),
   ],
 })
