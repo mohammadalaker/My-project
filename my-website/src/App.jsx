@@ -1194,8 +1194,20 @@ function App() {
   const [productDetailQty, setProductDetailQty] = useState(1);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
 
+  // عندما يفتح منتج في نافذة التفاصيل:
+  // - نعيد تعيين الكمية إلى 1
+  // - نسمح بإغلاق النافذة بزر ESC من لوحة المفاتيح
   useEffect(() => {
     if (selectedItem) setProductDetailQty(1);
+
+    if (!selectedItem) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        setSelectedItem(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedItem]);
 
   // Quantity Modal State
