@@ -1467,13 +1467,30 @@ function App() {
       if (mode === 'offers' && userRole !== 'admin') {
         list = list.filter((i) => i.isOffer);
       }
-      return search.trim()
-        ? list.filter(
-          (i) =>
-            (i.name || '').toLowerCase().includes(search.trim().toLowerCase()) ||
-            (i.barcode || '').toString().includes(search.trim())
-        )
-        : list;
+      const q = (search || '').trim();
+      if (!q) return list;
+      // البحث حسب نوع المنتج (product_type) والباركود — من أول حرف
+      const normalize = (s) => (s || '').normalize('NFC').toLowerCase();
+      const qNorm = normalize(q);
+      const tokens = qNorm.split(/\s+/).filter(Boolean);
+      const qDigits = toEnglishDigits(q.replace(/\s/g, ''));
+      return list.filter(
+        (i) => {
+          const productType = normalize(i.productType || i.product_type || '');
+          const barcode = (i.barcode || '').toString().trim();
+          const barcodeNorm = normalize(barcode);
+          const matchText = (text) => {
+            if (!text) return false;
+            if (tokens.length <= 1) return text.includes(qNorm);
+            return tokens.every((t) => text.includes(t));
+          };
+          return (
+            matchText(productType) ||
+            matchText(barcodeNorm) ||
+            (qDigits && barcode.includes(qDigits))
+          );
+        }
+      );
     },
     [filteredByGroup, search, mode, userRole]
   );
@@ -3620,9 +3637,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <input
                         type="text"
                         className="block w-full pl-11 pr-4 py-4 bg-white/80 border-0 ring-1 ring-slate-200/60 rounded-2xl text-slate-900 placeholder:text-slate-400 shadow-lg shadow-indigo-500/5 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all duration-300 text-lg"
-                        placeholder="Search product name or barcode..."
+                        placeholder="البحث بنوع المنتج أو الباركود..."
                         value={search}
                         onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                        autoComplete="off"
                       />
                       {search ? (
                         <button
@@ -3959,9 +3977,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
-                      { key: null, label: 'All', count: items.length, icon: null, type: 'all' },
-                      { key: '__electrical__', label: 'Electrical', count: items.filter((i) => isElectricalGroup(i.group)).length, icon: Zap, type: 'electrical' },
-                      { key: '__home__', label: 'Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed, type: 'household' },
+                      { key: null, label: 'All', count: filteredItems.length, icon: null, type: 'all' },
+                      { key: '__electrical__', label: 'Electrical', count: filteredItems.filter((i) => isElectricalGroup(i.group)).length, icon: Zap, type: 'electrical' },
+                      { key: '__home__', label: 'Kitchenware', count: filteredItems.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed, type: 'household' },
                     ].map(({ key, label, count, icon: Icon, type }) => {
                       const isSelected = selectedGroup === key || (key === '__electrical__' && selectedGroup && isElectricalGroup(selectedGroup)) || (key === '__home__' && selectedGroup && !isElectricalGroup(selectedGroup));
 
