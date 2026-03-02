@@ -635,8 +635,6 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
-  const [presentationItem, setPresentationItem] = useState(null);
-
   // Held Orders State
   const [heldOrders, setHeldOrders] = useState(() => {
     try {
@@ -1223,6 +1221,11 @@ function App() {
   const [editingTypeItem, setEditingTypeItem] = useState(null);
   const [newType, setNewType] = useState('');
 
+  // Quick Category (تصنيف) Edit State — لتعديل التصنيف سريعاً من شاشة الأدمن
+  const [quickEditCategoryItem, setQuickEditCategoryItem] = useState(null);
+  const [quickEditCategoryValue, setQuickEditCategoryValue] = useState('');
+  const [quickEditCategorySaving, setQuickEditCategorySaving] = useState(false);
+
   const openNameEditModal = (item) => {
     setEditingNameItem(item);
     setNewName(item.name || '');
@@ -1279,6 +1282,45 @@ function App() {
     }
   };
 
+  const openQuickEditCategory = (item) => {
+    if (userRole !== 'admin') return;
+    setQuickEditCategoryItem(item);
+    setQuickEditCategoryValue((item && item.group) ? String(item.group).trim() : '');
+  };
+
+  const handleQuickSaveCategory = async () => {
+    if (!quickEditCategoryItem) return;
+    const newGroup = quickEditCategoryValue.trim() || null;
+    setQuickEditCategorySaving(true);
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({ brand_group: newGroup })
+        .eq('barcode', quickEditCategoryItem.barcode);
+
+      if (error) throw error;
+
+      setItems((prev) =>
+        prev.map((i) =>
+          i.barcode === quickEditCategoryItem.barcode ? { ...i, group: newGroup || '' } : i
+        )
+      );
+
+      const uname = username || localStorage.getItem('sales_username') || 'unknown';
+      const ov = (quickEditCategoryItem.group != null ? String(quickEditCategoryItem.group) : '').trim();
+      const nv = newGroup ? String(newGroup) : '';
+      if (ov !== nv) {
+        await logActivityToSupabase({ username: uname, entity_id: quickEditCategoryItem.barcode, field_name: 'brand_group', old_value: ov, new_value: nv, description: `الفئة: ${ov || '—'} → ${nv || '—'}` });
+      }
+      fetchActivityLogs();
+      setQuickEditCategoryItem(null);
+      setQuickEditCategoryValue('');
+    } catch (err) {
+      alert('فشل تحديث التصنيف: ' + (err?.message || err));
+    } finally {
+      setQuickEditCategorySaving(false);
+    }
+  };
 
   const [isPending, startTransition] = useTransition();
 
@@ -1540,6 +1582,10 @@ function App() {
 
   const allGroups = useMemo(
     () => [...new Set(items.map((i) => i.group).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))),
+    [items]
+  );
+  const allProductTypes = useMemo(
+    () => [...new Set(items.map((i) => i.productType).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))),
     [items]
   );
   const electricalGroupsSorted = useMemo(() => {
@@ -5739,15 +5785,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     </button>
                                   )}
 
-                                  {/* Presentation Mode Button */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); setPresentationItem(item); }}
-                                    className="absolute top-2 left-2 p-2 rounded-xl bg-white/80 backdrop-blur-md text-slate-600 hover:text-indigo-600 hover:bg-white shadow-sm transform transition-all duration-300 hover:scale-110 z-20 opacity-80 hover:opacity-100"
-                                    title="عرض للزبون"
-                                  >
-                                    <MonitorPlay size={20} />
-                                  </button>
                                 </div>
 
                                 <div className="p-5 flex-1 flex flex-col">
@@ -5883,6 +5920,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                 {userRole === 'admin' && (
                                   <div className="absolute top-3 right-3 flex gap-1 transform translate-x-full opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                                    <button onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-indigo-600 hover:bg-indigo-50" title="تعديل نوع المنتج"><Tag size={14} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); handlePrintQR(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="طباعة QR"><Smartphone size={14} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="تعديل"><FileText size={14} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
@@ -6942,31 +6980,84 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
       {
         editingTypeItem && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditingTypeItem(null)}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditingTypeItem(null)} dir="rtl">
             <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Edit Product Type</h3>
+              <h3 className="text-lg font-bold text-slate-800 mb-4">تعديل نوع المنتج</h3>
               <input
+                list="quick-edit-type-list"
                 value={newType}
                 onChange={(e) => setNewType(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all mb-6"
-                placeholder="Enter short product type (e.g. سخان ماء)"
+                placeholder="اختر أو اكتب نوع المنتج (مثل: سخان ماء)"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') saveTypeEdit();
                 }}
               />
+              <datalist id="quick-edit-type-list">
+                {allProductTypes.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
               <div className="flex gap-3">
                 <button
                   onClick={() => setEditingTypeItem(null)}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors"
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
                 >
-                  Cancel
+                  إلغاء
                 </button>
                 <button
                   onClick={saveTypeEdit}
                   className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
                 >
-                  Save
+                  حفظ
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* مودال تعديل تصنيف المنتج سريعاً — شاشة الأدمن */}
+      {
+        quickEditCategoryItem && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => !quickEditCategorySaving && setQuickEditCategoryItem(null)}>
+            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()} dir="rtl">
+              <h3 className="text-lg font-bold text-slate-800 mb-1">تعديل تصنيف المنتج</h3>
+              <p className="text-sm text-slate-500 mb-4">{quickEditCategoryItem.name || quickEditCategoryItem.productType || quickEditCategoryItem.barcode}</p>
+              <input
+                list="quick-edit-category-list"
+                value={quickEditCategoryValue}
+                onChange={(e) => setQuickEditCategoryValue(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all mb-6"
+                placeholder="اختر أو اكتب التصنيف (الفئة)"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleQuickSaveCategory(); }
+                }}
+              />
+              <datalist id="quick-edit-category-list">
+                {allGroups.map((g) => (
+                  <option key={g} value={g} />
+                ))}
+              </datalist>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => !quickEditCategorySaving && setQuickEditCategoryItem(null)}
+                  disabled={quickEditCategorySaving}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuickSaveCategory}
+                  disabled={quickEditCategorySaving}
+                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all disabled:opacity-70 flex items-center justify-center gap-2"
+                >
+                  {quickEditCategorySaving ? <Loader2 size={18} className="animate-spin" /> : null}
+                  حفظ
                 </button>
               </div>
             </div>
@@ -7139,125 +7230,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         )
       }
-
-      {/* Presentation Mode Modal - Ultra Modern Redesign */}
-      <AnimatePresence>
-        {presentationItem && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[100] bg-[#030305] flex flex-col items-center justify-between p-4 sm:p-8 overflow-hidden"
-            onClick={() => setPresentationItem(null)}
-          >
-            {/* Ambient Aurora Glows */}
-            <div className="absolute top-0 left-1/4 w-[60vw] h-[60vw] bg-indigo-500/15 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
-            <div className="absolute bottom-0 right-1/4 w-[60vw] h-[60vw] bg-rose-500/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
-
-            {/* Top Bar (Close and Subtle branding/type) */}
-            <div className="w-full max-w-7xl flex justify-between items-center relative z-[110] pt-4 px-4 sm:px-8">
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                onClick={() => setPresentationItem(null)}
-                className="p-4 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-full transition-all border border-white/5 backdrop-blur-md"
-              >
-                <X size={28} />
-              </motion.button>
-
-              {presentationItem.productType && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="px-6 py-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-md"
-                >
-                  <span className="text-sm font-bold tracking-widest uppercase text-slate-300">
-                    {presentationItem.productType}
-                  </span>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Product Image Stage */}
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-              className="flex-1 w-full flex items-center justify-center relative z-10 max-h-[55vh] mt-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img
-                src={getImageFallback(presentationItem)}
-                alt={presentationItem.name}
-                className="max-w-full max-h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.8)]"
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            </motion.div>
-
-            {/* Information Glass Panel */}
-            <motion.div
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-              className="w-full max-w-5xl bg-white/[0.03] border border-white/10 backdrop-blur-3xl rounded-[2.5rem] sm:rounded-[3rem] p-8 sm:p-12 flex flex-col items-center text-center relative z-20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] mb-4 sm:mb-8"
-              onClick={(e) => e.stopPropagation()}
-              dir="rtl"
-            >
-              {/* Subtle top edge highlight */}
-              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-100 leading-[1.4] mb-10 max-w-4xl tracking-wide line-clamp-4">
-                {presentationItem.name}
-              </h2>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-12 w-full">
-
-                {/* Take Home QR Code */}
-                <div className="flex flex-col items-center justify-center p-3 bg-white/5 rounded-2xl border border-white/10 shadow-sm backdrop-blur-md">
-                  <p className="text-[10px] sm:text-xs text-indigo-300 font-bold tracking-widest mb-2 flex items-center gap-1.5">
-                    <Smartphone size={14} /> خذ التفاصيل معك
-                  </p>
-                  <div className="bg-white p-2 rounded-xl shadow-inner">
-                    <QRCodeSVG
-                      value={`https://maslamanisales.app/?barcode=${presentationItem.barcode}`}
-                      size={64}
-                      level="L"
-                      includeMargin={false}
-                    />
-                  </div>
-                </div>
-
-                {/* Vertical Divider (desktop only) */}
-                <div className="hidden sm:block w-px h-16 bg-white/10" />
-
-                {/* Barcode/Metadata */}
-                <div className="flex flex-col items-center sm:items-start text-slate-500 opacity-60">
-                  <p className="text-xs uppercase tracking-widest mb-1 font-bold">Product Code</p>
-                  <p className="font-mono text-lg">{presentationItem.barcode}</p>
-                </div>
-
-                {/* Vertical Divider (desktop only) */}
-                <div className="hidden sm:block w-px h-16 bg-white/10" />
-
-                {/* Price Display */}
-                <div className="flex flex-col items-center">
-                  <p className="text-sm text-emerald-500/80 font-bold uppercase tracking-widest mb-2">السعر للمستهلك</p>
-                  <div className="flex items-start gap-2 bg-emerald-500/10 px-8 py-3 rounded-2xl border border-emerald-500/20 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)]">
-                    <span className="text-6xl lg:text-7xl font-black text-emerald-400 tracking-tighter leading-none">
-                      {Math.round(presentationItem.priceAfterDiscount ?? presentationItem.price ?? 0)}
-                    </span>
-                    <span className="text-3xl text-emerald-500/80 font-bold mt-1">₪</span>
-                  </div>
-                </div>
-
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Mobile Bottom Nav */}
       <BottomNav
