@@ -145,9 +145,9 @@ function Sidebar({
                         <div className="p-4 border-t border-white/50 bg-white/30 backdrop-blur-sm">
                             <button
                                 onClick={handleLogout}
-                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all shadow-sm"
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-100 text-rose-500 font-semibold hover:bg-rose-50 transition-colors shadow-sm"
                             >
-                                <LogOut size={18} />
+                                <LogOut size={18} className="text-rose-500" />
                                 <span>تسجيل الخروج</span>
                             </button>
                         </div>

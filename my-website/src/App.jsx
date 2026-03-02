@@ -3587,10 +3587,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <div className="h-px bg-slate-100 my-1 mx-2"></div>
                         <button
                           onClick={() => { setShowProfileMenu(false); handleLogout(); }}
-                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-3"
+                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-rose-500 hover:bg-rose-50 transition-colors flex items-center justify-end gap-3"
                         >
-                          <LogOut size={18} />
-                          تسجيل الخروج
+                          <LogOut size={18} className="text-rose-500" />
+                          <span>تسجيل الخروج</span>
                         </button>
                       </div>
                     </motion.div>
