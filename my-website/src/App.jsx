@@ -59,6 +59,7 @@ import {
   AlertTriangle,
   PieChart as PieChartIcon,
   TrendingUp,
+  Bell,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -1636,6 +1637,64 @@ function App() {
       depletionForecast: depletionForecast.slice(0, 50),
     };
   }, [items, inventoryInsights]);
+
+  // تنبيه تنبؤ النفاد (48 ساعة): إشعار محلي عند وجود أصناف ستنفد خلال يومين — مرة واحدة يومياً
+  const DEPLETION_ALERT_HOURS = 48;
+  const DEPLETION_ALERT_DAYS = Math.ceil(DEPLETION_ALERT_HOURS / 24); // 2
+  useEffect(() => {
+    if (mode !== 'reports' || activeReportTab !== 'inventory' || insightsLoading) return;
+    const list = inventoryMetrics?.depletionForecast?.filter((i) => (i.daysUntilDepletion ?? 999) <= DEPLETION_ALERT_DAYS) ?? [];
+    if (list.length === 0) return;
+
+    const today = new Date().toDateString();
+    try {
+      if (localStorage.getItem('sales_depletion_alert_date') === today) return;
+    } catch (_) {}
+
+    const showNotification = () => {
+      if (!('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
+      const names = list.slice(0, 3).map((i) => i.name || i.barcode || 'صنف').join('، ');
+      const title = 'تنبيه مخزون';
+      const body = list.length === 1
+        ? `${names} — سينفد خلال ${list[0].daysUntilDepletion} أيام`
+        : `${list.length} أصناف ستنفد خلال 48 ساعة منها: ${names}`;
+      try {
+        const n = new Notification(title, { body, icon: '/pwa-192x192.png', tag: 'depletion-alert' });
+        n.onclick = () => window.focus();
+        localStorage.setItem('sales_depletion_alert_date', today);
+      } catch (e) {
+        console.warn('Notification failed:', e);
+      }
+    };
+
+    if (Notification.permission === 'granted') {
+      showNotification();
+      return;
+    }
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then((p) => {
+        if (p === 'granted') showNotification();
+      });
+    }
+  }, [mode, activeReportTab, insightsLoading, inventoryMetrics, DEPLETION_ALERT_DAYS]);
+
+  const requestStockAlertPermission = useCallback(async () => {
+    if (!('Notification' in window)) {
+      alert('متصفحك لا يدعم الإشعارات.');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      alert('تنبيهات المخزون مفعّلة مسبقاً. ستصل إشعارات عند وجود أصناف ستنفد خلال 48 ساعة.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      alert('تم تفعيل تنبيهات المخزون. ستتلقى إشعاراً عند وجود أصناف متوقعة النفاد خلال 48 ساعة.');
+    } else if (permission === 'denied') {
+      alert('تم رفض الإشعارات. يمكنك تفعيلها لاحقاً من إعدادات المتصفح لهذا الموقع.');
+    }
+  }, []);
 
   const getStockByBoxes = (item) => {
     const s = item?.stock;
@@ -4192,6 +4251,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 حالة المخزون الحالية — تاريخ التقرير: {new Date().toLocaleDateString('ar-SA')}
                               </p>
                               <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={requestStockAlertPermission}
+                                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-bold text-sm shadow-md hover:bg-amber-600 transition-colors"
+                                  title="إشعار عند نفاد صنف خلال 48 ساعة"
+                                >
+                                  <Bell size={18} /> تفعيل تنبيهات المخزون
+                                </button>
                                 <button
                                   onClick={handleExportReportInventory}
                                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-md hover:bg-emerald-700 transition-colors"
