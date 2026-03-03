@@ -833,6 +833,7 @@ function App() {
     try {
       const { data, error } = await supabase.from('customers').insert([{
         name: quickAddCustomerData.name,
+        company_name: quickAddCustomerData.name,
         phone: quickAddCustomerData.phone,
         loyalty_points: 0,
         total_spent: 0
@@ -2441,9 +2442,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
           if (existingCustomer) {
             await supabase.from('customers').update({
-              name: orderInfo.merchantName || orderInfo.companyName,
-              address: orderInfo.address,
-              customer_number: orderInfo.customerNumber,
+              name: orderInfo.merchantName || orderInfo.companyName || '',
+              company_name: orderInfo.companyName || '',
+              address: orderInfo.address || '',
+              customer_number: orderInfo.customerNumber || '',
               total_spent: Number(existingCustomer.total_spent || 0) + Number(orderTotal),
               loyalty_points: Number(existingCustomer.loyalty_points || 0) + pointsEarned,
               last_order_date: new Date().toISOString()
@@ -2451,9 +2453,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           } else {
             await supabase.from('customers').insert([{
               phone: orderInfo.phone,
-              name: orderInfo.merchantName || orderInfo.companyName,
-              address: orderInfo.address,
-              customer_number: orderInfo.customerNumber,
+              name: orderInfo.merchantName || orderInfo.companyName || '',
+              company_name: orderInfo.companyName || '',
+              address: orderInfo.address || '',
+              customer_number: orderInfo.customerNumber || '',
               total_spent: orderTotal,
               loyalty_points: pointsEarned,
               last_order_date: new Date().toISOString()
@@ -6277,7 +6280,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     ...prev,
                                     phone: cust.phone,
                                     merchantName: cust.name || prev.merchantName,
-                                    companyName: cust.name || prev.companyName,
+                                    companyName: cust.company_name || cust.name || prev.companyName,
                                     address: cust.address || prev.address,
                                     customerNumber: cust.customer_number || prev.customerNumber,
                                   }));
