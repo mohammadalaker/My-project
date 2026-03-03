@@ -677,7 +677,7 @@ function App() {
   const [insightsPhone, setInsightsPhone] = useState(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false);
-  const [quickAddCustomerData, setQuickAddCustomerData] = useState({ name: '', phone: '' });
+  const [quickAddCustomerData, setQuickAddCustomerData] = useState({ companyName: '', name: '', phone: '', address: '', customerNumber: '' });
 
   // Customers page (Sidebar) state
   const [customersPageSearch, setCustomersPageSearch] = useState('');
@@ -827,14 +827,16 @@ function App() {
 
   const handleQuickAddCustomer = async () => {
     if (!quickAddCustomerData.name || !quickAddCustomerData.phone) {
-      alert('يرجى إدخال الاسم ورقم الهاتف.');
+      alert('يرجى إدخال اسم التاجر ورقم الهاتف على الأقل.');
       return;
     }
     try {
       const { data, error } = await supabase.from('customers').insert([{
         name: quickAddCustomerData.name,
-        company_name: quickAddCustomerData.name,
+        company_name: quickAddCustomerData.companyName || quickAddCustomerData.name,
         phone: quickAddCustomerData.phone,
+        address: quickAddCustomerData.address || '',
+        customer_number: quickAddCustomerData.customerNumber || '',
         loyalty_points: 0,
         total_spent: 0
       }]).select();
@@ -845,7 +847,9 @@ function App() {
         ...prev,
         phone: quickAddCustomerData.phone,
         merchantName: quickAddCustomerData.name,
-        companyName: quickAddCustomerData.name
+        companyName: quickAddCustomerData.companyName || quickAddCustomerData.name,
+        address: quickAddCustomerData.address || '',
+        customerNumber: quickAddCustomerData.customerNumber || ''
       }));
       setCustomerSearch(quickAddCustomerData.phone);
       setShowQuickAddCustomer(false);
@@ -6262,7 +6266,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 }}
                                 onClick={(e) => {
                                   e.preventDefault();
-                                  setQuickAddCustomerData({ name: orderInfo.companyName || orderInfo.merchantName || '', phone: customerSearch });
+                                  setQuickAddCustomerData({
+                                    companyName: orderInfo.companyName || '',
+                                    name: orderInfo.merchantName || orderInfo.companyName || '',
+                                    phone: customerSearch,
+                                    address: orderInfo.address || '',
+                                    customerNumber: orderInfo.customerNumber || ''
+                                  });
                                   setShowQuickAddCustomer(true);
                                   setShowCustomerPredictions(false);
                                 }}
@@ -7094,9 +7104,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">رقم الهاتف</label>
+                  <label className="text-xs font-bold text-slate-600">رقم الهاتف <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     value={quickAddCustomerData.phone}
@@ -7107,14 +7117,45 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">الاسم (او اسم الشركة)</label>
+                  <label className="text-xs font-bold text-slate-600">اسم التاجر / المشتري <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     value={quickAddCustomerData.name}
                     onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, name: e.target.value })}
                     className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
-                    placeholder="الاسم الثلاثي أو اسم الشركة..."
+                    placeholder="اسم التاجر أو المشتري..."
                     autoFocus
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600">اسم المؤسسة / الشركة</label>
+                  <input
+                    type="text"
+                    value={quickAddCustomerData.companyName}
+                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, companyName: e.target.value })}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                    placeholder="اسم المؤسسة أو الشركة..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600">العنوان</label>
+                  <input
+                    type="text"
+                    value={quickAddCustomerData.address}
+                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, address: e.target.value })}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                    placeholder="المدينة، الشارع..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600">رقم الزبون (في الشركة)</label>
+                  <input
+                    type="text"
+                    value={quickAddCustomerData.customerNumber}
+                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, customerNumber: toEnglishDigits(e.target.value) })}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-mono text-left"
+                    placeholder="#"
+                    dir="ltr"
                   />
                 </div>
               </div>
