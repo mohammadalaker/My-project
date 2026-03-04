@@ -637,6 +637,7 @@ function App() {
   const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
   const [isSortingMode, setIsSortingMode] = useState(false);
+  const [sortingCategory, setSortingCategory] = useState(null); // 'electrical' | 'household'
   const [dynamicBarcodeOrder, setDynamicBarcodeOrder] = useState(BARCODE_ORDER);
 
   // Held Orders State
@@ -1405,12 +1406,28 @@ function App() {
     fetchCustomOrder();
   }, []);
 
-  const saveCustomOrder = async (newOrder) => {
+  const saveCustomOrder = async (newOrderForCategory) => {
     try {
-      const { error } = await supabase.from('app_settings').upsert({ id: 'homepage_barcode_order', value: newOrder });
+      // Merge the new sorted order with the other category items
+      const previousOrderMap = new Map(dynamicBarcodeOrder.map((bc, index) => [bc, index]));
+
+      const updatedOrder = [...dynamicBarcodeOrder];
+      // Keep everything that IS NOT in the newly sorted array untouched
+      const otherCategoryItems = updatedOrder.filter(bc => !newOrderForCategory.includes(bc));
+
+      // Since the newOrderForCategory contains ONLY the barcodes of the selected category
+      // We just prepend the otherCategoryItems and then append the newly sorted items (or vice versa, 
+      // as long as the relative index differences within the category are maintained)
+      // A safe way is to just replace the old elements with the new elements in place, 
+      // or simply construct a new array:
+
+      const mergedOrder = Array.from(new Set([...otherCategoryItems, ...newOrderForCategory]));
+
+      const { error } = await supabase.from('app_settings').upsert({ id: 'homepage_barcode_order', value: mergedOrder });
       if (error) throw error;
-      setDynamicBarcodeOrder(newOrder);
+      setDynamicBarcodeOrder(mergedOrder);
       setIsSortingMode(false);
+      setSortingCategory(null);
       alert('تم حفظ ترتيب المنتجات بنجاح!');
     } catch (e) {
       console.error('Fail save order:', e);
@@ -3758,10 +3775,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative">
             {isSortingMode && (
               <AdminSortProducts
-                items={filteredItems}
+                items={sortingCategory === 'electrical' ? filteredItems.filter((i) => isElectricalGroup(i.group)) : filteredItems.filter((i) => !isElectricalGroup(i.group))}
                 initialOrder={dynamicBarcodeOrder}
+                title={sortingCategory === 'electrical' ? "ترتيب المنتجات (الأجهزة الكهربائية)" : "ترتيب المنتجات (الأدوات المنزلية)"}
                 onSave={saveCustomOrder}
-                onCancel={() => setIsSortingMode(false)}
+                onCancel={() => { setIsSortingMode(false); setSortingCategory(null); }}
               />
             )}
             <div className="max-w-7xl mx-auto w-full pb-20">
@@ -3814,16 +3832,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <ArrowUpDown size={20} className={sortMode === 'name' ? 'text-indigo-600' : 'text-slate-400'} />
                       <span>{sortMode === 'barcode' ? 'By Name' : 'By Barcode'}</span>
                     </button>
-                    {userRole === 'admin' && (
-                      <button
-                        onClick={() => setIsSortingMode(true)}
-                        className="px-6 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all flex items-center gap-3 shrink-0 ring-1 ring-indigo-500/50"
-                        title="ترتيب المنتجات سحباً وإفلاتاً (للأدمن فقط)"
-                      >
-                        <PieChartIcon size={20} />
-                        <span>ترتيب المنتجات</span>
-                      </button>
-                    )}
                   </div>
                 </div>
               )}
@@ -5141,6 +5149,42 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <Lock size={14} /> خاصية إدارية
                         </div>
                       )}
+                    </div>
+
+                    {/* App Sorting Management */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-6">
+                      <div className="flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-2">
+                          <PieChartIcon size={32} />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">إدارة ترتيب المنتجات</h2>
+                        <p className="text-slate-500 max-w-sm mx-auto text-sm">
+                          تحديد ترتيب ظهور المنتجات في الصفحة الرئيسية لكل فئة.
+                        </p>
+
+                        {userRole === 'admin' ? (
+                          <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                            <button
+                              onClick={() => { setSortingCategory('electrical'); setIsSortingMode(true); }}
+                              className="px-6 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all flex items-center justify-center gap-3 shrink-0 ring-1 ring-indigo-500/50"
+                            >
+                              <Zap size={20} />
+                              <span>ترتيب الأجهزة الكهربائية</span>
+                            </button>
+                            <button
+                              onClick={() => { setSortingCategory('household'); setIsSortingMode(true); }}
+                              className="px-6 py-4 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold shadow-lg shadow-sky-500/30 hover:shadow-sky-500/40 transition-all flex items-center justify-center gap-3 shrink-0 ring-1 ring-sky-500/50"
+                            >
+                              <UtensilsCrossed size={20} />
+                              <span>ترتيب الأدوات المنزلية</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
+                            <Lock size={14} /> خاصية إدارية
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Session Management + إدارة المستخدمين وكلمات المرور */}

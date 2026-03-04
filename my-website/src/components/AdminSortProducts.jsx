@@ -62,7 +62,7 @@ const SortableItem = ({ item }) => {
 };
 
 // --- Main Sorting Component ---
-export default function AdminSortProducts({ items, initialOrder, onSave, onCancel }) {
+export default function AdminSortProducts({ items, initialOrder, onSave, onCancel, title = "ترتيب المنتجات" }) {
     const [localItems, setLocalItems] = useState([]);
 
     useEffect(() => {
@@ -105,7 +105,7 @@ export default function AdminSortProducts({ items, initialOrder, onSave, onCance
             {/* Header */}
             <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-50 shrink-0">
                 <div>
-                    <h2 className="text-xl font-black text-slate-800">ترتيب المنتجات (الرئيسية)</h2>
+                    <h2 className="text-xl font-black text-slate-800">{title}</h2>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                         <AlertCircle size={14} /> اسحب وافلت البطاقات لتغيير ترتيب العرض
                     </p>
