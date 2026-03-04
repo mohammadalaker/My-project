@@ -3780,6 +3780,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 title={sortingCategory === 'electrical' ? "ترتيب المنتجات (الأجهزة الكهربائية)" : "ترتيب المنتجات (الأدوات المنزلية)"}
                 onSave={saveCustomOrder}
                 onCancel={() => { setIsSortingMode(false); setSortingCategory(null); }}
+                getImage={getImage}
               />
             )}
             <div className="max-w-7xl mx-auto w-full pb-20">

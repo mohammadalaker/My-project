@@ -7,7 +7,7 @@ import { Save, X, Package, GripVertical, AlertCircle } from 'lucide-react';
 import { sortByBarcodeOrder } from '../barcodeOrder';
 
 // --- Sortable Item Component ---
-const SortableItem = ({ item }) => {
+const SortableItem = ({ item, getImage }) => {
     const {
         attributes,
         listeners,
@@ -25,16 +25,11 @@ const SortableItem = ({ item }) => {
         boxShadow: isDragging ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' : undefined,
     };
 
-    const getImageUrl = (item) => {
-        if (!item.image) return null;
-        return item.image.startsWith('http') ? item.image : `https://ixomkchbntcynqllaxhs.supabase.co/storage/v1/object/public/products/${item.image}`;
-    };
-
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={`relative bg-white rounded-2xl border-2 ${isDragging ? 'border-indigo-500 scale-105' : 'border-slate-200'} shadow-sm overflow-hidden flex flex-col`}
+            className={`relative bg-white rounded-3xl border-2 ${isDragging ? 'border-indigo-500 scale-105' : 'border-slate-100'} shadow-sm hover:shadow-xl overflow-hidden flex flex-col group transition-all duration-300`}
         >
             <div
                 className="absolute top-0 left-0 w-full h-8 bg-slate-100 flex items-center justify-center cursor-grab active:cursor-grabbing text-slate-400 hover:text-indigo-600 transition-colors z-20"
@@ -44,25 +39,39 @@ const SortableItem = ({ item }) => {
                 <GripVertical size={16} />
             </div>
 
-            <div className="aspect-square bg-slate-50 flex items-center justify-center p-4 mt-8 relative">
-                {getImageUrl(item) ? (
-                    <img src={getImageUrl(item)} alt={item.name} className="w-full h-full object-contain pointer-events-none" />
+            <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50 mt-8">
+                {getImage && getImage(item) ? (
+                    <img
+                        src={getImage(item)}
+                        alt={item.name}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 pointer-events-none"
+                    />
                 ) : (
-                    <Package className="text-slate-300 w-12 h-12" />
+                    <div className="w-full h-full flex items-center justify-center">
+                        <Package size={48} className="text-slate-200" />
+                    </div>
                 )}
             </div>
 
-            <div className="p-3 text-right flex-1 flex flex-col bg-white">
-                <p className="text-[10px] font-bold text-slate-400 truncate mb-1">{item.group}</p>
-                <p className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight flex-1">{item.name}</p>
-                <p className="text-[10px] text-slate-500 font-mono mt-1">{item.barcode}</p>
+            <div className="p-5 flex-1 flex flex-col bg-white">
+                <div className="flex flex-col mb-1 min-h-[2.5em] justify-start w-full text-right" dir="rtl">
+                    <h3 className="text-sm font-bold text-slate-800 leading-tight">
+                        {item.productType || item.group || ' '}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium line-clamp-1 mt-0.5" title={item.name}>
+                        {item.name || 'Unknown Product'}
+                    </p>
+                </div>
+                <p className="text-sm font-mono text-slate-500 mb-2 text-right">{item.barcode}</p>
             </div>
         </div>
     );
 };
 
 // --- Main Sorting Component ---
-export default function AdminSortProducts({ items, initialOrder, onSave, onCancel, title = "ترتيب المنتجات" }) {
+export default function AdminSortProducts({ items, initialOrder, onSave, onCancel, title = "ترتيب المنتجات", getImage }) {
     const [localItems, setLocalItems] = useState([]);
 
     useEffect(() => {
@@ -138,9 +147,9 @@ export default function AdminSortProducts({ items, initialOrder, onSave, onCance
                             items={localItems.map(i => i.id)}
                             strategy={rectSortingStrategy}
                         >
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6" dir="ltr">
                                 {localItems.map(item => (
-                                    <SortableItem key={item.id} item={item} />
+                                    <SortableItem key={item.id} item={item} getImage={getImage} />
                                 ))}
                             </div>
                         </SortableContext>
