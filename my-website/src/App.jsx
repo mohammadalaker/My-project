@@ -66,6 +66,7 @@ import { motion, useAnimation, AnimatePresence }
 import { useDrag } from '@use-gesture/react';
 import supabase from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
+import AdminSortProducts from './components/AdminSortProducts';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
 
 const BUCKET = 'Pic_of_items';
@@ -635,6 +636,9 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
+  const [isSortingMode, setIsSortingMode] = useState(false);
+  const [dynamicBarcodeOrder, setDynamicBarcodeOrder] = useState(BARCODE_ORDER);
+
   // Held Orders State
   const [heldOrders, setHeldOrders] = useState(() => {
     try {
@@ -1387,6 +1391,33 @@ function App() {
 
   const abortControllerRef = useRef(null);
 
+  useEffect(() => {
+    const fetchCustomOrder = async () => {
+      try {
+        const { data, error } = await supabase.from('app_settings').select('value').eq('id', 'homepage_barcode_order').single();
+        if (!error && data?.value && Array.isArray(data.value)) {
+          setDynamicBarcodeOrder(data.value);
+        }
+      } catch (err) {
+        console.error('Error fetching dynamic order', err);
+      }
+    };
+    fetchCustomOrder();
+  }, []);
+
+  const saveCustomOrder = async (newOrder) => {
+    try {
+      const { error } = await supabase.from('app_settings').upsert({ id: 'homepage_barcode_order', value: newOrder });
+      if (error) throw error;
+      setDynamicBarcodeOrder(newOrder);
+      setIsSortingMode(false);
+      alert('تم حفظ ترتيب المنتجات بنجاح!');
+    } catch (e) {
+      console.error('Fail save order:', e);
+      alert('فشل حفظ الترتيب');
+    }
+  };
+
   const fetchItems = useCallback(async () => {
     setLoading(true);
     let allItems = [];
@@ -1396,7 +1427,7 @@ function App() {
       try {
         allItems = await getLocalProducts();
         const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
-        const sorted = sortByBarcodeOrder(normalized, BARCODE_ORDER);
+        const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
         setItems(sorted);
         setHasMore(false);
         setLoading(false);
@@ -1433,23 +1464,60 @@ function App() {
       const itemsToCache = allItems.map(item => ({ ...item, id: String(item.barcode ?? '').trim() }));
       await saveProductsLocally(itemsToCache);
 
+      // After fetching from Supabase, also try to get local items to merge stock updates
+      try {
+        const localItems = await getLocalProducts();
+        const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
+
+        // 5. Merge stock updates from local items
+        const mergedItems = normalized.map(item => {
+          const localMatch = localItems.find(li => String(li.id) === String(item.id));
+          if (!localMatch || localMatch.stock_delta === 0) return item;
+
+          const deltaQty = localMatch.stock_delta || 0;
+          const stockMatch = item.stock_count != null ? { quantity: item.stock_count } :
+            item.stock != null ? { quantity: item.stock } :
+              0;
+
+          return { ...item, quantity: parseFloat(stockMatch.quantity) + deltaQty };
+        });
+
+        // 6. Merge with missing Supabase items that somehow are locally cached but not returned
+        // Make sure to only merge them if they aren't already fetched
+        const localOnly = localItems.filter(li => !normalized.some(ni => String(ni.id) === String(li.id)));
+        const combined = [...mergedItems, ...localOnly.map(normalizeItemFromSupabase)];
+
+        // 7. Sort final list by dynamicBarcodeOrder instead of static BARCODE_ORDER
+        const sorted = sortByBarcodeOrder(combined, dynamicBarcodeOrder);
+        setItems(sorted);
+        setHasMore(false);
+      } catch (innerErr) {
+        console.warn('Error merging local items or sorting:', innerErr);
+        // Fallback to just Supabase items if local merge fails
+        const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
+        const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
+        setItems(sorted);
+        setHasMore(false);
+      }
     } catch (err) {
       console.error('Supabase fetch error, trying local IndexedDB:', err);
       // Fallback to local IndexedDB if offline or API fails
       try {
-        allItems = await getLocalProducts();
+        const localItems = await getLocalProducts();
+        const normalized = localItems.map(normalizeItemFromSupabase).filter(Boolean);
+        const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
+        setItems(sorted);
+        setHasMore(false);
       } catch (idbErr) {
         console.error('Failed to load from local DB', idbErr);
+        setItems([]);
+        setHasMore(false);
       }
     } finally {
-      const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
-      const sorted = sortByBarcodeOrder(normalized, BARCODE_ORDER);
-      setItems(sorted);
-      setHasMore(false);
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [dynamicBarcodeOrder]);
 
   // Sync offline orders on startup and when online event fires
   const syncOfflineOrders = useCallback(async () => {
@@ -3687,7 +3755,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
           )}
 
-          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
+          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative">
+            {isSortingMode && (
+              <AdminSortProducts
+                items={filteredItems}
+                initialOrder={dynamicBarcodeOrder}
+                onSave={saveCustomOrder}
+                onCancel={() => setIsSortingMode(false)}
+              />
+            )}
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
@@ -3738,6 +3814,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <ArrowUpDown size={20} className={sortMode === 'name' ? 'text-indigo-600' : 'text-slate-400'} />
                       <span>{sortMode === 'barcode' ? 'By Name' : 'By Barcode'}</span>
                     </button>
+                    {userRole === 'admin' && (
+                      <button
+                        onClick={() => setIsSortingMode(true)}
+                        className="px-6 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all flex items-center gap-3 shrink-0 ring-1 ring-indigo-500/50"
+                        title="ترتيب المنتجات سحباً وإفلاتاً (للأدمن فقط)"
+                      >
+                        <PieChartIcon size={20} />
+                        <span>ترتيب المنتجات</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -5677,7 +5763,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       { title: 'Kitchenware', items: filteredItems.filter((i) => !isElectricalGroup(i.group)), color: 'sky', icon: UtensilsCrossed },
                     ].map(({ title, items: sectionItems, color, icon: Icon }) => {
                       const sorted = sortMode === 'barcode'
-                        ? sortByBarcodeOrder(sectionItems, BARCODE_ORDER)
+                        ? sortByBarcodeOrder(sectionItems, dynamicBarcodeOrder)
                         : [...sectionItems].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' }));
                       if (sorted.length === 0) return null;
                       return (
@@ -5950,7 +6036,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
             </div>
           </div>
-        </div>
+        </div >
       </div >
 
       {
