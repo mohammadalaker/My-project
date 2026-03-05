@@ -339,6 +339,7 @@ function App() {
       localStorage.setItem('sales_sidebar_open', open ? 'true' : 'false');
     } catch (_) { }
   }, []);
+
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
@@ -3644,12 +3645,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <div
-      className={`font-sans flex h-screen overflow-hidden text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
+      className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
     >
       <div
         className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
       >
-        <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative ${(showOrderPanel || showCatalogPanel) ? 'rounded-3xl bg-white/40 shadow-xl border border-white/50' : ''}`}>
+        <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'rounded-3xl shadow-xl border border-white/50 bg-white/40' : ''} ${(showOrderPanel || showCatalogPanel) ? 'shadow-xl' : ''}`}>
 
           <Sidebar
             isOpen={isSidebarOpen}
@@ -4177,17 +4178,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
-                      { key: null, label: 'All', count: filteredItems.length, icon: null, type: 'all' },
-                      { key: '__electrical__', label: 'Electrical', count: filteredItems.filter((i) => isElectricalGroup(i.group)).length, icon: Zap, type: 'electrical' },
-                      { key: '__home__', label: 'Kitchenware', count: filteredItems.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed, type: 'household' },
+                      { key: null, label: 'All', count: items.length, icon: null, type: 'all' },
+                      { key: '__electrical__', label: 'Electrical', count: items.filter((i) => isElectricalGroup(i.group)).length, icon: Zap, type: 'electrical' },
+                      { key: '__home__', label: 'Kitchenware', count: items.filter((i) => !isElectricalGroup(i.group)).length, icon: UtensilsCrossed, type: 'household' },
                     ].map(({ key, label, count, icon: Icon, type }) => {
                       const isSelected = selectedGroup === key || (key === '__electrical__' && selectedGroup && isElectricalGroup(selectedGroup)) || (key === '__home__' && selectedGroup && !isElectricalGroup(selectedGroup));
 
                       let activeClass = 'bg-white/80 text-slate-600 hover:bg-white hover:shadow-md';
                       if (isSelected) {
-                        if (type === 'electrical') activeClass = 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30 scale-105 border-white/20';
-                        else if (type === 'household') activeClass = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/30 scale-105 border-white/20';
-                        else activeClass = 'bg-slate-800 text-white shadow-lg scale-105 border-white/10';
+                        if (type === 'electrical') activeClass = 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30';
+                        else if (type === 'household') activeClass = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/30';
+                        else activeClass = 'bg-slate-800 text-white shadow-lg';
                       }
 
                       return (
@@ -4204,7 +4205,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     })}
                   </div>
 
-                  {/* Sub-categories */}
+                  {/* Sub-categories — المجموعات الفرعية كما كانت سابقاً */}
                   {(selectedGroup === '__electrical__' || (selectedGroup && isElectricalGroup(selectedGroup))) && electricalGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
                       <button onClick={() => handleCategorySwitch('__electrical__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
@@ -6153,7 +6154,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {
         showOrderPanel && mode === 'order' && (
-          <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-white/95 backdrop-blur-2xl border-l border-slate-200 shadow-2xl z-50 transition-all duration-500 text-slate-800">
+          <aside className="pos-panel flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-white/95 border-l border-slate-200 shadow-2xl z-50 transition-all duration-500 text-slate-800">
             {/* Header / Tabs */}
             <div className="flex-shrink-0 z-20">
               <div className="flex items-center justify-between px-8 py-6">
@@ -6174,16 +6175,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </h2>
                   <div className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1 opacity-60">
                     Maslamani System
-
-                    {userRole === 'admin' && (
-                      <button
-                        onClick={handleForceLogoutAll}
-                        className="mt-2 text-xs bg-rose-100 text-rose-700 px-2 py-1 rounded border border-rose-200 hover:bg-rose-200"
-                      >
-                        تسجيل خروج الجميع
-                      </button>
-                    )}
-
                     <span>Order #</span><span>NEW-001</span>
                   </div>
                 </div>
