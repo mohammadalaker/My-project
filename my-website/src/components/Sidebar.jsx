@@ -57,16 +57,16 @@ function Sidebar({
                         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] transition-opacity"
                     />
 
-                    {/* Sidebar Panel — z-index أعلى من الـ overlay */}
+                    {/* Sidebar Panel — عائم (Floating) مع حواف مستديرة وظل خفيف */}
                     <motion.div
                         variants={sidebarVariants}
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="fixed top-0 left-0 bottom-0 w-72 z-[101] flex flex-col overflow-hidden bg-white/75 backdrop-blur-xl border-r border-white/40 shadow-xl"
+                        className="fixed top-4 left-4 bottom-4 w-72 z-[101] flex flex-col overflow-hidden bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/50 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.08)]"
                     >
                         {/* Header / Brand */}
-                        <div className="flex items-center justify-between p-6 border-b border-white/50 bg-white/30 backdrop-blur-sm">
+                        <div className="flex items-center justify-between p-6 border-b border-slate-100/80 bg-white/40 backdrop-blur-sm rounded-t-3xl">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center text-white font-bold text-lg rotate-3">
                                     MS
@@ -142,7 +142,7 @@ function Sidebar({
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-white/50 bg-white/30 backdrop-blur-sm">
+                        <div className="p-4 border-t border-slate-100/80 bg-white/40 backdrop-blur-sm rounded-b-3xl">
                             <button
                                 onClick={handleLogout}
                                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-100 text-rose-500 font-semibold hover:bg-rose-50 transition-colors shadow-sm"
