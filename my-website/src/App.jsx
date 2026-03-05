@@ -611,6 +611,7 @@ function App() {
 
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showCatalogPanel, setShowCatalogPanel] = useState(false);
+  const [flyingItems, setFlyingItems] = useState([]);
   const [catalogItems, setCatalogItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [isSwitchingCategory, setIsSwitchingCategory] = useState(false);
@@ -639,6 +640,8 @@ function App() {
   const [isSortingMode, setIsSortingMode] = useState(false);
   const [sortingCategory, setSortingCategory] = useState(null); // 'electrical' | 'household'
   const [dynamicBarcodeOrder, setDynamicBarcodeOrder] = useState(BARCODE_ORDER);
+
+  const cartIconRef = useRef(null); // Added for cart animation
 
   // Held Orders State
   const [heldOrders, setHeldOrders] = useState(() => {
@@ -1221,6 +1224,7 @@ function App() {
   // Quantity Modal State
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityItem, setQuantityItem] = useState(null);
+  const [quantityEventClick, setQuantityEventClick] = useState(null);
   const [quantityValue, setQuantityValue] = useState(1);
 
   // Quick Name Edit State
@@ -1941,17 +1945,11 @@ function App() {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(20); // Light haptic tap for category switch
     }
-    setIsSwitchingCategory(true);
     setSelectedGroup(cat);
-
-    // Artificial fast delay to allow skeleton to flash for perceived performance
-    setTimeout(() => {
-      setIsSwitchingCategory(false);
-      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
-    }, 250);
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selectedGroup]);
 
-  const addToOrder = useCallback((item, qty = 1) => {
+  const addToOrder = useCallback((item, qty = 1, event = null) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(50); // Haptic feedback for Add to Cart
     }
@@ -1985,6 +1983,29 @@ function App() {
         ];
       });
     });
+
+    // Trigger Fly Animation
+    if (event && event.clientX && cartIconRef.current) {
+      const cartRect = cartIconRef.current.getBoundingClientRect();
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const endX = cartRect.left + cartRect.width / 2;
+      const endY = cartRect.top + cartRect.height / 2;
+      const id = Date.now() + Math.random();
+
+      setFlyingItems(prev => [...prev, {
+        id,
+        image: getImage(item),
+        startX,
+        startY,
+        endX,
+        endY
+      }]);
+
+      setTimeout(() => {
+        setFlyingItems(prev => prev.filter(f => f.id !== id));
+      }, 800); // 800ms animation duration
+    }
   }, [startTransition]);
 
   const removeFromOrder = useCallback((itemId) => {
@@ -3393,7 +3414,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     cardUploadRef.current?.click?.();
   };
 
-  const handleOpenQuantityModal = (item) => {
+  const handleOpenQuantityModal = (item, event = null) => {
+    if (event) setQuantityEventClick({ clientX: event.clientX, clientY: event.clientY });
     setQuantityItem(item);
     // Default to box count if available and valid number, otherwise 1
     const boxCount = item.box ? parseInt(item.box) : 1;
@@ -3403,9 +3425,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   const handleConfirmQuantity = () => {
     if (quantityItem && quantityValue > 0) {
-      addToOrder(quantityItem, quantityValue);
+      addToOrder(quantityItem, quantityValue, quantityEventClick);
       setShowQuantityModal(false);
       setQuantityItem(null);
+      setQuantityEventClick(null);
       setQuantityValue(1);
       // لا نفتح شاشة البيع تلقائياً بعد إضافة المنتج
     }
@@ -5822,6 +5845,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           </div>
 
                           <motion.div
+                            layout
                             initial="hidden"
                             animate="show"
                             variants={{
@@ -5835,237 +5859,243 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             }}
                             className="product-grid"
                           >
-                            {sorted.map((item, index) => (
-                              <motion.div
-                                variants={{
-                                  hidden: { opacity: 0, scale: 0.95, y: 10 },
-                                  show: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
-                                }}
-                                whileHover={{
-                                  y: -6,
-                                  boxShadow: "0 20px 40px -8px rgba(0,0,0,0.12), 0 10px 20px -5px rgba(0,0,0,0.08)",
-                                  transition: { duration: 0.2, ease: "easeOut" }
-                                }}
-                                key={item.id}
-                                className="glass-card group flex flex-col h-full cursor-pointer transition-colors"
-                                onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
-                              >
-                                {item.group && (
-                                  <div className="absolute top-0 left-3 z-10 -mt-1">
-                                    <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
-                                      {item.group}
-                                    </span>
-                                  </div>
-                                )}
-
-                                <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50">
-                                  {getImage(item) ? (
-                                    <img
-                                      src={getImage(item)}
-                                      alt={item.name}
-                                      loading="lazy"
-                                      decoding="async"
-                                      className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'flex';
-                                      }}
-                                    />
-                                  ) : null}
-                                  <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
-                                    <Package size={48} className="text-slate-200" />
-                                  </div>
-
-                                  {getStockStatus(item) === 'Out of Stock' ? (
-                                    <div className="absolute top-2 right-2 z-10">
-                                      <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
-                                        Out of Stock
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    item.stock_count > 0 && item.stock_count <= 5 && (
-                                      <div className="absolute top-2 right-2 z-10 animate-pulse">
-                                        <div className="bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-rose-500/30 flex items-center gap-1 border border-white/20" dir="rtl">
-                                          <Flame size={12} className="text-yellow-200" fill="currentColor" />
-                                          <span>باقي {item.stock_count} فقط!</span>
-                                        </div>
-                                      </div>
-                                    )
-                                  )}
-
-                                  {/* Offer Toggle (Admin Only in Offers Mode) */}
-                                  {mode === 'offers' && userRole === 'admin' && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); toggleOffer(item); }}
-                                      className={`absolute top-2 right-2 z-20 p-1.5 rounded-full shadow-md transition-all ${item.isOffer ? 'bg-amber-500 text-white' : 'bg-white text-slate-300 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]'}`}
-                                      title="Toggle Offer"
-                                    >
-                                      <Star size={16} fill={item.isOffer ? 'currentColor' : 'none'} />
-                                    </button>
-                                  )}
-
-                                  {/* Offer Badge (Visible when not in Offers mode or for non-admins) */}
-                                  {item.isOffer && (mode !== 'offers' || userRole !== 'admin') && (
-                                    <div className={`absolute right-2 z-10 ${getStockStatus(item) === 'Out of Stock' ? 'top-10' : 'top-2'}`}>
-                                      <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
-                                        <Star size={10} fill="currentColor" /> Offer
+                            <AnimatePresence mode="popLayout">
+                              {sorted.map((item, index) => (
+                                <motion.div
+                                  layout
+                                  initial="hidden"
+                                  animate="show"
+                                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
+                                  variants={{
+                                    hidden: { opacity: 0, scale: 0.95, y: 10 },
+                                    show: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+                                  }}
+                                  whileHover={{
+                                    y: -6,
+                                    boxShadow: "0 20px 40px -8px rgba(0,0,0,0.12), 0 10px 20px -5px rgba(0,0,0,0.08)",
+                                    transition: { duration: 0.2, ease: "easeOut" }
+                                  }}
+                                  key={item.id}
+                                  className="glass-card group flex flex-col h-full cursor-pointer transition-colors"
+                                  onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
+                                >
+                                  {item.group && (
+                                    <div className="absolute top-0 left-3 z-10 -mt-1">
+                                      <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
+                                        {item.group}
                                       </span>
                                     </div>
                                   )}
 
-                                  {userRole === 'admin' && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
-                                      className="absolute bottom-3 right-3 p-2 rounded-full bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 shadow-md transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300"
-                                    >
-                                      {uploading && cardUploadItemRef.current?.id === item.id ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                                    </button>
-                                  )}
-
-                                </div>
-
-                                <div className="p-5 flex-1 flex flex-col">
-                                  <div className="flex justify-between items-start gap-2 mb-1">
-                                    <div className="flex flex-col mb-1 min-h-[2.5em] justify-start w-full text-right" dir="rtl">
-                                      {item.productType ? (
-                                        <h3 className="text-sm font-bold text-slate-800 leading-tight">
-                                          {item.productType}
-                                        </h3>
-                                      ) : (
-                                        <h3 className="text-sm font-bold text-slate-400 italic">
-                                          {/* Fallback if no product type is specified */}
-                                        </h3>
-                                      )}
-                                      <p className="text-xs text-slate-500 font-medium line-clamp-1 mt-0.5" title={item.name}>
-                                        {item.name || 'Unknown Product'}
-                                      </p>
+                                  <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50">
+                                    {getImage(item) ? (
+                                      <img
+                                        src={getImage(item)}
+                                        alt={item.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                          e.target.nextSibling.style.display = 'flex';
+                                        }}
+                                      />
+                                    ) : null}
+                                    <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
+                                      <Package size={48} className="text-slate-200" />
                                     </div>
-                                    {userRole === 'admin' && mode !== 'order' && (
-                                      <div className="flex flex-col gap-1 -mt-1 -mr-1">
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
-                                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
-                                          title="Quick Edit Name"
-                                        >
-                                          <FileText size={16} />
-                                        </button>
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }}
-                                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
-                                          title="Quick Edit Product Type"
-                                        >
-                                          <Tag size={16} />
-                                        </button>
+
+                                    {getStockStatus(item) === 'Out of Stock' ? (
+                                      <div className="absolute top-2 right-2 z-10">
+                                        <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
+                                          Out of Stock
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      item.stock_count > 0 && item.stock_count <= 5 && (
+                                        <div className="absolute top-2 right-2 z-10 animate-pulse">
+                                          <div className="bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-rose-500/30 flex items-center gap-1 border border-white/20" dir="rtl">
+                                            <Flame size={12} className="text-yellow-200" fill="currentColor" />
+                                            <span>باقي {item.stock_count} فقط!</span>
+                                          </div>
+                                        </div>
+                                      )
+                                    )}
+
+                                    {/* Offer Toggle (Admin Only in Offers Mode) */}
+                                    {mode === 'offers' && userRole === 'admin' && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); toggleOffer(item); }}
+                                        className={`absolute top-2 right-2 z-20 p-1.5 rounded-full shadow-md transition-all ${item.isOffer ? 'bg-amber-500 text-white' : 'bg-white text-slate-300 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]'}`}
+                                        title="Toggle Offer"
+                                      >
+                                        <Star size={16} fill={item.isOffer ? 'currentColor' : 'none'} />
+                                      </button>
+                                    )}
+
+                                    {/* Offer Badge (Visible when not in Offers mode or for non-admins) */}
+                                    {item.isOffer && (mode !== 'offers' || userRole !== 'admin') && (
+                                      <div className={`absolute right-2 z-10 ${getStockStatus(item) === 'Out of Stock' ? 'top-10' : 'top-2'}`}>
+                                        <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                                          <Star size={10} fill="currentColor" /> Offer
+                                        </span>
                                       </div>
                                     )}
+
+                                    {userRole === 'admin' && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
+                                        className="absolute bottom-3 right-3 p-2 rounded-full bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 shadow-md transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300"
+                                      >
+                                        {uploading && cardUploadItemRef.current?.id === item.id ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                      </button>
+                                    )}
+
                                   </div>
-                                  <p className="text-sm font-mono text-slate-500 mb-4">{item.barcode}</p>
 
-                                  <div className="mt-auto space-y-3">
-                                    <div className="flex items-end justify-between">
-                                      <div>
-                                        <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Price</p>
-                                        <p className="text-3xl font-black text-slate-800">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
-                                      </div>
-                                      {item.priceAfterDiscount && item.priceAfterDiscount < item.price && (
-                                        <div className="text-right">
-                                          <p className="text-sm text-slate-400">₪{item.price}</p>
-                                          <p className="text-sm font-bold text-emerald-500">
-                                            -{Math.round(((item.price - item.priceAfterDiscount) / item.price) * 100)}%
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 relative">
-                                      <div className="flex flex-col">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase">Stock</span>
-                                        {item.stock_count > 0 && item.stock_count <= 2 ? (
-                                          <span className="text-xs font-bold text-rose-500 animate-pulse flex items-center gap-1">
-                                            {item.stock_count} <span className="text-[10px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-md no-underline">قارب على الانتهاء!</span>
-                                          </span>
+                                  <div className="p-5 flex-1 flex flex-col">
+                                    <div className="flex justify-between items-start gap-2 mb-1">
+                                      <div className="flex flex-col mb-1 min-h-[2.5em] justify-start w-full text-right" dir="rtl">
+                                        {item.productType ? (
+                                          <h3 className="text-sm font-bold text-slate-800 leading-tight">
+                                            {item.productType}
+                                          </h3>
                                         ) : (
-                                          <span className={`text-xs font-bold ${getStockStatus(item) === 'In Stock' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                            {getStockStatus(item)}
-                                          </span>
+                                          <h3 className="text-sm font-bold text-slate-400 italic">
+                                            {/* Fallback if no product type is specified */}
+                                          </h3>
                                         )}
+                                        <p className="text-xs text-slate-500 font-medium line-clamp-1 mt-0.5" title={item.name}>
+                                          {item.name || 'Unknown Product'}
+                                        </p>
                                       </div>
-                                      <div className="flex flex-col items-end">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase">Box</span>
-                                        <span className="text-xs font-bold text-slate-700">{item.box || '-'}</span>
-                                      </div>
-
-                                      {/* Restock Request Button Overlay */}
-                                      {item.stock_count > 0 && item.stock_count <= 2 && (
-                                        <div className="absolute top-[-36px] right-0 z-20">
+                                      {userRole === 'admin' && mode !== 'order' && (
+                                        <div className="flex flex-col gap-1 -mt-1 -mr-1">
                                           <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              console.log(`[RESTOCK REQUEST] Item ID: ${item.id}, Barcode: ${item.barcode}, Name: ${item.name}, Current Stock: ${item.stock_count}`);
-                                              // Alert the user that it worked locally for now
-                                              const originalText = e.target.innerText;
-                                              e.target.innerHTML = '✓ تم الطلب';
-                                              e.target.className = 'bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-200 transition-all shadow-sm flex items-center gap-1';
-                                              setTimeout(() => {
-                                                e.target.innerHTML = originalText;
-                                                e.target.className = 'bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-bold px-2 py-1 rounded-lg border border-rose-200 transition-all shadow-sm flex items-center gap-1 active:scale-95';
-                                              }, 3000);
-                                            }}
-                                            className="bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-bold px-2 py-1 rounded-lg border border-rose-200 transition-all shadow-sm flex items-center gap-1 active:scale-95"
-                                            title="إرسال طلب تزويد للمخزن"
+                                            onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
+                                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
+                                            title="Quick Edit Name"
                                           >
-                                            <span>📦</span> طلب تزويد
+                                            <FileText size={16} />
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }}
+                                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
+                                            title="Quick Edit Product Type"
+                                          >
+                                            <Tag size={16} />
                                           </button>
                                         </div>
                                       )}
                                     </div>
+                                    <p className="text-sm font-mono text-slate-500 mb-4">{item.barcode}</p>
 
-                                    {mode === 'catalog' ? (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (catalogItems.some((i) => i.id === item.id)) removeFromCatalog(item.id);
-                                          else addToCatalog(item);
-                                        }}
-                                        className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all btn-modern ${catalogItems.some((i) => i.id === item.id)
-                                          ? 'bg-rose-100 text-rose-600 border border-rose-200'
-                                          : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
-                                          }`}
-                                      >
-                                        {catalogItems.some((i) => i.id === item.id) ? (
-                                          <><Trash2 size={16} /> Remove</>
-                                        ) : (
-                                          <><FileText size={16} /> Catalog</>
+                                    <div className="mt-auto space-y-3">
+                                      <div className="flex items-end justify-between">
+                                        <div>
+                                          <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Price</p>
+                                          <p className="text-3xl font-black text-slate-800">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
+                                        </div>
+                                        {item.priceAfterDiscount && item.priceAfterDiscount < item.price && (
+                                          <div className="text-right">
+                                            <p className="text-sm text-slate-400">₪{item.price}</p>
+                                            <p className="text-sm font-bold text-emerald-500">
+                                              -{Math.round(((item.price - item.priceAfterDiscount) / item.price) * 100)}%
+                                            </p>
+                                          </div>
                                         )}
-                                      </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenQuantityModal(item);
-                                        }}
-                                        className="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:bg-slate-800 active:shadow-inner transition-all duration-200 btn-modern"
-                                      >
-                                        Add to Cart
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
+                                      </div>
 
-                                {userRole === 'admin' && (
-                                  <div className="absolute top-3 right-3 flex gap-1 transform translate-x-full opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
-                                    <button onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-indigo-600 hover:bg-indigo-50" title="تعديل نوع المنتج"><Tag size={14} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); handlePrintQR(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="طباعة QR"><Smartphone size={14} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="تعديل"><FileText size={14} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
+                                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 relative">
+                                        <div className="flex flex-col">
+                                          <span className="text-[10px] text-slate-400 font-bold uppercase">Stock</span>
+                                          {item.stock_count > 0 && item.stock_count <= 2 ? (
+                                            <span className="text-xs font-bold text-rose-500 animate-pulse flex items-center gap-1">
+                                              {item.stock_count} <span className="text-[10px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-md no-underline">قارب على الانتهاء!</span>
+                                            </span>
+                                          ) : (
+                                            <span className={`text-xs font-bold ${getStockStatus(item) === 'In Stock' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                              {getStockStatus(item)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                          <span className="text-[10px] text-slate-400 font-bold uppercase">Box</span>
+                                          <span className="text-xs font-bold text-slate-700">{item.box || '-'}</span>
+                                        </div>
+
+                                        {/* Restock Request Button Overlay */}
+                                        {item.stock_count > 0 && item.stock_count <= 2 && (
+                                          <div className="absolute top-[-36px] right-0 z-20">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                console.log(`[RESTOCK REQUEST] Item ID: ${item.id}, Barcode: ${item.barcode}, Name: ${item.name}, Current Stock: ${item.stock_count}`);
+                                                // Alert the user that it worked locally for now
+                                                const originalText = e.target.innerText;
+                                                e.target.innerHTML = '✓ تم الطلب';
+                                                e.target.className = 'bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-200 transition-all shadow-sm flex items-center gap-1';
+                                                setTimeout(() => {
+                                                  e.target.innerHTML = originalText;
+                                                  e.target.className = 'bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-bold px-2 py-1 rounded-lg border border-rose-200 transition-all shadow-sm flex items-center gap-1 active:scale-95';
+                                                }, 3000);
+                                              }}
+                                              className="bg-rose-50 text-rose-600 hover:bg-rose-100 text-[10px] font-bold px-2 py-1 rounded-lg border border-rose-200 transition-all shadow-sm flex items-center gap-1 active:scale-95"
+                                              title="إرسال طلب تزويد للمخزن"
+                                            >
+                                              <span>📦</span> طلب تزويد
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {mode === 'catalog' ? (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (catalogItems.some((i) => i.id === item.id)) removeFromCatalog(item.id);
+                                            else addToCatalog(item);
+                                          }}
+                                          className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all btn-modern ${catalogItems.some((i) => i.id === item.id)
+                                            ? 'bg-rose-100 text-rose-600 border border-rose-200'
+                                            : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
+                                            }`}
+                                        >
+                                          {catalogItems.some((i) => i.id === item.id) ? (
+                                            <><Trash2 size={16} /> Remove</>
+                                          ) : (
+                                            <><FileText size={16} /> Catalog</>
+                                          )}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleOpenQuantityModal(item);
+                                          }}
+                                          className="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:bg-slate-800 active:shadow-inner transition-all duration-200 btn-modern"
+                                        >
+                                          Add to Cart
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
-                                )}
-                              </motion.div>
-                            ))}
+
+                                  {userRole === 'admin' && (
+                                    <div className="absolute top-3 right-3 flex gap-1 transform translate-x-full opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
+                                      <button onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-indigo-600 hover:bg-indigo-50" title="تعديل نوع المنتج"><Tag size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); handlePrintQR(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="طباعة QR"><Smartphone size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="تعديل"><FileText size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
+                                    </div>
+                                  )}
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
                           </motion.div>
                         </section>
                       );
@@ -6831,8 +6861,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <div className="flex flex-wrap gap-3 mt-auto">
                       {mode !== 'catalog' && (
                         <button
-                          onClick={() => {
-                            addToOrder(selectedItem, productDetailQty);
+                          onClick={(e) => {
+                            addToOrder(selectedItem, productDetailQty, e);
                             setSelectedItem(null);
                           }}
                           className="px-8 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition-colors"
@@ -6937,9 +6967,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           const val = getValidQty(quantityValue);
                           setQuantityValue(val);
                           if (quantityItem && val > 0) {
-                            addToOrder(quantityItem, val);
+                            addToOrder(quantityItem, val, quantityEventClick);
                             setShowQuantityModal(false);
                             setQuantityItem(null);
+                            setQuantityEventClick(null);
                             setQuantityValue(1);
                           }
                         }
@@ -6975,9 +7006,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       const finalVal = getValidQty(quantityValue);
                       setQuantityValue(finalVal);
                       if (quantityItem && finalVal > 0) {
-                        addToOrder(quantityItem, finalVal);
+                        addToOrder(quantityItem, finalVal, quantityEventClick);
                         setShowQuantityModal(false);
                         setQuantityItem(null);
+                        setQuantityEventClick(null);
                         setQuantityValue(1);
                       }
                     }}
