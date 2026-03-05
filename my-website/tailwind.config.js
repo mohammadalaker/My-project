@@ -6,6 +6,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        arabic: ['IBM Plex Sans Arabic', 'system-ui', 'sans-serif'],
+        sans: ['Geist', 'IBM Plex Sans Arabic', 'system-ui', 'sans-serif'],
+      },
       colors: {
         primary: { DEFAULT: '#ea580c', light: '#fff7ed', dark: '#c2410c' },
         pastel: {

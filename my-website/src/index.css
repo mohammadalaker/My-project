@@ -1,8 +1,22 @@
+/* Typography: IBM Plex Sans Arabic + Geist — يجب أن تسبق كل العبارات */
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+@import '@fontsource/ibm-plex-sans-arabic/700.css';
+@import '@fontsource/geist/400.css';
+@import '@fontsource/geist/500.css';
+@import '@fontsource/geist/600.css';
+@import '@fontsource/geist/700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --font-arabic: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  /* النص الإنجليزي → Geist؛ النص العربي → IBM Plex Sans Arabic (fallback) */
+  --font-body: 'Geist', 'IBM Plex Sans Arabic', system-ui, sans-serif;
   --app-bg: #f8fafc;
   --header-bg: rgba(255, 255, 255, 0.7);
   --card-radius: 24px;
@@ -27,7 +41,7 @@
 
   body {
     @apply antialiased text-slate-800;
-    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-body);
     min-height: 100vh;
     background-color: var(--app-bg);
     background-image:
@@ -180,7 +194,7 @@
     margin: 0;
     padding: 2mm;
     /* Tiny padding */
-    font-family: 'DM Sans', system-ui, sans-serif !important;
+    font-family: var(--font-arabic), var(--font-sans), system-ui, sans-serif !important;
     color: black !important;
     background: white !important;
   }
