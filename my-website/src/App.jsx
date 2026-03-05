@@ -6110,7 +6110,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {
         showOrderPanel && mode === 'order' && (
-          <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-white/70 backdrop-blur-2xl border-l border-white shadow-[0_0_40px_rgba(0,0,0,0.1)] z-50 transition-all duration-500 text-slate-800">
+          <aside className="flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-white/95 backdrop-blur-2xl border-l border-slate-200 shadow-2xl z-50 transition-all duration-500 text-slate-800">
             {/* Header / Tabs */}
             <div className="flex-shrink-0 z-20">
               <div className="flex items-center justify-between px-8 py-6">
@@ -6170,7 +6170,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-transparent">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
 
               {/* TAB: ITEMS */}
               {activeTab === 'items' && (
@@ -6205,7 +6205,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <SwipeToDeleteItem onDelete={() => removeFromOrder(o.id)}>
                             <div className={`group relative rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count))
                               ? 'bg-amber-50 border border-amber-300 shadow-[0_4px_20px_-4px_rgba(251,191,36,0.3)] hover:shadow-[0_8px_30px_-4px_rgba(251,191,36,0.4)]'
-                              : 'bg-white/90 backdrop-blur-lg hover:bg-white border border-white/80 shadow-sm hover:shadow-md hover:-translate-y-0.5'
+                              : 'bg-white hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-100 hover:border-slate-200 hover:shadow-slate-200/50'
                               }`}>
                               {(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) && (
                                 <div className="absolute -top-3 -right-2 z-10 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-1 animate-pulse border-2 border-white">
@@ -6636,7 +6636,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             )}
 
             {/* Sticky Order Totals */}
-            <div className="flex-shrink-0 bg-white/80 backdrop-blur-2xl border-t border-white p-8 shadow-[0_-20px_40px_rgba(0,0,0,0.08)] z-20">
+            <div className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-8 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
 
               {/* Discount Lines */}
               {finalOrderDiscount > 0 && (
