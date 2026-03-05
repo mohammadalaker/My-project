@@ -1,4 +1,4 @@
-import{c as y,r as i,s as o,j as e,A as f,m as n,P as d}from"./index-DHGFwVaM.js";import{S as v}from"./shopping-bag-BF8zmkCu.js";/**
+import{c as y,r as i,s as o,j as e,A as f,m as n,P as d}from"./index-CPD7VbqY.js";import{S as v}from"./shopping-bag-BATpKPN8.js";/**
  * @license lucide-react v0.563.0 - ISC
  *
  * This source code is licensed under the ISC license.

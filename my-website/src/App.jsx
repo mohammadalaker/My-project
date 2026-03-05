@@ -6933,17 +6933,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
               <div className="bg-white rounded-[24px] p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 <h3 className="text-xl font-bold text-slate-900 mb-3 text-left">Quantity</h3>
-                <p className="text-slate-600 text-sm mb-6 leading-relaxed text-right" dir="auto" style={{ direction: 'rtl' }}>
-                  {quantityItem.name}
+                <p className="text-slate-600 font-bold mb-6 leading-relaxed text-right text-lg" dir="auto" style={{ direction: 'rtl' }}>
+                  {quantityItem.productType || quantityItem.name}
                 </p>
 
                 <div className="mb-6">
                   <label className="block text-sm font-semibold text-slate-700 mb-3 text-left w-full">Enter Quantity (multiples of {step})</label>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 max-w-[200px]">
                     <button
                       type="button"
                       onClick={() => setQuantityValue((v) => Math.max(step, getValidQty(v) - step))}
-                      className="w-[52px] h-[52px] flex items-center justify-center rounded-xl border-2 border-[#6366f1] bg-white text-[#6366f1] font-medium text-2xl hover:bg-indigo-50 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-[#6366f1] focus:ring-offset-1"
+                      className="w-12 h-12 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 font-medium text-2xl hover:bg-slate-50 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-slate-300"
                       aria-label="نقص"
                     >
                       −
@@ -6968,7 +6968,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         // When they click away, correct it to the nearest valid multiple
                         setQuantityValue(getValidQty(quantityValue));
                       }}
-                      className="flex-1 h-[52px] text-center text-xl font-bold rounded-xl border border-indigo-200 outline-none transition-all focus:border-[#6366f1] focus:ring-2 focus:ring-indigo-100 text-slate-900"
+                      className="flex-1 h-12 w-full text-center text-xl font-bold rounded-xl border border-slate-200 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 text-slate-900 mx-1"
                       autoFocus
                       onFocus={(e) => e.target.select()}
                       onKeyDown={(e) => {
@@ -6989,7 +6989,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <button
                       type="button"
                       onClick={() => setQuantityValue((v) => getValidQty(v) + step)}
-                      className="w-[52px] h-[52px] flex items-center justify-center rounded-xl border border-indigo-100 bg-[#eef2ff] text-[#4f46e5] font-medium text-2xl hover:bg-indigo-100 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-[#6366f1] focus:ring-offset-1"
+                      className="w-12 h-12 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 font-medium text-2xl hover:bg-slate-50 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-slate-300"
                       aria-label="أضف"
                     >
                       +
