@@ -1431,7 +1431,7 @@ function App() {
       alert('تم حفظ ترتيب المنتجات بنجاح!');
     } catch (e) {
       console.error('Fail save order:', e);
-      alert('فشل حفظ الترتيب');
+      alert(`فشل حفظ الترتيب: ${e?.message || e?.details || 'خطأ غير معروف في قاعدة البيانات'}`);
     }
   };
 
@@ -3425,7 +3425,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             ${item.productType ? `<div style="display:inline-block; background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-weight:800; font-size:0.75rem; margin-bottom:6px;">${item.productType}</div>` : ''}
             <div class="cat-name">${item.name}</div>
             <div class="cat-details">
-              <span class="cat-group">${item.group || '—'}</span>
+              <span class="cat-group font-bold">${item.group || '—'}</span>
               <span class="cat-barcode">${item.barcode}</span>
             </div>
             <div class="cat-prices">
@@ -5424,7 +5424,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           </td>
                                           <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
                                           <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
-                                          <td className="px-4 py-3 text-slate-600">{item.group || '—'}</td>
+                                          <td className="px-4 py-3 text-slate-600 font-bold">{item.group || '—'}</td>
                                           <td className="px-4 py-3"><span className={`font-bold ${qtyColor}`}>{qty}</span></td>
                                           <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
                                           <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${qtyBg}`}>{status}</span></td>
@@ -5851,7 +5851,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
                               >
                                 {item.group && (
-                                  <div className="absolute top-3 left-3 z-10">
+                                  <div className="absolute top-0 left-3 z-10 -mt-1">
                                     <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
                                       {item.group}
                                     </span>
@@ -6236,7 +6236,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   </div>
                                   <p className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2 pointer-events-none">
                                     <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">{o.item?.barcode}</span>
-                                    {o.item?.group && <span className="text-slate-400">• {o.item?.group}</span>}
+                                    {o.item?.group && <span className="text-slate-400 font-bold">• {o.item?.group}</span>}
                                   </p>
 
                                   <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate pointer-events-none" dir="rtl">

@@ -141,12 +141,12 @@ export default function OfferCard({
                                             )}
                                         </div>
 
-                                        <div className="w-full">
+                                        <div className="w-full relative mt-[-10px]">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className={`text-[10px] font-bold px-2 py-1 rounded shadow-lg ${it ? 'bg-slate-900 text-white' : 'bg-red-100 text-red-600'}`}>
                                                     x{effectiveQty} {it ? '' : '(Deleted)'}
                                                 </span>
-                                                {it?.group && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{it.group}</span>}
+                                                {it?.group && <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{it.group}</span>}
                                             </div>
 
                                             <div className="mb-2 w-full text-right" dir="rtl">
