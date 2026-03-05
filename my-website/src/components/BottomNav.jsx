@@ -1,7 +1,7 @@
 import React from 'react';
 import { Package, Grid, Gift } from 'lucide-react';
 
-export default function BottomNav({ mode, setMode, cartCount, onOpenCart, hasOffers }) {
+export default function BottomNav({ mode, setMode, cartCount, onOpenCart, hasOffers, cartButtonRef }) {
     return (
         <div className="fixed bottom-0 left-0 right-0 glass-panel border-t-0 px-4 py-3 pb-safe z-50 flex items-center justify-around sm:hidden rounded-t-3xl backdrop-blur-xl">
             <button
@@ -22,6 +22,7 @@ export default function BottomNav({ mode, setMode, cartCount, onOpenCart, hasOff
 
             <div className="relative -top-8">
                 <button
+                    ref={cartButtonRef}
                     onClick={onOpenCart}
                     className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30 flex items-center justify-center border-4 border-white/80 backdrop-blur-sm relative transition-transform active:scale-95"
                 >

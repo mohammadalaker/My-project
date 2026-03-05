@@ -641,7 +641,8 @@ function App() {
   const [sortingCategory, setSortingCategory] = useState(null); // 'electrical' | 'household'
   const [dynamicBarcodeOrder, setDynamicBarcodeOrder] = useState(BARCODE_ORDER);
 
-  const cartIconRef = useRef(null); // Added for cart animation
+  const cartIconRef = useRef(null); // للأنيميشن fly-to-cart (زر السلة في الديسكتوب)
+  const cartNavRef = useRef(null);  // زر السلة في الشريط السفلي (موبايل)
 
   // Held Orders State
   const [heldOrders, setHeldOrders] = useState(() => {
@@ -1984,9 +1985,10 @@ function App() {
       });
     });
 
-    // Trigger Fly Animation
-    if (event && event.clientX && cartIconRef.current) {
-      const cartRect = cartIconRef.current.getBoundingClientRect();
+    // Trigger Fly Animation — يحتاج ref مرتبط بزر السلة (ديسكتوب أو موبايل)
+    const cartEl = cartIconRef.current || cartNavRef.current;
+    if (event && event.clientX && cartEl) {
+      const cartRect = cartEl.getBoundingClientRect();
       const startX = event.clientX;
       const startY = event.clientY;
       const endX = cartRect.left + cartRect.width / 2;
@@ -6085,7 +6087,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleOpenQuantityModal(item);
+                                            handleOpenQuantityModal(item, e);
                                           }}
                                           className="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:bg-slate-800 active:shadow-inner transition-all duration-200 btn-modern"
                                         >
@@ -6127,6 +6129,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       {
         !showOrderPanel && mode === 'order' && (
           <button
+            ref={cartIconRef}
             onClick={() => setShowOrderPanel(true)}
             className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
             style={{ writingMode: 'vertical-rl' }}
@@ -7458,31 +7461,36 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         cartCount={orderLines.length}
         onOpenCart={() => setShowOrderPanel(true)}
         hasOffers={customOffers.length > 0}
+        cartButtonRef={cartNavRef}
       />
 
-      {/* Render Flying Items */}
-      {flyingItems.map(item => (
-        <div
-          key={item.id}
-          className={`fixed z-[100] pointer-events-none transition-all duration-700 ease-in-out`}
-          style={{
-            left: item.startX - 30, // Center the 60x60 box
-            top: item.startY - 30,
-            transform: item.flying
-              ? `translate(${item.endX - item.startX}px, ${item.endY - item.startY}px) scale(0.1) rotate(360deg)`
-              : 'translate(0px, 0px) scale(1) rotate(0deg)',
-            opacity: item.flying ? 0.2 : 0.9,
-            width: '60px',
-            height: '60px',
-          }}
-        >
-          {item.image ? (
-            <img src={item.image} className="w-full h-full object-contain drop-shadow-2xl rounded-xl" />
-          ) : (
-            <div className="w-full h-full bg-slate-200 rounded-xl flex items-center justify-center shadow-lg"><Package size={24} className="text-slate-400" /></div>
-          )}
-        </div>
-      ))}
+      {/* Render Flying Items — أكبر عند الظهور */}
+      {flyingItems.map(item => {
+        const size = 120; // أكبر — أحلى عند التفاعل
+        const half = size / 2;
+        return (
+          <div
+            key={item.id}
+            className="fixed z-[100] pointer-events-none transition-all duration-700 ease-out"
+            style={{
+              left: item.startX - half,
+              top: item.startY - half,
+              transform: item.flying
+                ? `translate(${item.endX - item.startX}px, ${item.endY - item.startY}px) scale(0.15) rotate(360deg)`
+                : 'translate(0px, 0px) scale(1) rotate(0deg)',
+              opacity: item.flying ? 0.25 : 0.95,
+              width: `${size}px`,
+              height: `${size}px`,
+            }}
+          >
+            {item.image ? (
+              <img src={item.image} alt="" className="w-full h-full object-contain drop-shadow-2xl rounded-xl" />
+            ) : (
+              <div className="w-full h-full bg-slate-200 rounded-xl flex items-center justify-center shadow-lg"><Package size={40} className="text-slate-400" /></div>
+            )}
+          </div>
+        );
+      })}
     </div >
   );
 }
