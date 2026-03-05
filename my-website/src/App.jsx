@@ -1993,18 +1993,28 @@ function App() {
       const endY = cartRect.top + cartRect.height / 2;
       const id = Date.now() + Math.random();
 
+      // Step 1: Element mounted at start position
       setFlyingItems(prev => [...prev, {
         id,
         image: getImage(item),
         startX,
         startY,
         endX,
-        endY
+        endY,
+        flying: false // false initially
       }]);
 
+      // Step 2: Trigger CSS transition next frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setFlyingItems(prev => prev.map(f => f.id === id ? { ...f, flying: true } : f));
+        });
+      });
+
+      // Step 3: Remove after animation
       setTimeout(() => {
         setFlyingItems(prev => prev.filter(f => f.id !== id));
-      }, 800); // 800ms animation duration
+      }, 700); // match transition duration
     }
   }, [startTransition]);
 
@@ -7449,6 +7459,30 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         onOpenCart={() => setShowOrderPanel(true)}
         hasOffers={customOffers.length > 0}
       />
+
+      {/* Render Flying Items */}
+      {flyingItems.map(item => (
+        <div
+          key={item.id}
+          className={`fixed z-[100] pointer-events-none transition-all duration-700 ease-in-out`}
+          style={{
+            left: item.startX - 30, // Center the 60x60 box
+            top: item.startY - 30,
+            transform: item.flying
+              ? `translate(${item.endX - item.startX}px, ${item.endY - item.startY}px) scale(0.1) rotate(360deg)`
+              : 'translate(0px, 0px) scale(1) rotate(0deg)',
+            opacity: item.flying ? 0.2 : 0.9,
+            width: '60px',
+            height: '60px',
+          }}
+        >
+          {item.image ? (
+            <img src={item.image} className="w-full h-full object-contain drop-shadow-2xl rounded-xl" />
+          ) : (
+            <div className="w-full h-full bg-slate-200 rounded-xl flex items-center justify-center shadow-lg"><Package size={24} className="text-slate-400" /></div>
+          )}
+        </div>
+      ))}
     </div >
   );
 }
