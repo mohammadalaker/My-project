@@ -3967,28 +3967,34 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
           )}
 
-          {/* BRANDS GRID - Modern Seamless Logo Images Section */}
-          <section className="w-full bg-white/30 backdrop-blur-xl border-b border-white/40 py-6 px-4 hidden sm:block z-10 relative overflow-hidden shadow-sm">
-            {/* Subtle light accents */}
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl -z-10 mix-blend-multiply"></div>
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-rose-200/20 rounded-full blur-3xl -z-10 mix-blend-multiply"></div>
+          {/* BRANDS GRID - Modern Circular Logo Images Section */}
+          <section className="w-full bg-slate-50 border-b border-slate-200/50 py-10 px-4 hidden sm:block z-10 relative overflow-hidden">
+            {/* Background Gradients to match the image */}
+            <div className="absolute top-0 left-0 w-1/3 h-full bg-gradient-to-r from-indigo-100/80 to-transparent blur-3xl -z-10"></div>
+            <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-orange-100/80 to-transparent blur-3xl -z-10"></div>
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-1/2 bg-rose-100/70 blur-3xl -z-10"></div>
 
-            <div className="max-w-7xl mx-auto flex flex-col items-center relative z-10">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="h-px w-12 bg-gradient-to-r from-transparent to-slate-300"></div>
-                <h2 className="text-[13px] font-black tracking-[0.2em] text-slate-500 uppercase">Premium Brands</h2>
-                <div className="h-px w-12 bg-gradient-to-l from-transparent to-slate-300"></div>
+            <div className="max-w-6xl mx-auto flex flex-col items-center relative z-10">
+              {/* Title */}
+              <div className="flex items-center gap-2 mb-10">
+                <h2 className="text-[14px] font-bold text-slate-800 tracking-widest uppercase flex items-center gap-2">
+                  <span>PREMIUM BRANDS</span>
+                  <span className="text-slate-300">/</span>
+                  <span className="font-arabic font-semibold">العلامات التجارية المميزة</span>
+                </h2>
               </div>
               
-              <div className="flex flex-wrap justify-center items-center gap-x-12 sm:gap-x-16 md:gap-x-20 gap-y-10 opacity-[0.85] w-full px-8">
+              {/* Logos Grid */}
+              <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 w-full px-4">
                 {Array.from({ length: 14 }).map((_, i) => (
-                  <div key={i} className="group relative h-10 sm:h-12 md:h-14 flex items-center justify-center transition-all duration-500 transform hover:scale-110 hover:opacity-100">
-                    {/* Subtle hover glow effect */}
-                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 rounded-xl blur-xl transition-all duration-500 -z-10"></div>
+                  <div 
+                    key={i} 
+                    className="group relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-white rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 transform hover:-translate-y-1"
+                  >
                     <img 
                       src={`/logos/Logo${i + 1}.jpg`} 
                       alt={`Brand Logo ${i + 1}`} 
-                      className="max-h-full max-w-[100px] sm:max-w-[130px] object-contain drop-shadow-sm transition-all duration-500 group-hover:drop-shadow-md"
+                      className="max-h-[50%] max-w-[65%] object-contain transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
                 ))}
