@@ -486,6 +486,38 @@ function App() {
     };
   }, [isAuthenticated]);
 
+  // 3. Safe Logout (Auto-Lock) after 2 minutes of inactivity
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let inactivityTimer;
+    
+    const resetTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      // 2 minutes = 120,000 ms
+      inactivityTimer = setTimeout(() => {
+        handleLogout(true);
+      }, 120 * 1000);
+    };
+
+    // Set initial timer
+    resetTimer();
+
+    // Events to track user activity
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+    
+    events.forEach(event => {
+      window.addEventListener(event, resetTimer, { passive: true });
+    });
+
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      events.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [isAuthenticated]);
+
   useEffect(() => {
     const auth = localStorage.getItem('sales_auth');
     const role = localStorage.getItem('sales_role');
