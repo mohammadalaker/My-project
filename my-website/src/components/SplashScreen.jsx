@@ -64,10 +64,45 @@ const SplashScreen = ({ onComplete }) => {
             className="flex flex-col items-center"
           >
             {/* Logo */}
-            <div className="w-28 h-28 mb-8 rounded-[2rem] bg-gradient-to-tr from-orange-500 to-amber-500 shadow-2xl shadow-orange-500/30 flex items-center justify-center border-4 border-white/10 relative overflow-hidden">
-              <div className="absolute inset-0 bg-white/20 w-1/2 h-full -skew-x-12 -translate-x-full animate-[shimmer_2s_infinite]" />
-              <span className="text-5xl font-black text-white px-2 tracking-tighter">MS</span>
-            </div>
+            <motion.div
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="mb-6 relative"
+            >
+              <div className="absolute inset-0 bg-orange-500/20 blur-2xl rounded-full" />
+              <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10 drop-shadow-2xl">
+                {/* Bag Body */}
+                <motion.path
+                  d="M4 8L4 18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V8Z"
+                  stroke="url(#gradientMain)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ duration: 1.5, ease: "easeInOut" }}
+                />
+                {/* Handle */}
+                <motion.path
+                  d="M16 10V6C16 3.79086 14.2091 2 12 2C9.79086 2 8 3.79086 8 6V10"
+                  stroke="url(#gradientMain)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ duration: 1, delay: 0.8, ease: "easeInOut" }}
+                />
+                
+                {/* Linear Gradients inside SVG */}
+                <defs>
+                  <linearGradient id="gradientMain" x1="4" y1="2" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#f97316" /> {/* Orange */}
+                    <stop offset="1" stopColor="#1e3a8a" /> {/* Dark Blue */}
+                  </linearGradient>
+                </defs>
+              </svg>
+            </motion.div>
             
             <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-2 text-center">
               Maslamani Sales
