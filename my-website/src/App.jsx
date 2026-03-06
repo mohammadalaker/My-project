@@ -3764,6 +3764,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     )}
                   </div>
+                  <p className="text-slate-600 text-sm font-extrabold tracking-tight mt-0.5 text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-slate-500">Premium Appliances</p>
                   <p className="text-slate-500 text-xs font-medium tracking-wide uppercase mt-0.5">
                     {safeLocaleDate({ weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>

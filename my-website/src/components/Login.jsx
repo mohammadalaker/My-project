@@ -123,6 +123,7 @@ export default function Login({ onLogin }) {
           <h1 className="text-3xl font-black text-white tracking-tight text-center">
             Maslamani Sales
           </h1>
+          <p className="text-white font-medium tracking-tight text-center mt-1 text-base opacity-90">Premium Appliances</p>
           <p className="text-white/50 font-medium mt-1">
             يرجى إدخال الرمز السري
           </p>

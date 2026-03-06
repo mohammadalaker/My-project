@@ -104,9 +104,10 @@ const SplashScreen = ({ onComplete }) => {
               </svg>
             </motion.div>
             
-            <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-2 text-center">
+            <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-1 text-center">
               Maslamani Sales
             </h1>
+            <p className="text-white font-medium tracking-tight text-center text-lg sm:text-xl opacity-90 mb-2">Premium Appliances</p>
             <p className="text-slate-400 font-medium text-sm sm:text-base tracking-widest uppercase mb-8">
               Point of Sale System
             </p>

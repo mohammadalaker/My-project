@@ -108,6 +108,7 @@ export default function CustomerDisplay() {
                         <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">
                             Maslamani<span className="font-light text-slate-500">Sales</span>
                         </h1>
+                        <p className="text-sm font-extrabold text-slate-600 tracking-tight">Premium Appliances</p>
                         <p className="text-sm font-bold text-indigo-500 tracking-widest uppercase">
                             Welcome
                         </p>

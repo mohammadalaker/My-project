@@ -47,26 +47,26 @@ function Sidebar({
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Overlay — z-index مرتفع لضمان الظهور فوق كل العناصر */}
+                    {/* Overlay — خلفية شفافة مع ضبابية خفيفة */}
                     <motion.div
                         variants={overlayVariants}
                         initial="hidden"
                         animate="visible"
                         exit="hidden"
                         onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] transition-opacity"
+                        className="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] z-[100] transition-opacity"
                     />
 
-                    {/* Sidebar Panel — عائم (Floating) مع حواف مستديرة وظل خفيف */}
+                    {/* Sidebar Panel — مظهر زجاجي (Glassmorphism): شفاف + ضبابية */}
                     <motion.div
                         variants={sidebarVariants}
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="fixed top-4 left-4 bottom-4 w-72 z-[101] flex flex-col overflow-hidden bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/50 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.08)]"
+                        className="fixed top-4 left-4 bottom-4 w-72 z-[101] flex flex-col overflow-hidden bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/40 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.5)_inset]"
                     >
                         {/* Header / Brand */}
-                        <div className="flex items-center justify-between p-6 border-b border-slate-100/80 bg-white/40 backdrop-blur-sm rounded-t-3xl">
+                        <div className="flex items-center justify-between p-6 border-b border-white/30 bg-white/30 backdrop-blur-md rounded-t-3xl">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center text-white font-bold text-lg rotate-3">
                                     MS
@@ -75,7 +75,7 @@ function Sidebar({
                                     <h2 className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
                                         Maslamani
                                     </h2>
-                                    <span className="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">Workspace</span>
+                                    <span className="text-xs font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-600 to-slate-500 tracking-tight">Premium Appliances</span>
                                 </div>
                             </div>
                             <button
@@ -87,7 +87,7 @@ function Sidebar({
                         </div>
 
                         {/* Navigation — مؤشر نشط منزلق (Framer Motion) */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1 relative">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1 relative bg-white/20 backdrop-blur-sm">
                             {navItems.map((item) => {
                                 const isVisible = item.roles.includes(userRole);
                                 if (!isVisible) return null;
@@ -101,7 +101,7 @@ function Sidebar({
                                         {isActive && !isPlaceholder && (
                                             <motion.div
                                                 layoutId="sidebar-active"
-                                                className="absolute inset-0 rounded-xl bg-indigo-50/90 border border-indigo-100 shadow-sm"
+                                                className="absolute inset-0 rounded-xl bg-indigo-100/70 border border-indigo-200/50 shadow-sm backdrop-blur-sm"
                                                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                                                 style={{ zIndex: 0 }}
                                             />
@@ -142,10 +142,10 @@ function Sidebar({
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-slate-100/80 bg-white/40 backdrop-blur-sm rounded-b-3xl">
+                        <div className="p-4 border-t border-white/30 bg-white/30 backdrop-blur-md rounded-b-3xl">
                             <button
                                 onClick={handleLogout}
-                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border border-slate-100 text-rose-500 font-semibold hover:bg-rose-50 transition-colors shadow-sm"
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/60 backdrop-blur-sm border border-white/50 text-rose-500 font-semibold hover:bg-rose-50/80 transition-colors shadow-sm"
                             >
                                 <LogOut size={18} className="text-rose-500" />
                                 <span>تسجيل الخروج</span>
