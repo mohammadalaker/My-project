@@ -3989,17 +3989,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && mode !== 'inventory' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
                   {/* New Premium Header Design */}
-                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full max-w-4xl mx-auto space-y-4 mb-8" dir="ltr">
-                    <span className="bg-indigo-600 text-white text-xs sm:text-sm font-bold px-4 py-1.5 rounded-full inline-block shadow-sm">
-                      Free Delivery in Ramallah
+                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full max-w-4xl mx-auto space-y-3 mb-6" dir="ltr">
+                    <span className="bg-indigo-600 text-white text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full inline-block shadow-sm">
+                      Premium Quality Assured
                     </span>
-                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                      Premium Electrical Appliances
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] tracking-tight">
+                      Explore our premium collection
                       <br className="hidden sm:block" />
-                      <span className="text-blue-600"> Delivered to Your Door</span>
+                      <span className="text-blue-600"> of electrical appliances and kitchenware</span>
                     </h1>
-                    <p className="text-lg sm:text-xl text-slate-600 font-medium">
-                      Shop the latest refrigerators, washing machines, TVs, and more.
+                    <p className="text-base sm:text-lg text-slate-600 font-medium">
+                      Select items to create a new order or manage your catalog.
                     </p>
                   </div>
 
