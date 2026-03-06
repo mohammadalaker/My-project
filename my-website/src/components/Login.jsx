@@ -17,6 +17,23 @@ export default function Login({ onLogin }) {
     }
   }, [error]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isSubmitting) return; // Prevent input while submitting
+      
+      if (/^[0-9]$/.test(e.key)) {
+        handlePinInput(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      } else if (e.key === 'Enter') {
+        handleSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pin, error, isSubmitting]); // Include dependencies used in handlers
+
   const handlePinInput = (num) => {
     if (error) setError('');
     if (pin.length < 10) { // Allowed longer pins just in case
