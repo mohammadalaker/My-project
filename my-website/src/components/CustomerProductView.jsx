@@ -111,6 +111,7 @@ export default function CustomerProductView() {
                     <div>
                         <h1 className="text-xl font-extrabold text-slate-800 leading-none">Maslamani<span className="font-light text-slate-500">Sales</span></h1>
                         <p className="text-xs font-extrabold text-slate-600 tracking-tight">Premium Appliances</p>
+                    </div>
                 </div>
                 <button onClick={() => {
                     if (navigator.share) {

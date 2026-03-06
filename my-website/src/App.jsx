@@ -62,7 +62,9 @@ import {
   PieChart as PieChartIcon,
   TrendingUp,
   Bell,
+  RefreshCw,
 } from 'lucide-react';
+import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, useSensors, useSensor } from '@dnd-kit/core';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
@@ -309,6 +311,11 @@ function App() {
   /* Dropdown Menu State */
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
+  const [showQuickSettings, setShowQuickSettings] = useState(false);
+  const quickSettingsRef = useRef(null);
+  const [uiLang, setUiLang] = useState(() => {
+    try { return localStorage.getItem('sales_ui_lang') || 'ar'; } catch { return 'ar'; }
+  });
 
   // Close profile menu if clicked outside
   useEffect(() => {
@@ -321,6 +328,17 @@ function App() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  // Close quick settings if clicked outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (quickSettingsRef.current && !quickSettingsRef.current.contains(event.target)) {
+        setShowQuickSettings(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   /* Splash Screen State */
@@ -2117,6 +2135,22 @@ function App() {
 
   const clearOrder = () => setOrderItems([]);
 
+  // Drag & Drop: sensors (delay so tap doesn't start drag)
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (over?.id !== 'cart' || !active?.data?.current || active.data.current.type !== 'product') return;
+    const barcode = active.data.current.barcode;
+    const item = items.find((i) => i.barcode === barcode || i.id === barcode);
+    if (item) {
+      addToOrder(item, 1);
+      setShowOrderPanel(true);
+    }
+  }, [items, addToOrder]);
+
   const orderLines = orderItems
     .map((o) => ({ ...o, item: items.find((i) => i.id === o.id) }))
     .filter((o) => o.item);
@@ -3688,6 +3722,34 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  // Drag & Drop: draggable product image (used in order mode)
+  function DraggableProductImage({ item, children }) {
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+      id: item.id,
+      data: { type: 'product', barcode: item.barcode },
+    });
+    return (
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        className={`touch-none select-none ${isDragging ? 'opacity-60 scale-95' : ''}`}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  // Drag & Drop: droppable cart zone
+  function CartDroppable({ children }) {
+    const { setNodeRef, isOver } = useDroppable({ id: 'cart' });
+    return (
+      <div ref={setNodeRef} className={isOver ? 'ring-2 ring-orange-400 ring-offset-2 rounded-2xl bg-orange-50/50 transition-all' : ''}>
+        {children}
+      </div>
+    );
+  }
+
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
@@ -3714,6 +3776,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <>
+      <DndContext sensors={dndSensors} onDragEnd={handleDragEnd}>
       <div
         className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
       >
@@ -3772,11 +3835,71 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 ml-auto shrink-0 relative" ref={profileMenuRef}>
+              <div className="flex items-center gap-3 ml-auto shrink-0 relative">
+                {/* Quick Settings — ترس بجوار الاسم */}
+                <div ref={quickSettingsRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setShowQuickSettings(!showQuickSettings); setShowProfileMenu(false); }}
+                    className="p-2.5 rounded-xl bg-white/60 border border-slate-200/70 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/80 transition-all shadow-sm"
+                    title="إعدادات سريعة"
+                  >
+                    <Settings size={20} />
+                  </button>
+                  <AnimatePresence>
+                    {showQuickSettings && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute top-full left-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 text-right"
+                        dir="rtl"
+                      >
+                        <div className="p-2.5 border-b border-slate-100 bg-slate-50/50">
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">إعدادات سريعة</p>
+                        </div>
+                        <div className="p-2 space-y-0.5">
+                          <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase">اللغة</div>
+                          <div className="flex gap-1 p-1">
+                            <button
+                              onClick={() => { setUiLang('ar'); try { localStorage.setItem('sales_ui_lang', 'ar'); } catch (_) {} setShowQuickSettings(false); }}
+                              className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'ar' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                            >
+                              عربي
+                            </button>
+                            <button
+                              onClick={() => { setUiLang('en'); try { localStorage.setItem('sales_ui_lang', 'en'); } catch (_) {} setShowQuickSettings(false); }}
+                              className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'en' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                            >
+                              English
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => { setShowQuickSettings(false); window.print(); }}
+                            className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
+                          >
+                            <Printer size={18} />
+                            طابعة الفواتير — طباعة الآن
+                          </button>
+                          <button
+                            onClick={() => { setShowQuickSettings(false); fetchItems(); }}
+                            className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
+                          >
+                            <RefreshCw size={18} />
+                            تحديث المخزون
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="relative" ref={profileMenuRef}>
                 {username === 'mohammadalaker' || username === 'admin' || username === 'supervisor' ? (
                   <div
                     className="flex items-center gap-3 bg-white/60 border border-slate-200/70 p-1.5 pr-5 rounded-full shadow-sm backdrop-blur-md transition-all hover:shadow-md cursor-pointer hover:bg-white/90"
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    onClick={() => { setShowProfileMenu(!showProfileMenu); setShowQuickSettings(false); }}
                   >
                     <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                       <User className="w-6 h-6 text-slate-400 mt-2" />
@@ -3794,7 +3917,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 ) : (
                   <div
                     className="flex items-center justify-center p-2 bg-white/60 border border-slate-200/70 rounded-xl shadow-sm cursor-pointer hover:bg-white/90 transition-all"
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    onClick={() => { setShowProfileMenu(!showProfileMenu); setShowQuickSettings(false); }}
                   >
                     <User className="w-6 h-6 text-slate-500" />
                   </div>
@@ -3859,6 +3982,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   )}
                 </AnimatePresence>
               </div>
+            </div>
             </div>
           </header>
 
@@ -5972,22 +6096,47 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   )}
 
                                   <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50">
-                                    {getImage(item) ? (
-                                      <img
-                                        src={getImage(item)}
-                                        alt={item.name}
-                                        loading="lazy"
-                                        decoding="async"
-                                        className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
-                                        onError={(e) => {
-                                          e.target.style.display = 'none';
-                                          e.target.nextSibling.style.display = 'flex';
-                                        }}
-                                      />
-                                    ) : null}
-                                    <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
-                                      <Package size={48} className="text-slate-200" />
-                                    </div>
+                                    {mode === 'order' ? (
+                                      <DraggableProductImage item={item}>
+                                        <>
+                                          {getImage(item) ? (
+                                            <img
+                                              src={getImage(item)}
+                                              alt={item.name}
+                                              loading="lazy"
+                                              decoding="async"
+                                              className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
+                                              onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                              }}
+                                            />
+                                          ) : null}
+                                          <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
+                                            <Package size={48} className="text-slate-200" />
+                                          </div>
+                                        </>
+                                      </DraggableProductImage>
+                                    ) : (
+                                      <>
+                                        {getImage(item) ? (
+                                          <img
+                                            src={getImage(item)}
+                                            alt={item.name}
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
+                                            onError={(e) => {
+                                              e.target.style.display = 'none';
+                                              e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                          />
+                                        ) : null}
+                                        <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
+                                          <Package size={48} className="text-slate-200" />
+                                        </div>
+                                      </>
+                                    )}
 
                                     {getStockStatus(item) === 'Out of Stock' ? (
                                       <div className="absolute top-2 right-2 z-10">
@@ -6310,12 +6459,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               {/* TAB: ITEMS */}
               {activeTab === 'items' && (
+                <CartDroppable>
                 <div className="p-4 space-y-3">
                   {orderLines.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 bg-white rounded-2xl border border-slate-100">
                       <ShoppingCart className="text-slate-400 mb-6" size={64} strokeWidth={1.5} />
                       <p className="text-lg font-bold text-slate-800 mb-2">No items in cart</p>
-                      <p className="text-sm text-slate-500">Click products to add</p>
+                      <p className="text-sm text-slate-500">Drag product image here or click to add</p>
                     </div>
                   ) : (
                     orderLinesByBox.map((o, idx) => {
@@ -6439,6 +6589,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     })
                   )}
                 </div>
+                </CartDroppable>
               )}
 
               {/* TAB: CUSTOMER */}
@@ -7625,6 +7776,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         );
       })}
       </div >
+    </DndContext>
     </>
   );
 }
