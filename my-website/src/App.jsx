@@ -1766,13 +1766,20 @@ function App() {
   }, [allGroups]);
   const kitchenwareIcons = [Home, Utensils, UtensilsCrossed, ChefHat, Wine, Flame, Cookie, Package];
 
-  /** In stock if qty > 0, else Out of Stock */
+  /** Stock: red = out, yellow = last 5, green = plenty */
   const getStockStatus = (item) => {
     const s = item?.stock ?? item?.stock_count;
     if (s == null || s === '') return 'Out of Stock';
     const n = Number(s);
     if (isNaN(n) || n <= 0) return 'Out of Stock';
-    return n <= 10 ? 'Low Stock' : 'In Stock';
+    if (n <= 5) return 'Low Stock'; // آخر 5 قطع
+    return 'In Stock'; // متوفر بكثرة
+  };
+  const getStockLabel = (item) => {
+    const status = getStockStatus(item);
+    if (status === 'Out of Stock') return 'Out of Stock';
+    if (status === 'Low Stock') return 'Last 5 units';
+    return 'Available';
   };
 
   /** Calculate Inventory Report Metrics */
@@ -4338,8 +4345,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                       let activeClass = 'bg-white/80 text-slate-600 hover:bg-white hover:shadow-md';
                       if (isSelected) {
-                        if (type === 'electrical') activeClass = 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30';
-                        else if (type === 'household') activeClass = 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/30';
+                        if (type === 'electrical') activeClass = 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30';
+                        else if (type === 'household') activeClass = 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30';
                         else activeClass = 'bg-slate-800 text-white shadow-lg';
                       }
 
@@ -4349,7 +4356,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           onClick={() => handleCategorySwitch(key)}
                           className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border border-transparent ${activeClass}`}
                         >
-                          {Icon && <Icon size={18} className={isSelected ? 'animate-pulse' : ''} />}
+                          {Icon && <Icon size={18} className={isSelected ? (type === 'electrical' ? 'text-blue-100' : type === 'household' ? 'text-amber-100' : '') : ''} />}
                           <span>{label}</span>
                           <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${isSelected ? 'bg-white/20' : 'bg-slate-200/50'}`}>{count}</span>
                         </button>
@@ -4360,12 +4367,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {/* Sub-categories — المجموعات الفرعية كما كانت سابقاً */}
                   {(selectedGroup === '__electrical__' || (selectedGroup && isElectricalGroup(selectedGroup))) && electricalGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => handleCategorySwitch('__electrical__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => handleCategorySwitch('__electrical__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__electrical__' ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {electricalGroupsSorted.map((g) => (
                         <button
                           key={g}
                           onClick={() => handleCategorySwitch(g)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-violet-600 text-white shadow-md shadow-violet-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-violet-600'}`}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-blue-600'}`}
                         >
                           {g}
                         </button>
@@ -4374,12 +4381,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   )}
                   {(selectedGroup === '__home__' || (selectedGroup && selectedGroup !== '__electrical__' && !isElectricalGroup(selectedGroup))) && kitchenwareGroupsSorted.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 mt-4 animate-fade-in">
-                      <button onClick={() => handleCategorySwitch('__home__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
+                      <button onClick={() => handleCategorySwitch('__home__')} className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup === '__home__' ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-200' : 'bg-white/60 text-slate-600 hover:bg-white'}`}>All</button>
                       {kitchenwareGroupsSorted.map((g) => (
                         <button
                           key={g}
                           onClick={() => handleCategorySwitch(g)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-purple-600'}`}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${selectedGroup && String(selectedGroup).trim().toLowerCase() === g.trim().toLowerCase() ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20' : 'bg-white/60 text-slate-600 hover:bg-white hover:text-orange-600'}`}
                         >
                           {g}
                         </button>
@@ -5593,8 +5600,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     filteredInventoryItems.map((item) => {
                                       const status = getStockStatus(item);
                                       const qty = Number(item.stock_count ?? item.stock ?? 0);
-                                      const qtyColor = qty === 0 ? 'text-rose-600' : qty <= 10 ? 'text-amber-600' : 'text-slate-700';
-                                      const qtyBg = qty === 0 ? 'bg-rose-100 text-rose-700' : qty <= 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
+                                      const qtyColor = qty === 0 ? 'text-rose-600' : qty <= 5 ? 'text-amber-600' : 'text-slate-700';
+                                      const qtyBg = qty === 0 ? 'bg-rose-100 text-rose-700' : qty <= 5 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700';
                                       const imgSrc = getImage(item) || getImageFallback(item);
                                       return (
                                         <tr key={item.id} className="border-b border-slate-50 hover:bg-amber-50/30 transition-colors">
@@ -6101,16 +6108,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           Out of Stock
                                         </div>
                                       </div>
-                                    ) : (
-                                      item.stock_count > 0 && item.stock_count <= 5 && (
-                                        <div className="absolute top-2 right-2 z-10 animate-pulse">
-                                          <div className="bg-gradient-to-r from-rose-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-rose-500/30 flex items-center gap-1 border border-white/20" dir="rtl">
-                                            <Flame size={12} className="text-yellow-200" fill="currentColor" />
-                                            <span>باقي {item.stock_count} فقط!</span>
-                                          </div>
+                                    ) : getStockStatus(item) === 'Low Stock' ? (
+                                      <div className="absolute top-2 right-2 z-10 animate-pulse">
+                                        <div className="bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-amber-500/30 flex items-center gap-1 border border-amber-400/50" dir="ltr">
+                                          <Flame size={12} className="text-amber-200" fill="currentColor" />
+                                          <span>Last {item.stock_count} units</span>
                                         </div>
-                                      )
-                                    )}
+                                      </div>
+                                    ) : null}
 
                                     {/* Offer Toggle (Admin Only in Offers Mode) */}
                                     {mode === 'offers' && userRole === 'admin' && (
@@ -6125,7 +6130,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                     {/* Offer Badge (Visible when not in Offers mode or for non-admins) */}
                                     {item.isOffer && (mode !== 'offers' || userRole !== 'admin') && (
-                                      <div className={`absolute right-2 z-10 ${getStockStatus(item) === 'Out of Stock' ? 'top-10' : 'top-2'}`}>
+                                      <div className={`absolute right-2 z-10 ${getStockStatus(item) === 'Out of Stock' ? 'top-10' : getStockStatus(item) === 'Low Stock' ? 'top-10' : 'top-2'}`}>
                                         <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
                                           <Star size={10} fill="currentColor" /> Offer
                                         </span>
@@ -6206,14 +6211,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       <div className="flex items-center justify-between pt-3 border-t border-slate-100 relative">
                                         <div className="flex flex-col">
                                           <span className="text-[10px] text-slate-400 font-bold uppercase">Stock</span>
-                                          {item.stock_count > 0 && item.stock_count <= 2 ? (
-                                            <span className="text-xs font-bold text-rose-500 animate-pulse flex items-center gap-1">
-                                              {item.stock_count} <span className="text-[10px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-md no-underline">قارب على الانتهاء!</span>
+                                          {getStockStatus(item) === 'Out of Stock' ? (
+                                            <span className="text-xs font-bold text-red-600">Out of Stock</span>
+                                          ) : getStockStatus(item) === 'Low Stock' ? (
+                                            <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
+                                              {item.stock_count} <span className="text-[10px]">Last 5 units</span>
                                             </span>
                                           ) : (
-                                            <span className={`text-xs font-bold ${getStockStatus(item) === 'In Stock' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                                              {getStockStatus(item)}
-                                            </span>
+                                            <span className="text-xs font-bold text-emerald-600">Available</span>
                                           )}
                                         </div>
                                         <div className="flex flex-col items-end">
@@ -7146,7 +7151,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <p><span className="font-semibold text-slate-700">السعر للمستهلك:</span> <span dir="ltr" className="font-bold text-slate-900">₪{selectedItem.price ?? 0}</span></p>
                     <p className="mt-1"><span className="font-semibold text-slate-700">بعد الخصم:</span> <span dir="ltr" className="font-bold text-emerald-600">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
                     <p className="mt-1"><span className="font-semibold text-slate-700">الصندوق:</span> {selectedItem.box || '—'}</p>
-                    <p className="mt-1"><span className="font-semibold text-slate-700">المخزون:</span> <span className={getStockStatus(selectedItem) === 'In Stock' ? 'text-emerald-600 font-bold' : 'text-slate-500'}>{getStockStatus(selectedItem)}</span></p>
+                    <p className="mt-1"><span className="font-semibold text-slate-700">المخزون:</span> <span className={getStockStatus(selectedItem) === 'Out of Stock' ? 'text-red-600 font-bold' : getStockStatus(selectedItem) === 'Low Stock' ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>{getStockLabel(selectedItem)}</span></p>
                     <p className="mt-1 font-mono text-xs"><span className="font-semibold text-slate-700">الباركود:</span> <span dir="ltr">{selectedItem.barcode || '—'}</span></p>
                   </div>
                 </div>
