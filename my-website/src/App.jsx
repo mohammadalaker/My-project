@@ -6089,22 +6089,31 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           )}
                                         </button>
                                       ) : (
-                                        <button
+                                        <motion.button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             setAddToCartPressedId(item.id);
                                             handleOpenQuantityModal(item, e);
                                           }}
-                                          className={`w-full py-3 rounded-xl text-sm font-bold shadow-lg transition-all duration-200 btn-modern flex items-center justify-center gap-2 ${
+                                          whileTap={{ scale: 0.95 }}
+                                          className={`w-full py-3 rounded-xl text-sm font-bold shadow-lg transition-colors duration-300 btn-modern flex items-center justify-center gap-2 ${
                                             addToCartPressedId === item.id
                                               ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-orange-500/30'
-                                              : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:bg-slate-800 active:shadow-inner'
+                                              : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:-translate-y-0.5 active:bg-slate-800 active:shadow-inner'
                                           }`}
                                         >
-                                          <ShoppingCart size={18} className="shrink-0" />
-                                          <span>Add to Cart</span>
-                                        </button>
+                                          <motion.span
+                                            key={addToCartPressedId === item.id ? 'added' : 'default'}
+                                            initial={addToCartPressedId === item.id ? { opacity: 0, scale: 0.85 } : false}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                            className="flex items-center justify-center gap-2"
+                                          >
+                                            <ShoppingCart size={18} className="shrink-0" />
+                                            <span>Add to Cart</span>
+                                          </motion.span>
+                                        </motion.button>
                                       )}
                                     </div>
                                   </div>
@@ -7468,7 +7477,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {/* Render Flying Items — أكبر عند الظهور */}
       {flyingItems.map(item => {
-        const size = 120; // أكبر — أحلى عند التفاعل
+        const size = 160; // أكبر شوي لظهور أوضح وأحلى
         const half = size / 2;
         return (
           <div
@@ -7488,7 +7497,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             {item.image ? (
               <img src={item.image} alt="" className="w-full h-full object-contain drop-shadow-2xl rounded-xl" />
             ) : (
-              <div className="w-full h-full bg-slate-200 rounded-xl flex items-center justify-center shadow-lg"><Package size={40} className="text-slate-400" /></div>
+              <div className="w-full h-full bg-slate-200 rounded-xl flex items-center justify-center shadow-lg"><Package size={56} className="text-slate-400" /></div>
             )}
           </div>
         );
