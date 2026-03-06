@@ -1290,6 +1290,17 @@ function App() {
       osc.stop(ctx.currentTime + 0.12);
     } catch (_) {}
   }, []);
+
+  /** تشغيل ملف error.mp3 (مع fallback للنغمة البرمجية) — عند محاولة إضافة منتج غير متوفر */
+  const playErrorFromFile = useCallback(() => {
+    try {
+      const audio = new Audio('/error.mp3');
+      audio.volume = 0.45;
+      audio.play().catch(() => playSoundError());
+    } catch (_) {
+      playSoundError();
+    }
+  }, [playSoundError]);
   const [quantityEventClick, setQuantityEventClick] = useState(null);
   const [quantityValue, setQuantityValue] = useState(1);
 
@@ -3506,15 +3517,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const handleConfirmQuantity = () => {
-    if (quantityItem && quantityValue > 0) {
-      addToOrder(quantityItem, quantityValue, quantityEventClick);
-      playBeep(); // UI Sound Palette: إضافة ناجحة — تأكيد دخول المنتج للسلة
-      setShowQuantityModal(false);
-      setQuantityItem(null);
-      setQuantityEventClick(null);
-      setQuantityValue(1);
-      // لا نفتح شاشة البيع تلقائياً بعد إضافة المنتج
+    if (!quantityItem || quantityValue <= 0) return;
+    const stock = quantityItem.stock_count ?? quantityItem.stock;
+    const stockNum = Number(stock);
+    const isOutOfStock = stock != null && stock !== '' ? (isNaN(stockNum) || stockNum <= 0) : true;
+    if (isOutOfStock) {
+      playErrorFromFile();
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([80, 40, 80]); // اهتزاز أقوى على التابلت
+      }
+      alert('المنتج غير متوفر في المخزون (Out of Stock).');
+      return;
     }
+    addToOrder(quantityItem, quantityValue, quantityEventClick);
+    playBeep();
+    setShowQuantityModal(false);
+    setQuantityItem(null);
+    setQuantityEventClick(null);
+    setQuantityValue(1);
   };
 
   const getCatalogHtml = useCallback((items) => {
