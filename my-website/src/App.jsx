@@ -323,15 +323,9 @@ function App() {
   }, []);
 
   /* Splash Screen State */
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !localStorage.getItem('hasSeenSplash_MS');
-    }
-    return false;
-  });
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleSplashComplete = useCallback(() => {
-    localStorage.setItem('hasSeenSplash_MS', 'true');
     setShowSplash(false);
   }, []);
 
@@ -3661,6 +3655,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
   if (!hasCheckedAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
@@ -3683,7 +3681,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <>
-      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
       <div
         className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
       >
