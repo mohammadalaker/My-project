@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, ArrowRight, Lock, Delete } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import supabase from '../lib/supabaseClient';
+
+// تحويل الرقم العربي إلى إنجليزي (٠١٢٣٤٥٦٧٨٩ → 0-9)
+const ARABIC_TO_ENGLISH_DIGIT = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
+const toEnglishDigit = (key) => ARABIC_TO_ENGLISH_DIGIT[key] ?? (/\d/.test(key) ? key : null);
 
 export default function Login({ onLogin }) {
   const [pin, setPin] = useState('');
@@ -17,26 +21,38 @@ export default function Login({ onLogin }) {
     }
   }, [error]);
 
+  // دعم اللمس (لوحة الأرقام) + كيبورد الكمبيوتر — أرقام إنجليزية أو عربية
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (isSubmitting) return; // Prevent input while submitting
-      
-      if (/^[0-9]$/.test(e.key)) {
-        handlePinInput(e.key);
-      } else if (e.key === 'Backspace') {
-        handleBackspace();
-      } else if (e.key === 'Enter') {
+      if (isSubmitting) return;
+      const digit = toEnglishDigit(e.key);
+      const isBackspace = e.key === 'Backspace';
+      const isEnter = e.key === 'Enter';
+      if (!digit && !isBackspace && !isEnter) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      if (digit) {
+        setPin((prev) => {
+          if (error) return prev;
+          return prev.length < 10 ? prev + digit : prev;
+        });
+        if (error) setError('');
+      } else if (isBackspace) {
+        setPin((prev) => prev.slice(0, -1));
+        if (error) setError('');
+      } else {
         handleSubmit();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pin, error, isSubmitting]); // Include dependencies used in handlers
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isSubmitting, error, pin]);
 
   const handlePinInput = (num) => {
     if (error) setError('');
-    if (pin.length < 10) { // Allowed longer pins just in case
+    if (pin.length < 10) {
       setPin(prev => prev + num);
     }
   };
@@ -49,7 +65,7 @@ export default function Login({ onLogin }) {
   const handleSubmit = async () => {
     if (!pin) return;
     setIsSubmitting(true);
-    
+
     let foundUsername = null;
     let _err = null;
     const localSetError = (msg) => {
@@ -60,32 +76,28 @@ export default function Login({ onLogin }) {
     };
 
     try {
-      // 1. Check Supabase explicitly for this PIN
-      // We assume users have unique PINs. If not, the first one returned is used.
       const { data, error: dbErr } = await supabase
         .from('sales_users')
         .select('username, password, role')
         .eq('password', pin)
         .limit(1)
         .maybeSingle();
-      
+
       if (data && !dbErr) {
         foundUsername = data.username;
       }
-    } catch(err) {
+    } catch (err) {
       console.warn('DB lookup failed, failing over to hardcoded users', err);
     }
 
-    // 2. Check hardcoded fallback users if no DB match
     if (!foundUsername) {
-      if (pin === '123456') foundUsername = 'mohammadalaker'; // Assuming admin or mohammadalaker.
-      else if (pin === '123') foundUsername = 'sale'; // the standard sale user
-      else if (pin === '999') foundUsername = 'supervisor'; // example alternative
+      if (pin === '123456') foundUsername = 'mohammadalaker';
+      else if (pin === '123') foundUsername = 'sale';
+      else if (pin === '999') foundUsername = 'supervisor';
     }
 
     if (foundUsername) {
       await onLogin(foundUsername, pin, localSetError, true);
-      // Wait for app state to update
       if (!_err) {
         setIsSubmitting(false);
       }
@@ -96,16 +108,12 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden select-none" dir="rtl">
-      {/* Background Ornaments (same as splash) */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/20 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-500/20 blur-[100px] rounded-full pointer-events-none" />
       <div className="absolute top-[20%] right-[20%] w-[30%] h-[30%] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
 
-      {/* Main Container */}
       <div className="w-full max-w-sm relative z-10 flex flex-col items-center">
-        
-        {/* Logo/Header */}
-        <motion.div 
+        <motion.div
           layoutId="logo-container"
           className="mb-10 flex flex-col items-center"
         >
@@ -115,18 +123,18 @@ export default function Login({ onLogin }) {
           <h1 className="text-3xl font-black text-white tracking-tight text-center">
             Maslamani Sales
           </h1>
-          <p className="text-white/50 font-medium mt-1">يرجى إدخال الرمز السري</p>
+          <p className="text-white/50 font-medium mt-1">
+            يرجى إدخال الرمز السري
+          </p>
         </motion.div>
 
-        {/* Dynamic Glass Panel */}
-        <motion.div 
+        <motion.div
           layout
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0, rotate: shake ? [-2, 2, -2, 2, 0] : 0 }}
           transition={{ duration: 0.4, rotate: { duration: 0.4 } }}
           className="w-full bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2rem] p-6 shadow-2xl relative overflow-hidden flex flex-col items-center"
         >
-          {/* PIN Display */}
           <div className="flex flex-col items-center mb-8 w-full">
             <div className="flex items-center justify-center gap-3 h-14 w-full bg-white/5 rounded-2xl border border-white/10 relative overflow-hidden">
               {pin.length === 0 && !error && (
@@ -140,7 +148,7 @@ export default function Login({ onLogin }) {
                   {error}
                 </div>
               )}
-              
+
               {!error && pin.length > 0 && (
                 <div className="flex gap-3">
                   {pin.split('').map((_, i) => (
@@ -156,7 +164,6 @@ export default function Login({ onLogin }) {
             </div>
           </div>
 
-          {/* Numpad */}
           <div className="grid grid-cols-3 gap-3 w-full">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
               <button
@@ -167,23 +174,21 @@ export default function Login({ onLogin }) {
                 {num}
               </button>
             ))}
-            
-            {/* Clear/Backspace */}
+
             <button
               onClick={handleBackspace}
               className="h-16 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/70 hover:text-white transition-all active:scale-90 flex items-center justify-center"
             >
               <Delete size={24} />
             </button>
-            
+
             <button
               onClick={() => handlePinInput('0')}
               className="h-16 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-3xl font-light text-white transition-all active:scale-90 active:bg-white/20"
             >
               0
             </button>
-            
-            {/* Enter/Submit */}
+
             <button
               onClick={handleSubmit}
               disabled={pin.length === 0 || isSubmitting}
@@ -193,7 +198,7 @@ export default function Login({ onLogin }) {
               {isSubmitting ? (
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
                   className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full"
                 />
               ) : (
