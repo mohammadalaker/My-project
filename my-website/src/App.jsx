@@ -1226,6 +1226,11 @@ function App() {
   // Quantity Modal State
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityItem, setQuantityItem] = useState(null);
+  const [addToCartPressedId, setAddToCartPressedId] = useState(null); // حالة محلية لزر Add to Cart (برتقالي + أيقونة سلة)
+
+  useEffect(() => {
+    if (!quantityItem) setAddToCartPressedId(null);
+  }, [quantityItem]);
   const [quantityEventClick, setQuantityEventClick] = useState(null);
   const [quantityValue, setQuantityValue] = useState(1);
 
@@ -6088,11 +6093,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
+                                            setAddToCartPressedId(item.id);
                                             handleOpenQuantityModal(item, e);
                                           }}
-                                          className="w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:bg-slate-800 active:shadow-inner transition-all duration-200 btn-modern"
+                                          className={`w-full py-3 rounded-xl text-sm font-bold shadow-lg transition-all duration-200 btn-modern flex items-center justify-center gap-2 ${
+                                            addToCartPressedId === item.id
+                                              ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-orange-500/30'
+                                              : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-slate-800 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 active:bg-slate-800 active:shadow-inner'
+                                          }`}
                                         >
-                                          Add to Cart
+                                          <ShoppingCart size={18} className="shrink-0" />
+                                          <span>Add to Cart</span>
                                         </button>
                                       )}
                                     </div>
