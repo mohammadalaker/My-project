@@ -68,6 +68,7 @@ import { useDrag } from '@use-gesture/react';
 import supabase from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 import AdminSortProducts from './components/AdminSortProducts';
+import SplashScreen from './components/SplashScreen';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
 
 const BUCKET = 'Pic_of_items';
@@ -319,6 +320,19 @@ function App() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  /* Splash Screen State */
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('hasSeenSplash_MS');
+    }
+    return false;
+  });
+
+  const handleSplashComplete = useCallback(() => {
+    localStorage.setItem('hasSeenSplash_MS', 'true');
+    setShowSplash(false);
   }, []);
 
   /* Login State */
@@ -3668,9 +3682,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   }
 
   return (
-    <div
-      className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
-    >
+    <>
+      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+      <div
+        className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
+      >
       <div
         className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
       >
@@ -7535,7 +7551,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         );
       })}
-    </div >
+      </div >
+    </>
   );
 }
 
