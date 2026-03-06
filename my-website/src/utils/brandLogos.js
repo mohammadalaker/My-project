@@ -1,0 +1,31 @@
+export function getGroupLogo(groupName) {
+  if (!groupName) return null;
+  const n = String(groupName).toLowerCase().trim();
+  if (n.includes('arçelik') || n.includes('arcelik')) return '/Logo/arçelik Logo.png';
+  if (n.includes('babyliss')) return '/Logo/Babyliss logo.png';
+  if (n.includes('beko')) return '/Logo/Beko Logo.png';
+  if (n.includes('black') && n.includes('decker')) return '/Logo/Black and decker Logo.png';
+  if (n.includes('braun')) return '/Logo/Braun Logo.png';
+  if (n.includes('campomatic')) return '/Logo/Campomatic Logo.png';
+  if (n.includes('conti')) return '/Logo/Conti logo.png';
+  if (n.includes('delonghi')) return '/Logo/DeLonghi Logo.png';
+  if (n.includes('dyson')) return '/Logo/Dyson Logo.png';
+  if (n.includes('fakir')) return '/Logo/Fakir Logo.png';
+  if (n.includes('fresh')) return '/Logo/Fresh logo.png';
+  if (n.includes('glemgas') || n.includes('glem gas')) return '/Logo/Glemgas logo.png';
+  if (n.includes('grundig')) return '/Logo/Grundig Logo.png';
+  if (n.includes('kenwood')) return '/Logo/Kenwood Logo.png';
+  if (n.includes('korkmaz')) return '/Logo/Korkmaz logo.png';
+  if (n.includes('lg')) return '/Logo/LG Logo.jpg';
+  if (n.includes('luminarc')) return '/Logo/Luminarc Logo.png';
+  if (n.includes('moulinex')) return '/Logo/Moulinex Logo.png';
+  if (n.includes('ocean')) return '/Logo/Ocean Logo.png';
+  if (n.includes('panasonic')) return '/Logo/Panasonic Logo.png';
+  if (n.includes('philips')) return '/Logo/Philips Logo.png';
+  if (n.includes('russell') || n.includes('hobbs')) return '/Logo/Russell hobbs Logo.png';
+  if (n.includes('samsung')) return '/Logo/Samsung Logo.png';
+  if (n.includes('tefal')) return '/Logo/Tefal Logo.png';
+  if (n.includes('toshiba')) return '/Logo/Toshiba Logo.png';
+  if (n.includes('viper')) return '/Logo/Viper Logo.png';
+  return null;
+}

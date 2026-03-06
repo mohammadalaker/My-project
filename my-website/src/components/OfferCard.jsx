@@ -1,4 +1,5 @@
 import { ShoppingCart, Gift, Sparkles, Trash2, FileText, Zap, Star, Flame } from 'lucide-react';
+import { getGroupLogo } from '../utils/brandLogos';
 
 export default function OfferCard({
     offer,
@@ -146,7 +147,15 @@ export default function OfferCard({
                                                 <span className={`text-[10px] font-bold px-2 py-1 rounded shadow-lg ${it ? 'bg-slate-900 text-white' : 'bg-red-100 text-red-600'}`}>
                                                     x{effectiveQty} {it ? '' : '(Deleted)'}
                                                 </span>
-                                                {it?.group && <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{it.group}</span>}
+                                                {it?.group && (
+                                                    getGroupLogo(it.group) ? (
+                                                        <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
+                                                            <img src={getGroupLogo(it.group)} alt={it.group} className="h-5 object-contain" />
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{it.group}</span>
+                                                    )
+                                                )}
                                             </div>
 
                                             <div className="mb-2 w-full text-right" dir="rtl">

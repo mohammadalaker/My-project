@@ -73,6 +73,7 @@ import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 import AdminSortProducts from './components/AdminSortProducts';
 import SplashScreen from './components/SplashScreen';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
+import { getGroupLogo } from './utils/brandLogos';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
@@ -6055,9 +6056,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 >
                                   {item.group && (
                                     <div className="absolute top-0 left-3 z-10 -mt-1">
-                                      <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
-                                        {item.group}
-                                      </span>
+                                      {getGroupLogo(item.group) ? (
+                                        <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
+                                          <img src={getGroupLogo(item.group)} alt={item.group} className="h-6 object-contain" />
+                                        </div>
+                                      ) : (
+                                        <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
+                                          {item.group}
+                                        </span>
+                                      )}
                                     </div>
                                   )}
 
