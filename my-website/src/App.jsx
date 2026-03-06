@@ -3753,7 +3753,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">Maslamani<span className="font-light">Sales</span></h1>
+                    <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">Maslamani<span className="font-light">{userRole === 'customer' ? 'POS' : 'Sales'}</span></h1>
                     {isOnline ? (
                       <div className="flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full" title="متصل بالإنترنت">
                         <Cloud size={12} className="fill-emerald-200" />
