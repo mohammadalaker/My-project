@@ -3967,17 +3967,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
           )}
 
-          {/* BRANDS GRID - Static Logo Images Section */}
-          <section className="w-full bg-white/50 backdrop-blur-md border-b border-slate-200/50 py-3 sm:py-4 px-4 hidden sm:block z-10">
-            <div className="max-w-7xl mx-auto flex flex-col items-center">
-              <h2 className="text-xl font-bold text-slate-800 mb-6">Premium Brands</h2>
-              <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-10 md:gap-14 opacity-90 w-full px-6">
+          {/* BRANDS GRID - Modern Seamless Logo Images Section */}
+          <section className="w-full bg-white/30 backdrop-blur-xl border-b border-white/40 py-6 px-4 hidden sm:block z-10 relative overflow-hidden shadow-sm">
+            {/* Subtle light accents */}
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-200/20 rounded-full blur-3xl -z-10 mix-blend-multiply"></div>
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-rose-200/20 rounded-full blur-3xl -z-10 mix-blend-multiply"></div>
+
+            <div className="max-w-7xl mx-auto flex flex-col items-center relative z-10">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="h-px w-12 bg-gradient-to-r from-transparent to-slate-300"></div>
+                <h2 className="text-[13px] font-black tracking-[0.2em] text-slate-500 uppercase">Premium Brands</h2>
+                <div className="h-px w-12 bg-gradient-to-l from-transparent to-slate-300"></div>
+              </div>
+              
+              <div className="flex flex-wrap justify-center items-center gap-x-12 sm:gap-x-16 md:gap-x-20 gap-y-10 opacity-[0.85] w-full px-8">
                 {Array.from({ length: 14 }).map((_, i) => (
-                  <div key={i} className="h-10 sm:h-12 md:h-14 flex items-center justify-center transition-all duration-300 transform hover:scale-105">
+                  <div key={i} className="group relative h-10 sm:h-12 md:h-14 flex items-center justify-center transition-all duration-500 transform hover:scale-110 hover:opacity-100">
+                    {/* Subtle hover glow effect */}
+                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 rounded-xl blur-xl transition-all duration-500 -z-10"></div>
                     <img 
                       src={`/logos/Logo${i + 1}.jpg`} 
                       alt={`Brand Logo ${i + 1}`} 
-                      className="max-h-full max-w-[100px] sm:max-w-[130px] object-contain rounded-lg"
+                      className="max-h-full max-w-[100px] sm:max-w-[130px] object-contain drop-shadow-sm transition-all duration-500 group-hover:drop-shadow-md"
                     />
                   </div>
                 ))}
