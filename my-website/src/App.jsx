@@ -3967,6 +3967,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
           )}
 
+          {/* BRANDS GRID - Static Logo Images Section */}
+          <section className="w-full bg-white/50 backdrop-blur-md border-b border-slate-200/50 py-3 sm:py-4 px-4 hidden sm:block z-10">
+            <div className="max-w-7xl mx-auto flex flex-col items-center">
+              <h2 className="text-xl font-bold text-slate-800 mb-6">العلامات التجارية</h2>
+              <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-10 md:gap-14 opacity-90 w-full px-6">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <div key={i} className="h-10 sm:h-12 md:h-14 flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-300 transform hover:scale-105">
+                    <img 
+                      src={`/logos/Logo${i + 1}.jpg`} 
+                      alt={`Brand Logo ${i + 1}`} 
+                      className="max-h-full max-w-[100px] sm:max-w-[130px] object-contain mix-blend-multiply"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
           <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative">
             {isSortingMode && (
               <AdminSortProducts
