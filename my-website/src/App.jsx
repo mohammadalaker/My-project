@@ -5042,16 +5042,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-6 shadow-inner">
                               <Grid size={32} />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-800 mb-3">كتالوج المنتجات</h3>
+                            <h3 className="text-2xl font-black text-slate-800 mb-3">Product Catalog</h3>
                             <p className="text-slate-500 mb-8 leading-relaxed">
-                              تصفح المعرض الكامل، استعرض الأسعار والمواصفات للعملاء دون الدخول في تفاصيل الفاتورة.
+                              Browse the full catalog, view prices and details for customers without entering order details.
                             </p>
                             <div className="mt-auto">
                               <button
                                 onClick={() => { setMode('catalog'); setShowOrderPanel(false); }}
                                 className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-lg shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2"
                               >
-                                <span>فتح الكتالوج</span>
+                                <span>Open Catalog</span>
                                 <ChevronRight size={20} />
                               </button>
                             </div>
@@ -6304,17 +6304,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {activeTab === 'items' && (
                 <div className="p-4 space-y-3">
                   {orderLines.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 opacity-60">
-                      <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-dashed border-slate-200">
-                        <Package className="text-slate-400" size={40} strokeWidth={1.5} />
-                      </div>
-                      <span className="text-lg font-bold text-slate-400 mb-2">Cart is Empty</span>
-                      <span className="text-sm text-slate-500 max-w-[200px] leading-relaxed block">Start scanning or select items from the catalog.</span>
-                      {userRole !== 'customer' && (
-                        <button onClick={() => setMode('catalog')} className="mt-8 px-8 py-3 rounded-xl bg-orange-500 text-white text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20">
-                          Open Catalog
-                        </button>
-                      )}
+                    <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 bg-white rounded-2xl border border-slate-100">
+                      <ShoppingCart className="text-slate-400 mb-6" size={64} strokeWidth={1.5} />
+                      <p className="text-lg font-bold text-slate-800 mb-2">No items in cart</p>
+                      <p className="text-sm text-slate-500">Click products to add</p>
                     </div>
                   ) : (
                     orderLinesByBox.map((o, idx) => {
