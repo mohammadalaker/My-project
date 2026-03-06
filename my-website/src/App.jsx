@@ -6271,10 +6271,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     )}
                   </h2>
-                  <div className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1 opacity-60">
-                    Maslamani System
-                    <span>Order #</span><span>NEW-001</span>
-                  </div>
                 </div>
                 <button onClick={() => setShowOrderPanel(false)} className="w-12 h-12 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all hover:rotate-90">
                   <X size={24} />
