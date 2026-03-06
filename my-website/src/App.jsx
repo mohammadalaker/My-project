@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { useSystemSounds } from './hooks/useSystemSounds';
 import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import {
   Search,
@@ -1233,74 +1234,7 @@ function App() {
     if (!quantityItem) setAddToCartPressedId(null);
   }, [quantityItem]);
 
-  const playBeep = useCallback(() => {
-    try {
-      const audio = new Audio('/beep.mp3');
-      audio.volume = 0.4;
-      audio.play().catch(() => {
-        try {
-          const ctx = new (window.AudioContext || window.webkitAudioContext)();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.frequency.value = 800;
-          osc.type = 'sine';
-          gain.gain.setValueAtTime(0.08, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
-          osc.start(ctx.currentTime);
-          osc.stop(ctx.currentTime + 0.06);
-        } catch (_) {}
-      });
-    } catch (_) {}
-  }, []);
-
-  /** UI Sound Palette: إتمام البيع — نغمة تصاعدية خفيفة (شعور إنجاز) */
-  const playSoundCheckout = useCallback(() => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(400, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.2);
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.25);
-    } catch (_) {}
-  }, []);
-
-  /** UI Sound Palette: خطأ/تحذير — نغمة منخفضة (طنين خفيف، دون إزعاج الزبون) */
-  const playSoundError = useCallback(() => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = 180;
-      gain.gain.setValueAtTime(0.06, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.12);
-    } catch (_) {}
-  }, []);
-
-  /** تشغيل ملف error.mp3 (مع fallback للنغمة البرمجية) — عند محاولة إضافة منتج غير متوفر */
-  const playErrorFromFile = useCallback(() => {
-    try {
-      const audio = new Audio('/error.mp3');
-      audio.volume = 0.45;
-      audio.play().catch(() => playSoundError());
-    } catch (_) {
-      playSoundError();
-    }
-  }, [playSoundError]);
+  const { playSuccess, playError, playCheckout } = useSystemSounds();
   const [quantityEventClick, setQuantityEventClick] = useState(null);
   const [quantityValue, setQuantityValue] = useState(1);
 
@@ -2044,7 +1978,7 @@ function App() {
 
         // Low Stock Enforcement
         if (item.stock_count != null && item.stock_count > 0 && newQty > item.stock_count) {
-          playSoundError(); // UI Sound Palette: الكمية غير متوفرة
+          playError(); // UI Sound Palette: الكمية غير متوفرة
           alert(`عذراً، الكمية المتوفرة في المخزون هي ${item.stock_count} فقط لهذا الصنف.`);
           newQty = item.stock_count; // Cap at max stock
         }
@@ -2095,7 +2029,7 @@ function App() {
         setFlyingItems(prev => prev.filter(f => f.id !== id));
       }, 700); // match transition duration
     }
-  }, [startTransition, playSoundError]);
+  }, [startTransition, playError]);
 
   const removeFromOrder = useCallback((itemId) => {
     startTransition(() => setOrderItems((prev) => prev.filter((x) => x.id !== itemId)));
@@ -2109,7 +2043,7 @@ function App() {
         if (itemLine && itemLine.item) {
           const stock = itemLine.item.stock_count;
           if (stock != null && stock > 0 && n > stock) {
-            playSoundError(); // UI Sound Palette: الكمية غير متوفرة
+            playError(); // UI Sound Palette: الكمية غير متوفرة
             alert(`عذراً، الكمية المتوفرة في المخزون هي ${stock} فقط لهذا الصنف.`);
             n = stock;
           }
@@ -2119,7 +2053,7 @@ function App() {
         return prev.map((x) => (x.id === itemId ? { ...x, qty: n } : x));
       });
     });
-  }, [startTransition, playSoundError]);
+  }, [startTransition, playError]);
 
   const setOrderLinePrice = (itemId, value) => {
     const n = parseFloat(String(value).replace(',', '.')) || 0;
@@ -2759,7 +2693,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const saved = await saveOrderToSupabase();
     if (!saved) return;
 
-    playSoundCheckout(); // UI Sound Palette: إتمام البيع — شعور إنجاز للموظف
+    playCheckout(); // UI Sound Palette: إتمام البيع — شعور إنجاز للموظف
 
     // Trigger PDF Export download
     const html = getPrintHtml();
@@ -3144,10 +3078,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       setShowCatalogPanel(true);
       if (inventoryBarcodeScanRef.current) inventoryBarcodeScanRef.current.value = '';
     } else {
-      playSoundError(); // UI Sound Palette: باركود غير صحيح
+      playError(); // UI Sound Palette: باركود غير صحيح
       alert('لم يُعثر على صنف بالباركود: ' + code);
     }
-  }, [items, playSoundError]);
+  }, [items, playError]);
 
   const handleExportInventory = useCallback(async () => {
     try {
@@ -3522,7 +3456,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const stockNum = Number(stock);
     const isOutOfStock = stock != null && stock !== '' ? (isNaN(stockNum) || stockNum <= 0) : true;
     if (isOutOfStock) {
-      playErrorFromFile();
+      playError();
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate([80, 40, 80]); // اهتزاز أقوى على التابلت
       }
@@ -3530,7 +3464,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       return;
     }
     addToOrder(quantityItem, quantityValue, quantityEventClick);
-    playBeep();
+    playSuccess();
     setShowQuantityModal(false);
     setQuantityItem(null);
     setQuantityEventClick(null);
@@ -6185,7 +6119,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                             setTimeout(() => {
                                               setAddToCartLoadingId(null);
                                               setAddToCartPressedId(item.id);
-                                              playBeep();
+                                              playSuccess();
                                               handleOpenQuantityModal(item, { clientX, clientY });
                                             }, 800);
                                           }}
