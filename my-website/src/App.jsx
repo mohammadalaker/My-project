@@ -311,8 +311,6 @@ function App() {
   /* Dropdown Menu State */
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
-  const [showQuickSettings, setShowQuickSettings] = useState(false);
-  const quickSettingsRef = useRef(null);
   const [uiLang, setUiLang] = useState(() => {
     try { return localStorage.getItem('sales_ui_lang') || 'ar'; } catch { return 'ar'; }
   });
@@ -328,17 +326,6 @@ function App() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
-
-  // Close quick settings if clicked outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (quickSettingsRef.current && !quickSettingsRef.current.contains(event.target)) {
-        setShowQuickSettings(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   /* Splash Screen State */
@@ -3835,71 +3822,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 ml-auto shrink-0 relative">
-                {/* Quick Settings — ترس بجوار الاسم */}
-                <div ref={quickSettingsRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setShowQuickSettings(!showQuickSettings); setShowProfileMenu(false); }}
-                    className="p-2.5 rounded-xl bg-white/60 border border-slate-200/70 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/80 transition-all shadow-sm"
-                    title="إعدادات سريعة"
-                  >
-                    <Settings size={20} />
-                  </button>
-                  <AnimatePresence>
-                    {showQuickSettings && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute top-full left-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 text-right"
-                        dir="rtl"
-                      >
-                        <div className="p-2.5 border-b border-slate-100 bg-slate-50/50">
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">إعدادات سريعة</p>
-                        </div>
-                        <div className="p-2 space-y-0.5">
-                          <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase">اللغة</div>
-                          <div className="flex gap-1 p-1">
-                            <button
-                              onClick={() => { setUiLang('ar'); try { localStorage.setItem('sales_ui_lang', 'ar'); } catch (_) {} setShowQuickSettings(false); }}
-                              className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'ar' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                            >
-                              عربي
-                            </button>
-                            <button
-                              onClick={() => { setUiLang('en'); try { localStorage.setItem('sales_ui_lang', 'en'); } catch (_) {} setShowQuickSettings(false); }}
-                              className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'en' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                            >
-                              English
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => { setShowQuickSettings(false); window.print(); }}
-                            className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
-                          >
-                            <Printer size={18} />
-                            طابعة الفواتير — طباعة الآن
-                          </button>
-                          <button
-                            onClick={() => { setShowQuickSettings(false); fetchItems(); }}
-                            className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
-                          >
-                            <RefreshCw size={18} />
-                            تحديث المخزون
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <div className="relative" ref={profileMenuRef}>
+              <div className="flex items-center gap-3 ml-auto shrink-0 relative" ref={profileMenuRef}>
                 {username === 'mohammadalaker' || username === 'admin' || username === 'supervisor' ? (
                   <div
                     className="flex items-center gap-3 bg-white/60 border border-slate-200/70 p-1.5 pr-5 rounded-full shadow-sm backdrop-blur-md transition-all hover:shadow-md cursor-pointer hover:bg-white/90"
-                    onClick={() => { setShowProfileMenu(!showProfileMenu); setShowQuickSettings(false); }}
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
                   >
                     <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
                       <User className="w-6 h-6 text-slate-400 mt-2" />
@@ -3917,7 +3844,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 ) : (
                   <div
                     className="flex items-center justify-center p-2 bg-white/60 border border-slate-200/70 rounded-xl shadow-sm cursor-pointer hover:bg-white/90 transition-all"
-                    onClick={() => { setShowProfileMenu(!showProfileMenu); setShowQuickSettings(false); }}
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
                   >
                     <User className="w-6 h-6 text-slate-500" />
                   </div>
@@ -3948,6 +3875,37 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           إعدادات الحساب
                         </button>
 
+                        <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                        <div className="px-3 py-1 text-xs font-bold text-slate-400 mb-1">إعدادات سريعة</div>
+                        <div className="flex gap-1 p-1">
+                          <button
+                            onClick={() => { setUiLang('ar'); try { localStorage.setItem('sales_ui_lang', 'ar'); } catch (_) {} setShowProfileMenu(false); }}
+                            className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'ar' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                          >
+                            عربي
+                          </button>
+                          <button
+                            onClick={() => { setUiLang('en'); try { localStorage.setItem('sales_ui_lang', 'en'); } catch (_) {} setShowProfileMenu(false); }}
+                            className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'en' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                          >
+                            English
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => { setShowProfileMenu(false); window.print(); }}
+                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
+                        >
+                          <Printer size={18} />
+                          طابعة الفواتير — طباعة الآن
+                        </button>
+                        <button
+                          onClick={() => { setShowProfileMenu(false); fetchItems(); }}
+                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
+                        >
+                          <RefreshCw size={18} />
+                          تحديث المخزون
+                        </button>
+
                         {(userRole === 'admin' || userRole === 'supervisor') && (
                           <>
                             <div className="h-px bg-slate-100 my-1 mx-2"></div>
@@ -3972,9 +3930,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <div className="h-px bg-slate-100 my-1 mx-2"></div>
                         <button
                           onClick={() => { setShowProfileMenu(false); handleLogout(); }}
-                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-rose-500 hover:bg-rose-50 transition-colors flex items-center justify-end gap-3"
+                          className="w-full text-right px-4 py-3 rounded-2xl text-sm font-semibold bg-slate-50/80 text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-100 hover:border-rose-100 transition-all duration-200 flex items-center justify-end gap-3 group"
                         >
-                          <LogOut size={18} className="text-rose-500" />
+                          <LogOut size={18} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
                           <span>تسجيل الخروج</span>
                         </button>
                       </div>
@@ -3982,7 +3940,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   )}
                 </AnimatePresence>
               </div>
-            </div>
             </div>
           </header>
 
