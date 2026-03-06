@@ -21,6 +21,7 @@ import {
   PlugZap,
   Cpu,
   Lock,
+  ShieldCheck,
   Utensils,
   UtensilsCrossed,
   ChefHat,
@@ -653,6 +654,8 @@ function App() {
 
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showCatalogPanel, setShowCatalogPanel] = useState(false);
+  const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
+  const [pdfPreviewBlobUrl, setPdfPreviewBlobUrl] = useState(null);
   const [flyingItems, setFlyingItems] = useState([]);
   const [catalogItems, setCatalogItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -2529,22 +2532,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
       const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      const w = window.open(url, '_blank', 'noopener,noreferrer');
-      if (!w || w.closed) {
-        const a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 15000);
+      setPdfPreviewBlobUrl(url);
+      setShowPdfPreviewModal(true);
     } catch (e) {
       console.error(e);
-      alert('حدث خطأ عند فتح الفاتورة: ' + (e.message || e));
+      alert('حدث خطأ عند إنشاء المعاينة: ' + (e.message || e));
     }
+  };
+
+  const closePdfPreviewModal = () => {
+    if (pdfPreviewBlobUrl) {
+      URL.revokeObjectURL(pdfPreviewBlobUrl);
+      setPdfPreviewBlobUrl(null);
+    }
+    setShowPdfPreviewModal(false);
   };
 
   const handlePrintOrder = openOrderPdfInNewTab;
@@ -5955,7 +5956,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   }}
                                   whileHover={{
                                     y: -6,
-                                    boxShadow: "0 20px 40px -8px rgba(0,0,0,0.12), 0 10px 20px -5px rgba(0,0,0,0.08)",
+                                    boxShadow: "0 8px 16px rgba(0,0,0,0.04), 0 24px 48px -12px rgba(0,0,0,0.08)",
                                     transition: { duration: 0.2, ease: "easeOut" }
                                   }}
                                   key={item.id}
@@ -6072,7 +6073,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         </div>
                                       )}
                                     </div>
-                                    <p className="text-sm font-mono text-slate-500 mb-4">{item.barcode}</p>
+                                    <p className="text-sm font-mono text-slate-500 mb-1.5">{item.barcode}</p>
+                                    <div className="flex items-center gap-1 mb-4">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-sm shadow-emerald-500/20 border border-white/20">
+                                        <ShieldCheck size={10} className="opacity-90" />
+                                        {item.warranty || '1 Year Warranty'}
+                                      </span>
+                                    </div>
 
                                     <div className="mt-auto space-y-3">
                                       <div className="flex items-end justify-between">
@@ -6832,6 +6839,53 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </aside>
         )
       }
+
+      {/* PDF Preview — نافذة منبثقة زجاجية (Light Glassmorphism Modal) */}
+      <AnimatePresence>
+        {showPdfPreviewModal && pdfPreviewBlobUrl && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closePdfPreviewModal}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200]"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed inset-4 sm:inset-8 z-[201] flex flex-col rounded-3xl overflow-hidden bg-white/70 backdrop-blur-2xl border border-white/50 shadow-[0_25px_80px_-12px_rgba(0,0,0,0.15),0_0_0_1px_rgba(255,255,255,0.5)_inset]"
+            >
+              <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/40 bg-white/40 backdrop-blur-md">
+                <h3 className="text-lg font-bold text-slate-800">PDF Preview — معاينة الفاتورة</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { window.open(pdfPreviewBlobUrl, '_blank'); closePdfPreviewModal(); }}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors"
+                  >
+                    Open in New Tab
+                  </button>
+                  <button
+                    onClick={closePdfPreviewModal}
+                    className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 bg-slate-100/50 rounded-b-3xl">
+                <iframe
+                  title="PDF Preview"
+                  src={pdfPreviewBlobUrl}
+                  className="w-full h-full border-0 rounded-b-3xl bg-white"
+                />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {
         showCatalogPanel && (
