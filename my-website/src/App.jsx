@@ -3970,7 +3970,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           {/* BRANDS GRID - Static Logo Images Section */}
           <section className="w-full bg-white/50 backdrop-blur-md border-b border-slate-200/50 py-3 sm:py-4 px-4 hidden sm:block z-10">
             <div className="max-w-7xl mx-auto flex flex-col items-center">
-              <h2 className="text-xl font-bold text-slate-800 mb-6">العلامات التجارية</h2>
+              <h2 className="text-xl font-bold text-slate-800 mb-6">Premium Brands</h2>
               <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-10 md:gap-14 opacity-90 w-full px-6">
                 {Array.from({ length: 14 }).map((_, i) => (
                   <div key={i} className="h-10 sm:h-12 md:h-14 flex items-center justify-center transition-all duration-300 transform hover:scale-105">
@@ -4001,13 +4001,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
               {mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && mode !== 'inventory' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
-                  <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
-                    Explore our premium collection of electrical appliances and kitchenware.
-                    Select items to create a new order or manage your catalog.
-                  </p>
-
                   {/* Search Bar & Sort */}
-                  <div className="w-full max-w-2xl mt-8 flex flex-col sm:flex-row items-center gap-4 z-20">
+                  <div className="w-full max-w-2xl flex flex-col sm:flex-row items-center gap-4 z-20">
                     <div className="relative group w-full flex-1">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <Search className="h-5 w-5 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
