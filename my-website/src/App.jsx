@@ -3991,15 +3991,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {/* New Premium Header Design */}
                   <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full max-w-4xl mx-auto space-y-4 mb-8" dir="ltr">
                     <span className="bg-indigo-600 text-white text-xs sm:text-sm font-bold px-4 py-1.5 rounded-full inline-block shadow-sm">
-                      Explore our premium collection
+                      Free Delivery in Ramallah
                     </span>
                     <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                      Of electrical appliances
+                      Premium Electrical Appliances
                       <br className="hidden sm:block" />
-                      <span className="text-blue-600"> and kitchenware</span>
+                      <span className="text-blue-600"> Delivered to Your Door</span>
                     </h1>
                     <p className="text-lg sm:text-xl text-slate-600 font-medium">
-                      Select items to create a new order or manage your catalog.
+                      Shop the latest refrigerators, washing machines, TVs, and more.
                     </p>
                   </div>
 
