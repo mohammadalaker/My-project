@@ -3968,7 +3968,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           )}
 
           {/* BRANDS GRID - Modern Circular Logo Images Section */}
-          <section className="w-full bg-slate-50 border-b border-slate-200/50 py-10 px-4 hidden sm:block z-10 relative overflow-hidden">
+          <section className="w-full bg-slate-50 border-b border-slate-200/50 py-4 sm:py-6 px-4 hidden sm:block z-10 relative overflow-hidden">
             {/* Background Gradients to match the image */}
             <div className="absolute top-0 left-0 w-1/3 h-full bg-gradient-to-r from-indigo-100/80 to-transparent blur-3xl -z-10"></div>
             <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-orange-100/80 to-transparent blur-3xl -z-10"></div>
@@ -3976,8 +3976,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
             <div className="max-w-6xl mx-auto flex flex-col items-center relative z-10">
               {/* Title */}
-              <div className="flex items-center gap-2 mb-10">
-                <h2 className="text-[14px] font-bold text-slate-800 tracking-widest uppercase flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-[11px] font-bold text-slate-800 tracking-widest uppercase flex items-center gap-2">
                   <span>PREMIUM BRANDS</span>
                   <span className="text-slate-300">/</span>
                   <span className="font-arabic font-semibold">العلامات التجارية المميزة</span>
@@ -3985,11 +3985,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
               
               {/* Logos Grid */}
-              <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 w-full px-4">
+              <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6 w-full px-2">
                 {Array.from({ length: 14 }).map((_, i) => (
                   <div 
                     key={i} 
-                    className="group relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-white rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 transform hover:-translate-y-1"
+                    className="group relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white rounded-full flex items-center justify-center shadow-[0_4px_15px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_25px_rgb(0,0,0,0.06)] transition-all duration-300 transform hover:-translate-y-1"
                   >
                     <img 
                       src={`/logos/Logo${i + 1}.jpg`} 
