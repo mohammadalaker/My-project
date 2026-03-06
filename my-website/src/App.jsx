@@ -73,7 +73,7 @@ import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 import AdminSortProducts from './components/AdminSortProducts';
 import SplashScreen from './components/SplashScreen';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
-import { getGroupLogo } from './utils/brandLogos';
+import { useBrandLogos } from './hooks/useBrandLogos';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
@@ -305,6 +305,8 @@ function SwipeToDeleteItem({ children, onDelete }) {
 
 
 function App() {
+  const { getLogoUrl, uploadLogo, removeLogo, logos, loading: logosLoading, fetchLogos } = useBrandLogos();
+
 
   const isCustomerDisplayMode = typeof window !== 'undefined' && window.location.search.includes('mode=display');
   const isCustomerProductMode = typeof window !== 'undefined' && window.location.search.includes('barcode=');
@@ -5386,6 +5388,67 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     </div>
 
+                    {/* Brand Logos Management */}
+                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-6">
+                      <div className="flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 mb-2">
+                          <Tag size={32} />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">إدارة شعارات الماركات (Logos)</h2>
+                        <p className="text-slate-500 max-w-sm mx-auto text-sm">
+                          رفع وتعديل شعارات الماركات التجارية لتظهر بدلاً من الأسماء النصية على بطاقات المنتجات.
+                        </p>
+                        
+                        {userRole === 'admin' ? (
+                          <div className="w-full mt-6 text-right border-t border-slate-100 pt-6">
+                            {logosLoading ? (
+                                <div className="flex justify-center py-4"><Loader2 size={28} className="animate-spin text-purple-500" /></div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {[...new Set(items.map(i => i.group).filter(Boolean))].sort().map(groupName => {
+                                      const existingLogo = getLogoUrl(groupName);
+                                      return (
+                                          <div key={groupName} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-shadow">
+                                              <div className="flex items-center justify-between w-full h-12">
+                                                  <p className="font-bold text-slate-800 text-sm max-w-[60%] shrink-0 break-words" title={groupName} dir="auto">{groupName}</p>
+                                                  {existingLogo ? (
+                                                      <div className="h-10 w-20 bg-white rounded-lg p-1 border border-slate-200 flex items-center justify-center shrink-0">
+                                                          <img src={existingLogo} alt="" className="max-h-full max-w-full object-contain" />
+                                                      </div>
+                                                  ) : (
+                                                      <div className="h-10 w-20 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold shrink-0">بدون لوجو</div>
+                                                  )}
+                                              </div>
+                                              <div className="flex items-center gap-2 mt-2 w-full">
+                                                  <label className="flex-1 cursor-pointer bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm flex items-center justify-center gap-1 transition-colors py-2">
+                                                      <Upload size={14} />
+                                                      <span>رفع</span>
+                                                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                          if(e.target.files && e.target.files[0]) {
+                                                              await uploadLogo(groupName, e.target.files[0]);
+                                                          }
+                                                      }} />
+                                                  </label>
+                                                  {existingLogo && (
+                                                      <button onClick={() => removeLogo(groupName)} className="bg-rose-50 border border-rose-100 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-100 shadow-sm transition-colors flex items-center justify-center gap-1 py-2 px-3">
+                                                          <Trash2 size={14} /> حذف
+                                                      </button>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      );
+                                  })}
+                                </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
+                            <Lock size={14} /> خاصية إدارية
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Session Management + إدارة المستخدمين وكلمات المرور */}
                     <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-6">
                       <div className="flex flex-col items-center justify-center text-center space-y-4">
@@ -6056,9 +6119,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 >
                                   {item.group && (
                                     <div className="absolute top-0 left-3 z-10 -mt-1">
-                                      {getGroupLogo(item.group) ? (
+                                      {getLogoUrl(item.group) ? (
                                         <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
-                                          <img src={getGroupLogo(item.group)} alt={item.group} className="h-6 object-contain" />
+                                          <img src={getLogoUrl(item.group)} alt={item.group} className="h-6 object-contain" />
                                         </div>
                                       ) : (
                                         <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">

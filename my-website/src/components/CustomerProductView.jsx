@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import supabase from '../lib/supabaseClient';
 import { Package, Smartphone, ShieldCheck, Zap, Info, Share2, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getGroupLogo } from '../utils/brandLogos';
+import { useBrandLogos } from '../hooks/useBrandLogos';
 
 export default function CustomerProductView() {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const { getLogoUrl } = useBrandLogos();
 
     // Parse barcode from URL query string
     const getBarcodeFromUrl = () => {
@@ -148,9 +149,9 @@ export default function CustomerProductView() {
                             </div>
                         )}
                         {product.brand_group && (
-                            getGroupLogo(product.brand_group) ? (
+                            getLogoUrl(product.brand_group) ? (
                                 <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-2 flex items-center justify-center">
-                                    <img src={getGroupLogo(product.brand_group)} alt={product.brand_group} className="h-5 object-contain" />
+                                    <img src={getLogoUrl(product.brand_group)} alt={product.brand_group} className="h-5 object-contain" />
                                 </div>
                             ) : (
                                 <div className="bg-white/90 backdrop-blur text-slate-700 text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm border border-slate-200 uppercase tracking-wider">

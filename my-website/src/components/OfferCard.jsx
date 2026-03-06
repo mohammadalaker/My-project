@@ -1,5 +1,5 @@
 import { ShoppingCart, Gift, Sparkles, Trash2, FileText, Zap, Star, Flame } from 'lucide-react';
-import { getGroupLogo } from '../utils/brandLogos';
+
 
 export default function OfferCard({
     offer,
@@ -11,7 +11,8 @@ export default function OfferCard({
     onEdit,
     onDelete,
     addOfferToOrder,
-    onItemClick
+    onItemClick,
+    getLogoUrl
 }) {
     const totalPrice = offer.items.reduce((sum, e) => {
         const it = getItemByBarcode(e.barcode);
@@ -148,10 +149,14 @@ export default function OfferCard({
                                                     x{effectiveQty} {it ? '' : '(Deleted)'}
                                                 </span>
                                                 {it?.group && (
-                                                    getGroupLogo(it.group) ? (
-                                                        <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
-                                                            <img src={getGroupLogo(it.group)} alt={it.group} className="h-5 object-contain" />
-                                                        </div>
+                                                    getLogoUrl ? (
+                                                        getLogoUrl(it.group) ? (
+                                                            <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
+                                                                <img src={getLogoUrl(it.group)} alt={it.group} className="h-5 object-contain" />
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{it.group}</span>
+                                                        )
                                                     ) : (
                                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{it.group}</span>
                                                     )
