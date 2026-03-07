@@ -3844,7 +3844,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     )}
                   </div>
-                  <p className="text-slate-600 text-sm font-extrabold tracking-tight mt-0.5 text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-slate-500">Premium Appliances</p>
+                  <p className="text-slate-600 text-sm font-extrabold tracking-tight mt-0.5 text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-slate-500">أجهزة متميزة</p>
                   <p className="text-slate-500 text-xs font-medium tracking-wide uppercase mt-0.5">
                     {safeLocaleDate({ weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
@@ -4007,18 +4007,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
               {mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && mode !== 'inventory' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
-                  {/* New Premium Header Design */}
-                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full max-w-4xl mx-auto space-y-3 mb-6" dir="ltr">
+                  {/* New Premium Header Design — بالعربية */}
+                  <div className="flex flex-col items-center sm:items-start text-center sm:text-right w-full max-w-4xl mx-auto space-y-3 mb-6" dir="rtl">
                     <span className="bg-indigo-600 text-white text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full inline-block shadow-sm">
-                      Premium Quality Assured
+                      جودة متميزة مضمونة
                     </span>
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                      Explore our premium collection
+                      استكشف مجموعتنا المتميزة
                       <br className="hidden sm:block" />
-                      <span className="text-blue-600"> of electrical appliances and kitchenware</span>
+                      <span className="text-blue-600"> من الأجهزة الكهربائية وأدوات المطبخ</span>
                     </h1>
                     <p className="text-base sm:text-lg text-slate-600 font-medium">
-                      Select items to create a new order or manage your catalog.
+                      اختر العناصر لإنشاء طلب جديد أو لإدارة الكتالوج الخاص بك.
                     </p>
                   </div>
 
