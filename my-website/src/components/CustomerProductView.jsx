@@ -3,6 +3,7 @@ import supabase from '../lib/supabaseClient';
 import { Package, Smartphone, ShieldCheck, Zap, Info, Share2, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useBrandLogos } from '../hooks/useBrandLogos';
+import { getDisplayGroupForBarcode } from '../utils/displayGroupKMG';
 
 export default function CustomerProductView() {
     const [product, setProduct] = useState(null);
@@ -49,7 +50,8 @@ export default function CustomerProductView() {
     // تحديث عنوان الصفحة عند توفر المنتج (يجب أن يكون الـ hook دائماً في نفس الترتيب)
     useEffect(() => {
         if (!product) return;
-        const title = product.eng_name || product.brand_group || product.barcode || 'Product';
+        const dg = getDisplayGroupForBarcode(product.barcode, product.brand_group);
+        const title = product.eng_name || dg || product.barcode || 'Product';
         document.title = `${title} | Maslamani Sales`;
         return () => { document.title = 'Maslamani Sales'; };
     }, [product]);
@@ -101,6 +103,7 @@ export default function CustomerProductView() {
     const hasDiscount = finalPrice < price;
     const discountPercent = hasDiscount ? Math.round(((price - finalPrice) / price) * 100) : 0;
     const stockCount = Number(product.stock_count) || 0;
+    const displayGroup = getDisplayGroupForBarcode(product.barcode, product.brand_group);
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 font-sans selection:bg-indigo-100 pb-24" dir="rtl">
@@ -148,14 +151,14 @@ export default function CustomerProductView() {
                                 خصم {discountPercent}%
                             </div>
                         )}
-                        {product.brand_group && (
-                            getLogoUrl(product.brand_group) ? (
+                        {displayGroup && (
+                            getLogoUrl(displayGroup) ? (
                                 <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-2 flex items-center justify-center">
-                                    <img src={getLogoUrl(product.brand_group)} alt={product.brand_group} className="h-5 object-contain" />
+                                    <img src={getLogoUrl(displayGroup)} alt={displayGroup} className="h-5 object-contain" />
                                 </div>
                             ) : (
                                 <div className="bg-white/90 backdrop-blur text-slate-700 text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm border border-slate-200 uppercase tracking-wider">
-                                    {product.brand_group}
+                                    {displayGroup}
                                 </div>
                             )
                         )}
@@ -168,7 +171,7 @@ export default function CustomerProductView() {
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                             <p className="text-xs font-mono text-slate-400 mb-2">{product.barcode}</p>
                             <h2 className="text-2xl font-black text-slate-800 leading-snug mb-2">
-                                {product.eng_name || product.brand_group || 'منتج غير معروف'}
+                                {product.eng_name || displayGroup || 'منتج غير معروف'}
                             </h2>
                             {product.product_type && (
                                 <p className="text-sm font-bold text-indigo-500 mb-6 bg-indigo-50 inline-block px-3 py-1 rounded-lg">

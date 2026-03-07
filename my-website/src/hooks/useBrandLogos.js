@@ -54,6 +54,7 @@ export function useBrandLogos() {
         if (normalizedGroup.includes('glemgas') || normalizedGroup.includes('glem gas')) return '/Logo/Glemgas logo.png';
         if (normalizedGroup.includes('grundig')) return '/Logo/Grundig Logo.png';
         if (normalizedGroup.includes('kenwood')) return '/Logo/Kenwood Logo.png';
+        if (normalizedGroup.includes('kmg')) return '/Logo/KMG Logo.png';
         if (normalizedGroup.includes('korkmaz')) return '/Logo/Korkmaz logo.png';
         if (normalizedGroup.includes('lg')) return '/Logo/LG Logo.jpg';
         if (normalizedGroup.includes('luminarc')) return '/Logo/Luminarc Logo.png';

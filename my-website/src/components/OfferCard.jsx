@@ -12,7 +12,8 @@ export default function OfferCard({
     onDelete,
     addOfferToOrder,
     onItemClick,
-    getLogoUrl
+    getLogoUrl,
+    getDisplayGroup
 }) {
     const totalPrice = offer.items.reduce((sum, e) => {
         const it = getItemByBarcode(e.barcode);
@@ -148,19 +149,22 @@ export default function OfferCard({
                                                 <span className={`text-[10px] font-bold px-2 py-1 rounded shadow-lg ${it ? 'bg-slate-900 text-white' : 'bg-red-100 text-red-600'}`}>
                                                     x{effectiveQty} {it ? '' : '(Deleted)'}
                                                 </span>
-                                                {it?.group && (
-                                                    getLogoUrl ? (
-                                                        getLogoUrl(it.group) ? (
-                                                            <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
-                                                                <img src={getLogoUrl(it.group)} alt={it.group} className="h-5 object-contain" />
-                                                            </div>
+                                                {(() => {
+                                                    const displayGroup = getDisplayGroup ? getDisplayGroup(it) : (it?.group ?? '');
+                                                    return displayGroup ? (
+                                                        getLogoUrl ? (
+                                                            getLogoUrl(displayGroup) ? (
+                                                                <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
+                                                                    <img src={getLogoUrl(displayGroup)} alt={displayGroup} className="h-5 object-contain" />
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{displayGroup}</span>
+                                                            )
                                                         ) : (
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{it.group}</span>
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{displayGroup}</span>
                                                         )
-                                                    ) : (
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{it.group}</span>
-                                                    )
-                                                )}
+                                                    ) : null;
+                                                })()}
                                             </div>
 
                                             <div className="mb-2 w-full text-right" dir="rtl">

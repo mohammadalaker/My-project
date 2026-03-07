@@ -73,6 +73,7 @@ import AdminSortProducts from './components/AdminSortProducts';
 import SplashScreen from './components/SplashScreen';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
 import { useBrandLogos } from './hooks/useBrandLogos';
+import { getDisplayGroupForBarcode } from './utils/displayGroupKMG';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
@@ -114,6 +115,9 @@ const isElectricalGroup = (g) =>
   g && ELECTRICAL_GROUPS.some((eg) => String(g).trim().toLowerCase() === eg);
 const isHouseholdGroup = (g) =>
   g && HOUSEHOLD_GROUPS.some((hg) => String(g).trim().toLowerCase() === hg);
+
+/** Display group for UI (logo/label). For specific barcodes shows "KMG" only. */
+const getDisplayGroup = (item) => (item ? getDisplayGroupForBarcode(item.barcode, item.group) : '');
 
 /** Convert Arabic/Persian digits to English digits */
 function toEnglishDigits(str) {
@@ -5334,6 +5338,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           getImage={getImage}
                           getImageFallback={getImageFallback}
                           getStockStatus={getStockStatus}
+                          getLogoUrl={getLogoUrl}
+                          getDisplayGroup={getDisplayGroup}
                           userRole={userRole}
                           onEdit={startEditOffer}
                           onDelete={deleteOffer}
@@ -5714,7 +5720,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           </td>
                                           <td className="px-4 py-3 font-mono text-slate-600">{item.barcode || '—'}</td>
                                           <td className="px-4 py-3 font-semibold text-slate-800">{item.name || '—'}</td>
-                                          <td className="px-4 py-3 text-slate-600 font-bold">{item.group || '—'}</td>
+                                          <td className="px-4 py-3 text-slate-600 font-bold">{getDisplayGroup(item) || '—'}</td>
                                           <td className="px-4 py-3"><span className={`font-bold ${qtyColor}`}>{qty}</span></td>
                                           <td className="px-4 py-3 font-semibold text-slate-700">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</td>
                                           <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold ${qtyBg}`}>{status}</span></td>
@@ -6146,15 +6152,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   className="glass-card group flex flex-col h-full cursor-pointer transition-colors"
                                   onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
                                 >
-                                  {item.group && (
+                                  {getDisplayGroup(item) && (
                                     <div className="absolute top-0 left-3 z-10 -mt-1">
-                                      {getLogoUrl(item.group) ? (
+                                      {getLogoUrl(getDisplayGroup(item)) ? (
                                         <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
-                                          <img src={getLogoUrl(item.group)} alt={item.group} className="h-6 object-contain" />
+                                          <img src={getLogoUrl(getDisplayGroup(item))} alt={getDisplayGroup(item)} className="h-6 object-contain" />
                                         </div>
                                       ) : (
                                         <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
-                                          {item.group}
+                                          {getDisplayGroup(item)}
                                         </span>
                                       )}
                                     </div>
@@ -7086,7 +7092,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <p className="text-xs font-bold text-slate-800 break-words leading-tight">{item.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 rounded">{item.barcode}</span>
-                        {item.group && <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 rounded">{item.group}</span>}
+                        {getDisplayGroup(item) && <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 rounded">{getDisplayGroup(item)}</span>}
                       </div>
                       <div className="mt-2 flex items-baseline gap-3">
                         {item.priceAfterDiscount && item.priceAfterDiscount < item.price ? (
