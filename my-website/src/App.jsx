@@ -64,7 +64,6 @@ import {
   Bell,
   RefreshCw,
 } from 'lucide-react';
-import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, useSensors, useSensor } from '@dnd-kit/core';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
@@ -2132,22 +2131,6 @@ function App() {
 
   const clearOrder = () => setOrderItems([]);
 
-  // Drag & Drop: sensors (delay so tap doesn't start drag)
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
-  );
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
-    if (over?.id !== 'cart' || !active?.data?.current || active.data.current.type !== 'product') return;
-    const barcode = active.data.current.barcode;
-    const item = items.find((i) => i.barcode === barcode || i.id === barcode);
-    if (item) {
-      addToOrder(item, 1);
-      setShowOrderPanel(true);
-    }
-  }, [items, addToOrder]);
-
   const orderLines = orderItems
     .map((o) => ({ ...o, item: items.find((i) => i.id === o.id) }))
     .filter((o) => o.item);
@@ -3719,34 +3702,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
-  // Drag & Drop: draggable product image (used in order mode)
-  function DraggableProductImage({ item, children }) {
-    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-      id: item.id,
-      data: { type: 'product', barcode: item.barcode },
-    });
-    return (
-      <div
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
-        className={`touch-none select-none ${isDragging ? 'opacity-60 scale-95' : ''}`}
-      >
-        {children}
-      </div>
-    );
-  }
-
-  // Drag & Drop: droppable cart zone
-  function CartDroppable({ children }) {
-    const { setNodeRef, isOver } = useDroppable({ id: 'cart' });
-    return (
-      <div ref={setNodeRef} className={isOver ? 'ring-2 ring-orange-400 ring-offset-2 rounded-2xl bg-orange-50/50 transition-all' : ''}>
-        {children}
-      </div>
-    );
-  }
-
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
@@ -3773,7 +3728,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <>
-      <DndContext sensors={dndSensors} onDragEnd={handleDragEnd}>
       <div
         className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
       >
@@ -6142,47 +6096,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   )}
 
                                   <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50">
-                                    {mode === 'order' ? (
-                                      <DraggableProductImage item={item}>
-                                        <>
-                                          {getImage(item) ? (
-                                            <img
-                                              src={getImage(item)}
-                                              alt={item.name}
-                                              loading="lazy"
-                                              decoding="async"
-                                              className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
-                                              onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.nextSibling.style.display = 'flex';
-                                              }}
-                                            />
-                                          ) : null}
-                                          <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
-                                            <Package size={48} className="text-slate-200" />
-                                          </div>
-                                        </>
-                                      </DraggableProductImage>
-                                    ) : (
-                                      <>
-                                        {getImage(item) ? (
-                                          <img
-                                            src={getImage(item)}
-                                            alt={item.name}
-                                            loading="lazy"
-                                            decoding="async"
-                                            className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
-                                            onError={(e) => {
-                                              e.target.style.display = 'none';
-                                              e.target.nextSibling.style.display = 'flex';
-                                            }}
-                                          />
-                                        ) : null}
-                                        <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
-                                          <Package size={48} className="text-slate-200" />
-                                        </div>
-                                      </>
-                                    )}
+                                    {getImage(item) ? (
+                                      <img
+                                        src={getImage(item)}
+                                        alt={item.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                          e.target.nextSibling.style.display = 'flex';
+                                        }}
+                                      />
+                                    ) : null}
+                                    <div className={`w-full h-full flex items-center justify-center ${getImage(item) ? 'hidden' : ''}`}>
+                                      <Package size={48} className="text-slate-200" />
+                                    </div>
 
                                     {getStockStatus(item) === 'Out of Stock' ? (
                                       <div className="absolute top-2 right-2 z-10">
@@ -6503,13 +6432,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               {/* TAB: ITEMS */}
               {activeTab === 'items' && (
-                <CartDroppable>
                 <div className="p-4 space-y-3">
                   {orderLines.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 bg-white rounded-2xl border border-slate-100">
                       <ShoppingCart className="text-slate-400 mb-6" size={64} strokeWidth={1.5} />
                       <p className="text-lg font-bold text-slate-800 mb-2">No items in cart</p>
-                      <p className="text-sm text-slate-500">Drag product image here or click to add</p>
+                      <p className="text-sm text-slate-500">Click products to add</p>
                     </div>
                   ) : (
                     orderLinesByBox.map((o, idx) => {
@@ -6633,7 +6561,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     })
                   )}
                 </div>
-                </CartDroppable>
               )}
 
               {/* TAB: CUSTOMER */}
@@ -7820,7 +7747,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         );
       })}
       </div >
-    </DndContext>
     </>
   );
 }
