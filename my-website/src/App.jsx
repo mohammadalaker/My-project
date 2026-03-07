@@ -1278,7 +1278,6 @@ function App() {
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityItem, setQuantityItem] = useState(null);
   const [addToCartPressedId, setAddToCartPressedId] = useState(null); // حالة محلية لزر Add to Cart (برتقالي + أيقونة سلة)
-  const [addToCartLoadingId, setAddToCartLoadingId] = useState(null); // تحميل 800ms ثم برتقالي + صوت
 
   useEffect(() => {
     if (!quantityItem) setAddToCartPressedId(null);
@@ -6285,42 +6284,31 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       ) : (
                                         <motion.button
                                           type="button"
-                                          disabled={addToCartLoadingId === item.id}
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             const clientX = e.clientX;
                                             const clientY = e.clientY;
-                                            setAddToCartLoadingId(item.id);
-                                            setTimeout(() => {
-                                              setAddToCartLoadingId(null);
-                                              setAddToCartPressedId(item.id);
-                                              playSuccess();
-                                              handleOpenQuantityModal(item, { clientX, clientY });
-                                            }, 800);
+                                            playSuccess();
+                                            setAddToCartPressedId(item.id);
+                                            handleOpenQuantityModal(item, { clientX, clientY });
                                           }}
-                                          whileTap={addToCartLoadingId !== item.id ? { scale: 0.95 } : undefined}
+                                          whileTap={{ scale: 0.95 }}
                                           className={`w-full py-3 rounded-xl text-sm font-bold shadow-lg flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 ease-out ${
-                                            addToCartLoadingId === item.id
-                                              ? 'bg-slate-700 text-white shadow-slate-900/20 cursor-wait'
-                                              : addToCartPressedId === item.id
-                                                ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-orange-500/30'
-                                                : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-slate-700 hover:shadow-xl hover:shadow-slate-600/20 hover:-translate-y-0.5 active:bg-slate-800 active:shadow-inner'
+                                            addToCartPressedId === item.id
+                                              ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-orange-500/30'
+                                              : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-slate-700 hover:shadow-xl hover:shadow-slate-600/20 hover:-translate-y-0.5 active:bg-slate-800 active:shadow-inner'
                                           }`}
                                         >
-                                          {addToCartLoadingId === item.id ? (
-                                            <Loader2 size={20} className="animate-spin shrink-0 text-white" />
-                                          ) : (
-                                            <motion.span
-                                              key={addToCartPressedId === item.id ? 'added' : 'default'}
-                                              initial={addToCartPressedId === item.id ? { opacity: 0, scale: 0.85 } : false}
-                                              animate={{ opacity: 1, scale: 1 }}
-                                              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                                              className="flex items-center justify-center gap-2"
-                                            >
-                                              <ShoppingCart size={18} className="shrink-0" />
-                                              <span>Add to Cart</span>
-                                            </motion.span>
-                                          )}
+                                          <motion.span
+                                            key={addToCartPressedId === item.id ? 'added' : 'default'}
+                                            initial={addToCartPressedId === item.id ? { opacity: 0, scale: 0.85 } : false}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                            className="flex items-center justify-center gap-2"
+                                          >
+                                            <ShoppingCart size={18} className="shrink-0" />
+                                            <span>Add to Cart</span>
+                                          </motion.span>
                                         </motion.button>
                                       )}
                                     </div>
