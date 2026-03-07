@@ -2341,7 +2341,7 @@ function App() {
 
     return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>فاتورة مبيعات</title>
+<title>طلبية مبيعات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
   body { font-family: 'Tajawal', system-ui, sans-serif; padding: 40px; background: #f8fafc; color: #1e293b; margin: 0; direction: rtl; }
@@ -2431,7 +2431,7 @@ function App() {
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
       </div>
       <div>
-        <h1 class="print-title">فاتورة مبيعات</h1>
+        <h1 class="print-title">طلبية مبيعات</h1>
         <div class="print-subtitle">SALES ORDER AGREEMENT</div>
       </div>
     </div>
