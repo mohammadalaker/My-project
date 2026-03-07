@@ -1278,6 +1278,7 @@ function App() {
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityItem, setQuantityItem] = useState(null);
   const [addToCartPressedId, setAddToCartPressedId] = useState(null); // حالة محلية لزر Add to Cart (برتقالي + أيقونة سلة)
+  const [stockAlert, setStockAlert] = useState(''); // State for non-blocking stock warnings
 
   useEffect(() => {
     if (!quantityItem) setAddToCartPressedId(null);
@@ -2020,6 +2021,17 @@ function App() {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(50); // Haptic feedback for Add to Cart
     }
+    
+    const stockCountNum = Number(item.stock_count);
+    const currentLine = orderItems.find((x) => x.id === item.id);
+    const currentQty = currentLine ? (Number(currentLine.qty) || 0) : 0;
+    
+    if (!isNaN(stockCountNum) && stockCountNum > 0 && (currentQty + qty) > stockCountNum) {
+      playError();
+      setStockAlert(`عذراً، الكمية المتوفرة هي ${stockCountNum} فقط لهذا الصنف.`);
+      setTimeout(() => setStockAlert(''), 3500);
+    }
+
     startTransition(() => {
       setOrderItems((prev) => {
         const unitPrice = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
@@ -2032,11 +2044,9 @@ function App() {
           newQty = prev[i].qty + qty;
         }
 
-        // Low Stock Enforcement
-        if (item.stock_count != null && item.stock_count > 0 && newQty > item.stock_count) {
-          playError(); // UI Sound Palette: الكمية غير متوفرة
-          alert(`عذراً، الكمية المتوفرة في المخزون هي ${item.stock_count} فقط لهذا الصنف.`);
-          newQty = item.stock_count; // Cap at max stock
+        // Pure limit capping
+        if (!isNaN(stockCountNum) && stockCountNum > 0 && newQty > stockCountNum) {
+          newQty = stockCountNum;
         }
 
         if (i >= 0) {
@@ -2093,23 +2103,63 @@ function App() {
 
   const setOrderQty = useCallback((itemId, qty) => {
     let n = Math.max(0, parseInt(qty, 10) || 0);
+    const line = orderItems.find(x => x.id === itemId);
+    
+    if (line && line.item) {
+      const stock = Number(line.item.stock_count);
+      if (!isNaN(stock) && stock > 0 && n > stock) {
+        playError();
+        setStockAlert(`عذراً، الكمية المتوفرة في المخزون هي ${stock} فقط لهذا الصنف.`);
+        setTimeout(() => setStockAlert(''), 3500);
+      }
+    }
+
     startTransition(() => {
       setOrderItems((prev) => {
         const itemLine = prev.find(x => x.id === itemId);
         if (itemLine && itemLine.item) {
-          const stock = itemLine.item.stock_count;
-          if (stock != null && stock > 0 && n > stock) {
-            playError(); // UI Sound Palette: الكمية غير متوفرة
-            alert(`عذراً، الكمية المتوفرة في المخزون هي ${stock} فقط لهذا الصنف.`);
-            n = stock;
-          }
+          const stock = Number(itemLine.item.stock_count);
+          if (!isNaN(stock) && stock > 0 && n > stock) n = stock; // pure cap
         }
 
         if (n === 0) return prev.filter((x) => x.id !== itemId);
         return prev.map((x) => (x.id === itemId ? { ...x, qty: n } : x));
       });
     });
-  }, [startTransition, playError]);
+  }, [orderItems, startTransition, playError]);
+
+  /** زيادة/نقصان الكمية بواحد — يستخدم التحديث الدالي لضمان القراءة من آخر حالة */
+  const changeOrderQtyBy = useCallback((itemId, delta) => {
+    const line = orderItems.find(x => x.id === itemId);
+    if (line) {
+      const current = Number(line.qty) || 0;
+      const n = Math.max(0, current + (Number(delta) || 0));
+      if (line.item) {
+        const stock = line.item.stock_count;
+        if (stock != null && stock > 0 && n > stock) {
+          playError();
+          setStockAlert(`عذراً، الكمية المتوفرة في المخزون هي ${stock} فقط لهذا الصنف.`);
+          setTimeout(() => setStockAlert(''), 3500);
+        }
+      }
+    }
+
+    setOrderItems((prev) => {
+      const prevLine = prev.find((x) => x.id === itemId);
+      if (!prevLine) return prev;
+      const current = Number(prevLine.qty) || 0;
+      const numericDelta = Number(delta) || 0;
+      let n = Math.max(0, current + numericDelta);
+      
+      if (prevLine.item) {
+        const stock = prevLine.item.stock_count;
+        if (stock != null && stock > 0 && n > stock) n = stock; // pure cap
+      }
+      
+      if (n === 0) return prev.filter((x) => x.id !== itemId);
+      return prev.map((x) => (x.id === itemId ? { ...x, qty: n } : x));
+    });
+  }, [orderItems, playError]);
 
   const setOrderLinePrice = (itemId, value) => {
     const n = parseFloat(String(value).replace(',', '.')) || 0;
@@ -2882,6 +2932,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     ws.getRow(r).height = 24;
     r++;
     const sortedLines = sortByBarcodeOrder(orderLines, BARCODE_ORDER);
+    // ألوان عمود الخصم حسب نسبة الخصم — كل نسبة لها لون مميز
+    const discountPalette = ['FFE8F5E9', 'FFE3F2FD', 'FFFFF8E1', 'FFF3E5F5', 'FFFFEBEE', 'FFE0F2F1', 'FFFCE4EC', 'FFEFEBE9']; // أخضر فاتح، أزرق، أصفر، بنفسجي، وردي، ...
+    const uniqueDiscPcts = [...new Set(sortedLines.map((o) => getLineDiscountPercent(o)))].sort((a, b) => a - b);
+    const discPctToColor = {};
+    uniqueDiscPcts.forEach((pct, i) => {
+      discPctToColor[pct] = discountPalette[i % discountPalette.length];
+    });
     sortedLines.forEach((o, i) => {
       const discPct = getLineDiscountPercent(o);
       const barcodeToLookup = o.barcode || o.item?.barcode || '';
@@ -2899,10 +2956,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       ws.getCell(r, 7).value = discPct > 0 ? discPct + '%' : '—';
       ws.getCell(r, 8).value = parseFloat(getLineTotal(o).toFixed(2));
       const rowFill = i % 2 === 0 ? colors.white : 'FFF8fafc';
+      const discountCellFill = discPct > 0 ? (discPctToColor[discPct] || rowFill) : rowFill;
       for (let c = 1; c <= 8; c++) {
         const cell = ws.getCell(r, c);
+        const fill = c === 7 ? discountCellFill : rowFill;
         styleCell(cell, {
-          fill: rowFill,
+          fill,
           font: c === 8 ? { bold: true, color: { argb: colors.primary } } : { color: { argb: colors.textDark } },
           alignment: c <= 3 ? { horizontal: 'right' } : { horizontal: 'center' },
         });
@@ -3727,6 +3786,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <>
+      {stockAlert && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] bg-red-600/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transform transition-all duration-300 pointer-events-auto shrink-0 border border-white/10" dir="rtl">
+          <AlertOctagon size={22} className="shrink-0 animate-pulse text-red-200" />
+          <span className="font-bold text-md whitespace-nowrap">{stockAlert}</span>
+          <button onClick={() => setStockAlert('')} className="bg-black/20 hover:bg-black/30 p-1.5 rounded-full transition-colors shrink-0 mr-1"><X size={14} /></button>
+        </div>
+      )}
       <div
         className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
       >
@@ -6478,24 +6544,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     {o.item?.group && <span className="text-slate-400 font-bold">• {o.item?.group}</span>}
                                   </p>
 
-                                  <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate pointer-events-none" dir="rtl">
+                                  <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate" dir="rtl">
                                     {/* Qty Control */}
-                                    <div className="flex flex-col justify-center items-center bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm shrink-0 w-14 pointer-events-auto" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
+                                    <div className="flex flex-col justify-center items-center bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm shrink-0 w-14" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
-                                        onClick={() => setOrderQty(o.id, parseInt(o.qty || 0) + 1)}
+                                        onClick={() => changeOrderQtyBy(o.id, 1)}
                                         className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                       >
                                         <Plus size={18} strokeWidth={3} />
                                       </motion.button>
                                       <input
                                         className="w-full bg-transparent text-center text-lg font-black text-slate-700 outline-none my-1"
-                                        value={o.qty || ''}
+                                        value={o.qty ?? ''}
                                         onChange={(e) => setOrderQty(o.id, e.target.value)}
                                       />
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
-                                        onClick={() => setOrderQty(o.id, Math.max(1, (parseInt(o.qty || 0) - 1)))}
+                                        onClick={() => changeOrderQtyBy(o.id, -1)}
                                         className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                       >
                                         <Minus size={18} strokeWidth={3} />
@@ -6503,7 +6569,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     </div>
 
                                     {/* Pricing Squares Grid */}
-                                    <div className="flex-1 w-full grid grid-cols-2 gap-3 pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
+                                    <div className="flex-1 w-full grid grid-cols-2 gap-3" onPointerDown={(e) => e.stopPropagation()}>
 
                                       {/* Card 1: Consumer Price */}
                                       <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-2xl p-3 border border-slate-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
