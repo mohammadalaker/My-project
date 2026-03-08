@@ -3908,36 +3908,40 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           إعدادات الحساب
                         </button>
 
-                        <div className="h-px bg-slate-100 my-1 mx-2"></div>
-                        <div className="px-3 py-1 text-xs font-bold text-slate-400 mb-1">إعدادات سريعة</div>
-                        <div className="flex gap-1 p-1">
-                          <button
-                            onClick={() => { setUiLang('ar'); try { localStorage.setItem('sales_ui_lang', 'ar'); } catch (_) {} setShowProfileMenu(false); }}
-                            className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'ar' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                          >
-                            عربي
-                          </button>
-                          <button
-                            onClick={() => { setUiLang('en'); try { localStorage.setItem('sales_ui_lang', 'en'); } catch (_) {} setShowProfileMenu(false); }}
-                            className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'en' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                          >
-                            English
-                          </button>
-                        </div>
-                        <button
-                          onClick={() => { setShowProfileMenu(false); window.print(); }}
-                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
-                        >
-                          <Printer size={18} />
-                          طابعة الفواتير — طباعة الآن
-                        </button>
-                        <button
-                          onClick={() => { setShowProfileMenu(false); fetchItems(); }}
-                          className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
-                        >
-                          <RefreshCw size={18} />
-                          تحديث المخزون
-                        </button>
+                        {(userRole === 'admin' || userRole === 'supervisor') && (
+                          <>
+                            <div className="h-px bg-slate-100 my-1 mx-2"></div>
+                            <div className="px-3 py-1 text-xs font-bold text-slate-400 mb-1">إعدادات سريعة</div>
+                            <div className="flex gap-1 p-1">
+                              <button
+                                onClick={() => { setUiLang('ar'); try { localStorage.setItem('sales_ui_lang', 'ar'); } catch (_) {} setShowProfileMenu(false); }}
+                                className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'ar' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                              >
+                                عربي
+                              </button>
+                              <button
+                                onClick={() => { setUiLang('en'); try { localStorage.setItem('sales_ui_lang', 'en'); } catch (_) {} setShowProfileMenu(false); }}
+                                className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'en' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                              >
+                                English
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => { setShowProfileMenu(false); window.print(); }}
+                              className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
+                            >
+                              <Printer size={18} />
+                              طابعة الفواتير — طباعة الآن
+                            </button>
+                            <button
+                              onClick={() => { setShowProfileMenu(false); fetchItems(); }}
+                              className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
+                            >
+                              <RefreshCw size={18} />
+                              تحديث المخزون
+                            </button>
+                          </>
+                        )}
 
                         {(userRole === 'admin' || userRole === 'supervisor') && (
                           <>
