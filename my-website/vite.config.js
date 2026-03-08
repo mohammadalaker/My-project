@@ -69,10 +69,20 @@ export default defineConfig({
     ...(process.env.NODE_ENV !== 'production' ? [pwaPlugin] : []),
   ],
   build: {
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 1000,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        passes: 2,
+      },
+      format: {
+        comments: false,
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // فصل المكتبات الكبيرة في chunks منفصلة لتسريع التحميل والـ cache
           if (id.includes('node_modules')) {
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
@@ -86,7 +96,7 @@ export default defineConfig({
             if (id.includes('exceljs') || id.includes('xlsx')) {
               return 'excel-vendor';
             }
-            return 'vendor'; // Fallback for other node_modules
+            return 'vendor';
           }
         }
       }
