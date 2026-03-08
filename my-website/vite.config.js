@@ -65,7 +65,31 @@ export default defineConfig({
   base: '/',
   plugins: [
     react(),
-    // PWA في التطوير فقط (البناء للإنتاج يفشل بسبب terser في workbox). العمل دون اتصال يعمل عبر IndexedDB + مزامنة الطلبات.
+    // PWA في التطوير فقط
     ...(process.env.NODE_ENV !== 'production' ? [pwaPlugin] : []),
   ],
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase-vendor';
+            }
+            if (id.includes('recharts') || id.includes('framer-motion') || id.includes('lucide-react')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('exceljs') || id.includes('xlsx')) {
+              return 'excel-vendor';
+            }
+            return 'vendor'; // Fallback for other node_modules
+          }
+        }
+      }
+    }
+  }
 })
