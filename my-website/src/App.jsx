@@ -449,38 +449,9 @@ function App() {
       }
     };
 
-    // Realtime subscription to the signal row (only if supabase supports channel)
-    let channel = null;
-    console.log('App.jsx: Checking supabase.channel...', typeof supabase.channel, supabase);
-    if (typeof supabase.channel === 'function') {
-      try {
-        channel = supabase
-          .channel('public:custom_offers:force_logout')
-          .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'custom_offers',
-            filter: "id=eq.SYSTEM_FORCE_LOGOUT"
-          }, (payload) => {
-            const newTime = parseInt(payload.new.title, 10);
-            if (newTime) checkLogoutSignal(newTime);
-          })
-          .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'custom_offers',
-            filter: "id=eq.SYSTEM_FORCE_LOGOUT"
-          }, (payload) => {
-            const newTime = parseInt(payload.new.title, 10);
-            if (newTime) checkLogoutSignal(newTime);
-          })
-          .subscribe();
-      } catch (err) {
-        console.warn('Realtime channel setup failed:', err);
-      }
-    }
-
-    const initialCheck = async () => {
+    // Polling mechanism instead of realtime to save on Supabase Realtime messages
+    // Checks every 2 minutes (120,000 ms)
+    const checkForceLogout = async () => {
       try {
         const { data } = await supabase.from('custom_offers').select('title').eq('id', 'SYSTEM_FORCE_LOGOUT').single();
         if (data && data.title) {
@@ -489,13 +460,12 @@ function App() {
       } catch (_) { }
     };
 
-    initialCheck();
+    // Initial check on mount
+    checkForceLogout();
 
-    return () => {
-      if (channel && typeof supabase.removeChannel === 'function') {
-        supabase.removeChannel(channel);
-      }
-    };
+    const intervalId = setInterval(checkForceLogout, 120 * 1000);
+
+    return () => clearInterval(intervalId);
   }, [isAuthenticated]);
 
   // 3. Safe Logout (Auto-Lock) after 2 minutes of inactivity
