@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition
 import { createPortal } from 'react-dom';
 import { useSystemSounds } from './hooks/useSystemSounds';
 import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
+// استيراد أيقونات محددة فقط من lucide-react (لا تستورد المكتبة كاملة) لتقليل حجم الـ bundle
 import {
   Search,
   Plus,
@@ -174,6 +175,7 @@ function amountToEnglishWords(amount) {
 }
 
 const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer, visible, product_type';
+const ITEMS_BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, product_type';
 
 const parsePrice = (val) => {
   if (val === null || val === undefined || val === '') return null;
@@ -228,7 +230,7 @@ function AddToOfferRow({ item, getImage, onAdd }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 hover:border-amber-300 transition-colors">
       {getImage(item) ? (
-        <img src={getImage(item)} alt="" className="w-12 h-12 object-contain rounded-lg" />
+        <img src={getImage(item)} alt="" loading="lazy" className="w-12 h-12 object-contain rounded-lg" />
       ) : (
         <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center"><Package size={20} className="text-slate-400" /></div>
       )}
@@ -1476,6 +1478,7 @@ function App() {
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
+    itemsUseBaseSelectRef.current = false;
     let allItems = [];
 
     // عند عدم الاتصال: تحميل من الكاش المحلي فوراً دون انتظار فشل Supabase
@@ -1497,15 +1500,19 @@ function App() {
     try {
       const { data, error } = await supabase
         .from('items')
-        .select(ITEMS_SELECT);
+        .select(ITEMS_SELECT)
+        .order('barcode', { ascending: true })
+        .range(0, ITEMS_PAGE_SIZE - 1);
 
       if (error) {
         if (error.message?.includes('column items.is_offer does not exist') || error.message?.includes('column items.visible does not exist') || error.code === '42703') {
           console.warn('items column missing (is_offer/visible), falling back to base items query...');
-          const BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, product_type';
+          itemsUseBaseSelectRef.current = true;
           const { data: retryData, error: retryError } = await supabase
             .from('items')
-            .select(BASE_SELECT);
+            .select(ITEMS_BASE_SELECT)
+            .order('barcode', { ascending: true })
+            .range(0, ITEMS_PAGE_SIZE - 1);
 
           if (retryError) throw retryError;
           allItems = retryData || [];
@@ -1515,6 +1522,10 @@ function App() {
       } else {
         allItems = data || [];
       }
+
+      itemsOffsetRef.current = allItems.length;
+      accumulatedRawItemsRef.current = [...allItems];
+      setHasMore(allItems.length === ITEMS_PAGE_SIZE);
 
       // Cache the successfully fetched items locally
       const itemsToCache = allItems.map(item => ({ ...item, id: String(item.barcode ?? '').trim() }));
@@ -1628,9 +1639,67 @@ function App() {
   }, [fetchItems, syncOfflineOrders, refreshPendingSyncCount]);
 
   // Removed pagination and server-side search effects
-  const loadMore = () => { };
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+      const from = itemsOffsetRef.current;
+      const to = from + ITEMS_PAGE_SIZE - 1;
+      const selectCols = itemsUseBaseSelectRef.current ? ITEMS_BASE_SELECT : ITEMS_SELECT;
+      try {
+        const { data, error } = await supabase
+          .from('items')
+          .select(selectCols)
+        .order('barcode', { ascending: true })
+        .range(from, to);
+      if (error) throw error;
+      const newRaw = data || [];
+      itemsOffsetRef.current += newRaw.length;
+      setHasMore(newRaw.length === ITEMS_PAGE_SIZE);
+      accumulatedRawItemsRef.current = [...accumulatedRawItemsRef.current, ...newRaw];
+
+      const normalizedNew = newRaw.map(normalizeItemFromSupabase).filter(Boolean);
+      const localItems = await getLocalProducts();
+      const mergedNew = normalizedNew.map((item) => {
+        const localMatch = localItems.find((li) => String(li.id) === String(item.id));
+        if (!localMatch || localMatch.stock_delta === 0) return item;
+        const deltaQty = localMatch.stock_delta || 0;
+        const stockMatch = item.stock_count != null ? { quantity: item.stock_count } : item.stock != null ? { quantity: item.stock } : 0;
+        return { ...item, quantity: parseFloat(stockMatch.quantity) + deltaQty };
+      });
+
+      setItems((prev) => {
+        const combined = [...prev, ...mergedNew];
+        return sortByBarcodeOrder(combined, dynamicBarcodeOrder);
+      });
+
+      const toCache = accumulatedRawItemsRef.current.map((item) => ({ ...item, id: String(item.barcode ?? '').trim() }));
+      await saveProductsLocally(toCache);
+    } catch (err) {
+      console.error('Load more items failed:', err);
+      itemsOffsetRef.current = from;
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, dynamicBarcodeOrder]);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !loadingMore) loadMore();
+      },
+      { rootMargin: '200px', threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore]);
   const loadMoreRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const ITEMS_PAGE_SIZE = 100;
+  const itemsOffsetRef = useRef(0);
+  const accumulatedRawItemsRef = useRef([]);
+  const itemsUseBaseSelectRef = useRef(false);
 
   const filteredByGroup = useMemo(
     () =>
@@ -2280,7 +2349,7 @@ function App() {
         const barcode = barcodeToLookup.replace(/</g, '&lt;');
         const imgUrl = !isSubmitted && o.item?.image ? getPublicImageUrl(o.item.image) : null;
         const imgSrc = imgUrl ? String(imgUrl).replace(/"/g, '&quot;') : '';
-        const imgCell = imgSrc ? `<td class="inv-td-img"><img src="${imgSrc}" alt="" /></td>` : '<td class="inv-td-img">—</td>';
+        const imgCell = imgSrc ? `<td class="inv-td-img"><img src="${imgSrc}" alt="" loading="lazy" /></td>` : '<td class="inv-td-img">—</td>';
 
         return `<tr>
           ${imgCell}
@@ -2483,7 +2552,7 @@ function App() {
         const discPercent = getLineDiscountPercent(o);
         const imgSrc = getImage(o.item);
         const imgHtml = imgSrc
-          ? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" /></div>`
+          ? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" loading="lazy" /></div>`
           : '<div class="inv-img"><span class="inv-no-img">📦</span></div>';
         const name = (o.customName || o.item?.group || o.item?.name || '').replace(/</g, '&lt;');
         const group = (o.item?.group || '').replace(/</g, '&lt;');
@@ -3562,7 +3631,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const cards = items.map(item => {
       const imgUrl = getPublicImageUrl(item.image);
       const img = imgUrl
-        ? `<div class="cat-img"><img src="${imgUrl}" alt="${item.name}" /></div>`
+        ? `<div class="cat-img"><img src="${imgUrl}" alt="${item.name}" loading="lazy" /></div>`
         : `<div class="cat-img"><div class="cat-no-img">📦</div></div>`;
 
       return `
@@ -5268,7 +5337,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       className={`flex items-center gap-4 p-4 rounded-xl border shadow-sm ${it ? 'bg-white border-slate-200' : 'bg-red-50 border-red-200'}`}
                                     >
                                       {it && getImage(it) ? (
-                                        <img src={getImage(it)} alt="" className="w-14 h-14 object-contain rounded-lg" />
+                                        <img src={getImage(it)} alt="" loading="lazy" className="w-14 h-14 object-contain rounded-lg" />
                                       ) : (
                                         <div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center">
                                           <Package size={24} className="text-slate-400" />
@@ -5423,7 +5492,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                                   <p className="font-bold text-slate-800 text-sm max-w-[60%] shrink-0 break-words" title={groupName} dir="auto">{groupName}</p>
                                                   {existingLogo ? (
                                                       <div className="h-10 w-20 bg-white rounded-lg p-1 border border-slate-200 flex items-center justify-center shrink-0">
-                                                          <img src={existingLogo} alt="" className="max-h-full max-w-full object-contain" />
+                                                          <img src={existingLogo} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
                                                       </div>
                                                   ) : (
                                                       <div className="h-10 w-20 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold shrink-0">بدون لوجو</div>
@@ -6131,7 +6200,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <div className="absolute top-0 left-3 z-10 -mt-1">
                                       {getLogoUrl(getDisplayGroup(item)) ? (
                                         <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
-                                          <img src={getLogoUrl(getDisplayGroup(item))} alt={getDisplayGroup(item)} className="h-6 object-contain" />
+                                          <img src={getLogoUrl(getDisplayGroup(item))} alt={getDisplayGroup(item)} loading="lazy" className="h-6 object-contain" />
                                         </div>
                                       ) : (
                                         <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
@@ -7117,7 +7186,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {/* Left: Image */}
                   <div className="aspect-square max-h-[400px] rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center overflow-hidden">
                     {getImage(selectedItem) ? (
-                      <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-8" onError={(e) => (e.target.style.display = 'none')} />
+                      <img src={getImage(selectedItem)} alt="" loading="lazy" className="w-full h-full object-contain p-8" onError={(e) => (e.target.style.display = 'none')} />
                     ) : (
                       <Package size={120} className="text-slate-300" />
                     )}
@@ -7380,6 +7449,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           key={formData.image_url}
                           src={getPublicImageUrl(formData.image_url)}
                           alt=""
+                          loading="lazy"
                           className="w-full h-full object-contain"
                           onError={(e) => (e.target.style.display = 'none')}
                         />
@@ -7774,7 +7844,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             }}
           >
             {item.image ? (
-              <img src={item.image} alt="" className="w-full h-full object-contain drop-shadow-2xl rounded-xl" />
+              <img src={item.image} alt="" loading="lazy" className="w-full h-full object-contain drop-shadow-2xl rounded-xl" />
             ) : (
               <div className="w-full h-full bg-slate-200 rounded-xl flex items-center justify-center shadow-lg"><Package size={56} className="text-slate-400" /></div>
             )}

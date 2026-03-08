@@ -30,7 +30,7 @@ export default function CustomerProductView() {
             try {
                 const { data, error: dbError } = await supabase
                     .from('items')
-                    .select('*')
+                    .select('barcode, eng_name, brand_group, full_price, price_after_disc, stock_count, image_url, product_type')
                     .eq('barcode', barcode)
                     .single();
 
@@ -138,7 +138,7 @@ export default function CustomerProductView() {
 
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 w-full h-full flex items-center justify-center">
                         {getPublicImageUrl(product.image_url) ? (
-                            <img src={getPublicImageUrl(product.image_url)} alt={product.eng_name || ''} className="max-w-full max-h-full object-contain filter drop-shadow-2xl" />
+                            <img src={getPublicImageUrl(product.image_url)} alt={product.eng_name || ''} loading="lazy" decoding="async" className="max-w-full max-h-full object-contain filter drop-shadow-2xl" />
                         ) : (
                             <Package size={100} className="text-slate-300" />
                         )}
@@ -154,7 +154,7 @@ export default function CustomerProductView() {
                         {displayGroup && (
                             getLogoUrl(displayGroup) ? (
                                 <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-2 flex items-center justify-center">
-                                    <img src={getLogoUrl(displayGroup)} alt={displayGroup} className="h-5 object-contain" />
+                                    <img src={getLogoUrl(displayGroup)} alt={displayGroup} loading="lazy" className="h-5 object-contain" />
                                 </div>
                             ) : (
                                 <div className="bg-white/90 backdrop-blur text-slate-700 text-[10px] font-bold px-3 py-1.5 rounded-full shadow-sm border border-slate-200 uppercase tracking-wider">

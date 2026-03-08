@@ -175,6 +175,7 @@ export default function CustomerDisplay() {
                                                                     <img
                                                                         src={getImageFallback(item)}
                                                                         alt={`Product ${item.barcode}`}
+                                                                        loading="lazy"
                                                                         className="max-w-full max-h-full object-contain mix-blend-multiply transition-opacity duration-300 peer"
                                                                         onError={(e) => {
                                                                             e.target.style.display = 'none';
@@ -247,7 +248,7 @@ export default function CustomerDisplay() {
                                                 >
                                                     <div className="w-20 h-20 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 overflow-hidden shrink-0">
                                                         {getPublicImageUrl(line.image) ? (
-                                                            <img src={getPublicImageUrl(line.image)} alt="" className="w-full h-full object-contain p-2" />
+                                                            <img src={getPublicImageUrl(line.image)} alt="" loading="lazy" className="w-full h-full object-contain p-2" />
                                                         ) : (
                                                             <Package size={24} className="text-slate-300" />
                                                         )}

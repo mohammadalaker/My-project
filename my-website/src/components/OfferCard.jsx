@@ -138,7 +138,7 @@ export default function OfferCard({
                                     <div className={`relative flex flex-col h-full z-10 ${isLarge ? 'justify-between' : 'justify-center items-center md:items-start'}`}>
                                         <div className={`w-full ${isLarge ? 'h-64' : 'h-32'} flex items-center justify-center mb-6`}>
                                             {it && getImage(it) ? (
-                                                <img src={getImage(it)} alt="" className="w-full h-full object-contain filter drop-shadow-xl group-hover/item:scale-105 transition-transform duration-500" />
+                                                <img src={getImage(it)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain filter drop-shadow-xl group-hover/item:scale-105 transition-transform duration-500" />
                                             ) : (
                                                 <span className="text-4xl opacity-20">📦</span>
                                             )}
@@ -155,7 +155,7 @@ export default function OfferCard({
                                                         getLogoUrl ? (
                                                             getLogoUrl(displayGroup) ? (
                                                                 <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
-                                                                    <img src={getLogoUrl(displayGroup)} alt={displayGroup} className="h-5 object-contain" />
+                                                                    <img src={getLogoUrl(displayGroup)} alt={displayGroup} loading="lazy" decoding="async" className="h-5 object-contain" />
                                                                 </div>
                                                             ) : (
                                                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{displayGroup}</span>
@@ -223,7 +223,7 @@ export default function OfferCard({
                                             <div className="w-24 h-24 bg-slate-50 rounded-2xl flex items-center justify-center shrink-0 mb-3 relative">
                                                 <div className="absolute inset-0 bg-emerald-500/5 rounded-2xl rotate-3 group-hover/gift:rotate-6 transition-transform"></div>
                                                 {imgSrc ? (
-                                                    <img src={imgSrc} alt="" className="w-full h-full object-contain relative z-10" />
+                                                    <img src={imgSrc} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain relative z-10" />
                                                 ) : (
                                                     <Gift size={32} className="text-emerald-200 relative z-10" />
                                                 )}

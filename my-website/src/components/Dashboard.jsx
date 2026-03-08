@@ -432,7 +432,7 @@ export default function Dashboard({ items, orders }) {
                                     <tr key={item.id} className="border-b border-rose-50 last:border-0 hover:bg-rose-50/30 transition-colors text-slate-700">
                                         <td className="py-3 px-4">
                                             {item.image ? (
-                                                <img src={item.image.startsWith('http') ? item.image : `https://hytncdomjctqihrqfswh.supabase.co/storage/v1/object/public/item-images/${item.image}`} alt={item.name} className="w-10 h-10 object-contain mix-blend-multiply rounded-md bg-slate-50 border border-slate-100 p-0.5" />
+                                                <img src={item.image.startsWith('http') ? item.image : `https://hytncdomjctqihrqfswh.supabase.co/storage/v1/object/public/item-images/${item.image}`} alt={item.name} loading="lazy" className="w-10 h-10 object-contain mix-blend-multiply rounded-md bg-slate-50 border border-slate-100 p-0.5" />
                                             ) : (
                                                 <div className="w-10 h-10 bg-slate-100 rounded-md flex items-center justify-center text-slate-300">
                                                     <ShoppingCart size={16} />
