@@ -3967,10 +3967,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <div className="h-px bg-slate-100 my-1 mx-2"></div>
                         <button
                           onClick={() => { setShowProfileMenu(false); handleLogout(); }}
-                          className="w-full text-right px-4 py-3 rounded-2xl text-sm font-semibold bg-slate-50/80 text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-100 hover:border-rose-100 transition-all duration-200 flex items-center justify-end gap-3 group"
+                          className="w-full text-right px-4 py-3 rounded-2xl text-sm font-bold bg-gradient-to-r from-rose-50 to-red-50 text-rose-600 border border-rose-100 hover:border-rose-200 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-end gap-3 group relative overflow-hidden"
                         >
-                          <LogOut size={18} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
-                          <span>تسجيل الخروج</span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-rose-100/50 translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
+                          <LogOut size={18} className="text-rose-400 group-hover:text-rose-600 transition-colors relative z-10 group-hover:-translate-x-1 duration-300" />
+                          <span className="relative z-10">تسجيل الخروج</span>
                         </button>
                       </div>
                     </motion.div>
