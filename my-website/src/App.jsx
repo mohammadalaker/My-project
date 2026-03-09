@@ -1500,9 +1500,7 @@ function App() {
     try {
       const { data, error } = await supabase
         .from('items')
-        .select(ITEMS_SELECT)
-        .order('barcode', { ascending: true })
-        .range(0, ITEMS_PAGE_SIZE - 1);
+        .select(ITEMS_SELECT);
 
       if (error) {
         if (error.message?.includes('column items.is_offer does not exist') || error.message?.includes('column items.visible does not exist') || error.code === '42703') {
@@ -1510,9 +1508,7 @@ function App() {
           itemsUseBaseSelectRef.current = true;
           const { data: retryData, error: retryError } = await supabase
             .from('items')
-            .select(ITEMS_BASE_SELECT)
-            .order('barcode', { ascending: true })
-            .range(0, ITEMS_PAGE_SIZE - 1);
+            .select(ITEMS_BASE_SELECT);
 
           if (retryError) throw retryError;
           allItems = retryData || [];
@@ -1525,7 +1521,7 @@ function App() {
 
       itemsOffsetRef.current = allItems.length;
       accumulatedRawItemsRef.current = [...allItems];
-      setHasMore(allItems.length === ITEMS_PAGE_SIZE);
+      setHasMore(false);
 
       // Cache the successfully fetched items locally
       const itemsToCache = allItems.map(item => ({ ...item, id: String(item.barcode ?? '').trim() }));
@@ -1557,14 +1553,12 @@ function App() {
         // 7. Sort final list by dynamicBarcodeOrder instead of static BARCODE_ORDER
         const sorted = sortByBarcodeOrder(combined, dynamicBarcodeOrder);
         setItems(sorted);
-        setHasMore(false);
       } catch (innerErr) {
         console.warn('Error merging local items or sorting:', innerErr);
         // Fallback to just Supabase items if local merge fails
         const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
         const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
         setItems(sorted);
-        setHasMore(false);
       }
     } catch (err) {
       console.error('Supabase fetch error, trying local IndexedDB:', err);
