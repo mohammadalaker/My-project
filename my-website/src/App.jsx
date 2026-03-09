@@ -374,6 +374,11 @@ function App() {
   const [newPassword, setNewPassword] = useState('');
   const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
 
+  // إدارة شعارات الماركات: إخفاء التفاصيل حتى يدخل المستخدم إلى القسم
+  const [showBrandLogosDetails, setShowBrandLogosDetails] = useState(false);
+  // إدارة الجلسات والحسابات: إخفاء التفاصيل حتى يدخل المستخدم إلى القسم
+  const [showSessionManagementDetails, setShowSessionManagementDetails] = useState(false);
+
   // Return Customer Display Early
   if (isCustomerDisplayMode) {
     return (
@@ -5473,47 +5478,70 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </p>
                         
                         {userRole === 'admin' ? (
-                          <div className="w-full mt-6 text-right border-t border-slate-100 pt-6">
-                            {logosLoading ? (
-                                <div className="flex justify-center py-4"><Loader2 size={28} className="animate-spin text-purple-500" /></div>
+                          <>
+                            {!showBrandLogosDetails ? (
+                              <button
+                                type="button"
+                                onClick={() => setShowBrandLogosDetails(true)}
+                                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-purple-100 text-purple-700 font-bold hover:bg-purple-200 transition-colors border border-purple-200"
+                              >
+                                <ChevronRight size={20} className="rtl:rotate-180" />
+                                الدخول إلى إدارة الشعارات
+                              </button>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                  {[...new Set(items.map(i => i.group).filter(Boolean))].sort().map(groupName => {
-                                      const existingLogo = getLogoUrl(groupName);
-                                      return (
-                                          <div key={groupName} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-shadow">
-                                              <div className="flex items-center justify-between w-full h-12">
-                                                  <p className="font-bold text-slate-800 text-sm max-w-[60%] shrink-0 break-words" title={groupName} dir="auto">{groupName}</p>
-                                                  {existingLogo ? (
-                                                      <div className="h-10 w-20 bg-white rounded-lg p-1 border border-slate-200 flex items-center justify-center shrink-0">
-                                                          <img src={existingLogo} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
-                                                      </div>
-                                                  ) : (
-                                                      <div className="h-10 w-20 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold shrink-0">بدون لوجو</div>
-                                                  )}
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowBrandLogosDetails(false)}
+                                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors text-sm"
+                                >
+                                  <ChevronRight size={18} className="rtl:rotate-180" />
+                                  إخفاء التفاصيل
+                                </button>
+                                <div className="w-full mt-2 text-right border-t border-slate-100 pt-6">
+                                  {logosLoading ? (
+                                    <div className="flex justify-center py-4"><Loader2 size={28} className="animate-spin text-purple-500" /></div>
+                                  ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                      {[...new Set(items.map(i => i.group).filter(Boolean))].sort().map(groupName => {
+                                          const existingLogo = getLogoUrl(groupName);
+                                          return (
+                                              <div key={groupName} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-shadow">
+                                                  <div className="flex items-center justify-between w-full h-12">
+                                                      <p className="font-bold text-slate-800 text-sm max-w-[60%] shrink-0 break-words" title={groupName} dir="auto">{groupName}</p>
+                                                      {existingLogo ? (
+                                                          <div className="h-10 w-20 bg-white rounded-lg p-1 border border-slate-200 flex items-center justify-center shrink-0">
+                                                              <img src={existingLogo} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
+                                                          </div>
+                                                      ) : (
+                                                          <div className="h-10 w-20 bg-slate-200 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold shrink-0">بدون لوجو</div>
+                                                      )}
+                                                  </div>
+                                                  <div className="flex items-center gap-2 mt-2 w-full">
+                                                      <label className="flex-1 cursor-pointer bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm flex items-center justify-center gap-1 transition-colors py-2">
+                                                          <Upload size={14} />
+                                                          <span>رفع</span>
+                                                          <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                                              if(e.target.files && e.target.files[0]) {
+                                                                  await uploadLogo(groupName, e.target.files[0]);
+                                                              }
+                                                          }} />
+                                                      </label>
+                                                      {existingLogo && (
+                                                          <button onClick={() => removeLogo(groupName)} className="bg-rose-50 border border-rose-100 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-100 shadow-sm transition-colors flex items-center justify-center gap-1 py-2 px-3">
+                                                              <Trash2 size={14} /> حذف
+                                                          </button>
+                                                      )}
+                                                  </div>
                                               </div>
-                                              <div className="flex items-center gap-2 mt-2 w-full">
-                                                  <label className="flex-1 cursor-pointer bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm flex items-center justify-center gap-1 transition-colors py-2">
-                                                      <Upload size={14} />
-                                                      <span>رفع</span>
-                                                      <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                                          if(e.target.files && e.target.files[0]) {
-                                                              await uploadLogo(groupName, e.target.files[0]);
-                                                          }
-                                                      }} />
-                                                  </label>
-                                                  {existingLogo && (
-                                                      <button onClick={() => removeLogo(groupName)} className="bg-rose-50 border border-rose-100 text-rose-600 rounded-lg text-xs font-bold hover:bg-rose-100 shadow-sm transition-colors flex items-center justify-center gap-1 py-2 px-3">
-                                                          <Trash2 size={14} /> حذف
-                                                      </button>
-                                                  )}
-                                              </div>
-                                          </div>
-                                      );
-                                  })}
+                                          );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
+                              </>
                             )}
-                          </div>
+                          </>
                         ) : (
                           <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
                             <Lock size={14} /> خاصية إدارية
@@ -5535,7 +5563,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                         {userRole === 'admin' ? (
                           <>
-                            <button
+                            {!showSessionManagementDetails ? (
+                              <button
+                                type="button"
+                                onClick={() => setShowSessionManagementDetails(true)}
+                                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-100 text-rose-700 font-bold hover:bg-rose-200 transition-colors border border-rose-200"
+                              >
+                                <ChevronRight size={20} className="rtl:rotate-180" />
+                                الدخول إلى إدارة الجلسات والحسابات
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowSessionManagementDetails(false)}
+                                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors text-sm"
+                                >
+                                  <ChevronRight size={18} className="rtl:rotate-180" />
+                                  إخفاء التفاصيل
+                                </button>
+                                <button
                               onClick={handleForceLogoutAll}
                               className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 text-white font-bold shadow-lg shadow-rose-500/30 hover:shadow-rose-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
                             >
@@ -5582,6 +5629,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 </div>
                               )}
                             </div>
+                              </>
+                            )}
                           </>
                         ) : (
                           <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-xs font-bold flex items-center gap-2">
