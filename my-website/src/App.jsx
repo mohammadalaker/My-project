@@ -3946,6 +3946,31 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           إعدادات الحساب
                         </button>
 
+                        {userRole === 'customer' && (
+                          <button
+                            onClick={() => { setShowProfileMenu(false); setMode('offers'); }}
+                            className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 ${mode === 'offers' ? 'bg-amber-50 text-amber-700' : 'text-slate-700 hover:bg-slate-100 hover:text-amber-600'}`}
+                          >
+                            <Gift size={18} />
+                            العروض
+                            {customOffers.filter(o => o.items && o.items.length > 0).length > 0 && (
+                              <span className="mr-auto px-2 py-0.5 rounded-lg text-xs bg-amber-200 text-amber-800 font-bold">
+                                {customOffers.filter(o => o.items && o.items.length > 0).length}
+                              </span>
+                            )}
+                          </button>
+                        )}
+
+                        {userRole === 'customer' && (
+                          <button
+                            onClick={() => { setShowProfileMenu(false); setMode('order'); }}
+                            className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 ${mode === 'order' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100 hover:text-indigo-600'}`}
+                          >
+                            <Package size={18} />
+                            البيع (وضع البيع)
+                          </button>
+                        )}
+
                         {(userRole === 'admin' || userRole === 'supervisor') && (
                           <>
                             <div className="h-px bg-slate-100 my-1 mx-2"></div>
@@ -5257,6 +5282,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 ) : mode === 'offers' ? (
                   /* Custom Offers - اختيار المنتجات للعروض */
                   <div className="space-y-8 animate-fade-in">
+                    {/* زر الرجوع لشاشة البيع لمستخدم البيع */}
+                    {userRole === 'customer' && (
+                      <div className="flex justify-start">
+                        <button
+                          onClick={() => setMode('order')}
+                          className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 transition-all border border-indigo-600"
+                        >
+                          <Package size={20} />
+                          <span>الرجوع لشاشة البيع</span>
+                          <ChevronRight size={18} className="rtl:rotate-180" />
+                        </button>
+                      </div>
+                    )}
+
                     {userRole === 'admin' && editingOffer && (
                       <div className="flex flex-wrap items-center gap-4">
                         <button
