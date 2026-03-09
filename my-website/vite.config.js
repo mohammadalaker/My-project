@@ -81,8 +81,9 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
+        // Remove manualChunks to fix circular dependencies causing production errors
+        /*
         manualChunks(id) {
-          // فصل المكتبات الكبيرة في chunks منفصلة لتسريع التحميل والـ cache
           if (id.includes('node_modules')) {
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
@@ -99,6 +100,7 @@ export default defineConfig({
             return 'vendor';
           }
         }
+        */
       }
     }
   }
