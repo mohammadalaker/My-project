@@ -1069,9 +1069,24 @@ function App() {
 
   const fetchCustomOffers = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('custom_offers').select('id, title, items, created_at').neq('id', 'SYSTEM_FORCE_LOGOUT').order('created_at', { ascending: true });
+      let data, error;
+      let withColumn = true;
+      const res = await supabase.from('custom_offers').select('id, title, items, created_at, show_on_sales_screen').neq('id', 'SYSTEM_FORCE_LOGOUT').order('created_at', { ascending: true });
+      data = res.data;
+      error = res.error;
+      if (error && (error.message || '').includes('show_on_sales_screen')) {
+        const fallback = await supabase.from('custom_offers').select('id, title, items, created_at').neq('id', 'SYSTEM_FORCE_LOGOUT').order('created_at', { ascending: true });
+        data = fallback.data;
+        error = fallback.error;
+        withColumn = false;
+      }
       if (!error && data && data.length > 0) {
-        const parsed = data.map((r) => ({ id: r.id, title: r.title || 'عرض', items: Array.isArray(r.items) ? r.items : [] }));
+        const parsed = data.map((r) => ({
+          id: r.id,
+          title: r.title || 'عرض',
+          items: Array.isArray(r.items) ? r.items : [],
+          showOnSalesScreen: withColumn ? (r.show_on_sales_screen !== false) : true,
+        }));
         setCustomOffers(parsed);
         try { localStorage.setItem('sales_custom_offers', JSON.stringify(parsed)); } catch (_) { }
       } else if (!error && (!data || data.length === 0)) {
@@ -1079,7 +1094,7 @@ function App() {
         if (local.length > 0) {
           for (const o of local) {
             try {
-              await supabase.from('custom_offers').upsert({ id: o.id, title: o.title || 'عرض', items: o.items || [], updated_at: new Date().toISOString() }, { onConflict: 'id' });
+              await supabase.from('custom_offers').upsert({ id: o.id, title: o.title || 'عرض', items: o.items || [], updated_at: new Date().toISOString(), show_on_sales_screen: o.showOnSalesScreen !== false }, { onConflict: 'id' });
             } catch (_) { }
           }
         }
@@ -1389,8 +1404,8 @@ function App() {
 
   const createNewOffer = () => {
     const id = 'o_' + Date.now();
-    setCustomOffers((prev) => [...prev, { id, title: 'عرض جديد', items: [] }]);
-    setEditingOffer({ id, title: 'عرض جديد', items: [] });
+    setCustomOffers((prev) => [...prev, { id, title: 'عرض جديد', items: [], showOnSalesScreen: true }]);
+    setEditingOffer({ id, title: 'عرض جديد', items: [], showOnSalesScreen: true });
   };
 
   const addProductToOffer = (item, quantity, offerPrice, isFree) => {
@@ -1411,16 +1426,30 @@ function App() {
       alert('أضف منتجاً واحداً على الأقل للعرض');
       return;
     }
-    const offerData = { id: editingOffer.id, title: editingOffer.title || 'عرض', items: editingOffer.items, updated_at: new Date().toISOString() };
+    const showOnSales = editingOffer.showOnSalesScreen !== false;
+    const offerData = {
+      id: editingOffer.id,
+      title: editingOffer.title || 'عرض',
+      items: editingOffer.items,
+      updated_at: new Date().toISOString(),
+      show_on_sales_screen: showOnSales,
+    };
     setCustomOffers((prev) => {
       const next = prev.filter((o) => o.id !== editingOffer.id);
-      next.push({ id: offerData.id, title: offerData.title, items: offerData.items });
+      next.push({ id: offerData.id, title: offerData.title, items: offerData.items, showOnSalesScreen: showOnSales });
       return next;
     });
     setEditingOffer(null);
     try {
       await supabase.from('custom_offers').upsert(offerData, { onConflict: 'id' });
-    } catch (e) { console.warn('Supabase save offer:', e); }
+    } catch (e) {
+      if (e?.message && String(e.message).includes('show_on_sales_screen')) {
+        const { id, title, items, updated_at } = offerData;
+        await supabase.from('custom_offers').upsert({ id, title, items, updated_at }, { onConflict: 'id' });
+      } else {
+        console.warn('Supabase save offer:', e);
+      }
+    }
   };
 
   const deleteOffer = async (id) => {
@@ -1433,7 +1462,12 @@ function App() {
   };
 
   const startEditOffer = (offer) => {
-    setEditingOffer({ id: offer.id, title: offer.title, items: [...offer.items] });
+    setEditingOffer({
+      id: offer.id,
+      title: offer.title,
+      items: [...offer.items],
+      showOnSalesScreen: offer.showOnSalesScreen !== false,
+    });
   };
 
   const abortControllerRef = useRef(null);
@@ -3662,7 +3696,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <title>Maslamani Sales Catalog</title>
+  <title>كتالوج المبيعات - Maslamani</title>
   <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
   body { font-family: 'Inter', sans-serif; margin: 0; padding: 40px; background: white; color: #1e293b; }
@@ -3726,8 +3760,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         </div>
     </div>
     <div class="catalog-title">
-        <h3>Collection</h3>
-        <h2>Catalog</h2>
+        <h3>المجموعة</h3>
+        <h2>الكتالوج</h2>
     </div>
   </div>
 
@@ -3760,7 +3794,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const clearCatalog = () => {
-    if (window.confirm('Clear all items from catalog?')) {
+    if (window.confirm('مسح جميع المنتجات من الكتالوج؟')) {
       setCatalogItems([]);
     }
   };
@@ -3953,9 +3987,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           >
                             <Gift size={18} />
                             العروض
-                            {customOffers.filter(o => o.items && o.items.length > 0).length > 0 && (
+                            {customOffers.filter(o => o.items && o.items.length > 0 && o.showOnSalesScreen !== false).length > 0 && (
                               <span className="mr-auto px-2 py-0.5 rounded-lg text-xs bg-amber-200 text-amber-800 font-bold">
-                                {customOffers.filter(o => o.items && o.items.length > 0).length}
+                                {customOffers.filter(o => o.items && o.items.length > 0 && o.showOnSalesScreen !== false).length}
                               </span>
                             )}
                           </button>
@@ -5238,16 +5272,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-6 shadow-inner">
                               <Grid size={32} />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-800 mb-3">Product Catalog</h3>
+                            <h3 className="text-2xl font-black text-slate-800 mb-3">كتالوج المنتجات</h3>
                             <p className="text-slate-500 mb-8 leading-relaxed">
-                              Browse the full catalog, view prices and details for customers without entering order details.
+                              استعرض كتالوج المنتجات كاملاً مع الأسعار والتفاصيل للعملاء دون إدخال الطلب.
                             </p>
                             <div className="mt-auto">
                               <button
                                 onClick={() => { setMode('catalog'); setShowOrderPanel(false); }}
                                 className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-lg shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2"
                               >
-                                <span>Open Catalog</span>
+                                <span>فتح الكتالوج</span>
                                 <ChevronRight size={20} />
                               </button>
                             </div>
@@ -5326,6 +5360,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <X size={20} />
                             </button>
                           </div>
+                        </div>
+
+                        {/* خانة إظهار العرض على شاشة البيع */}
+                        <div className="mb-6 flex items-center gap-3 p-4 rounded-xl bg-white/70 border border-amber-200">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={editingOffer.showOnSalesScreen !== false}
+                              onChange={(e) => setEditingOffer((p) => ({ ...p, showOnSalesScreen: e.target.checked }))}
+                              className="w-5 h-5 rounded border-2 border-amber-400 text-amber-600 focus:ring-amber-400"
+                            />
+                            <span className="text-sm font-bold text-slate-800">إظهار هذا العرض على شاشة البيع</span>
+                          </label>
+                          <span className="text-xs text-slate-500">عند التفعيل يظهر العرض لمستخدم البيع في قائمة العروض</span>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-6">
@@ -5410,9 +5458,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     )}
 
-                    {/* Offer cards - عرض للعملاء والأدمن */}
+                    {/* Offer cards - عرض للعملاء والأدمن (للبيع: فقط العروض المفعّلة لشاشة البيع) */}
                     <div className="flex flex-col gap-12 max-w-7xl mx-auto px-4 sm:px-6">
-                      {customOffers.filter(offer => offer.items && offer.items.length > 0).map((offer) => (
+                      {(userRole === 'customer'
+                        ? customOffers.filter(offer => offer.items && offer.items.length > 0 && offer.showOnSalesScreen !== false)
+                        : customOffers.filter(offer => offer.items && offer.items.length > 0)
+                      ).map((offer) => (
                         <OfferCard
                           key={offer.id}
                           offer={offer}
@@ -5426,10 +5477,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           onEdit={startEditOffer}
                           onDelete={deleteOffer}
                           onItemClick={setSelectedItem}
-                          addOfferToOrder={(o) => o.items.forEach((e) => {
-                            const it = getItemByBarcode(e.barcode);
-                            if (it) addToOrder({ ...it, priceAfterDiscount: e.isFree ? 0 : e.offerPrice }, e.quantity);
-                          })}
+                          addOfferToOrder={(o) => {
+                            o.items.forEach((e) => {
+                              const it = getItemByBarcode(e.barcode);
+                              if (it) addToOrder({ ...it, priceAfterDiscount: e.isFree ? 0 : e.offerPrice }, e.quantity);
+                            });
+                            if (userRole === 'admin') { setShowOrderPanel(true); setMode('order'); }
+                          }}
                         />
                       ))}
                     </div>
@@ -6473,10 +6527,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                             : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
                                             }`}
                                         >
-                                          {catalogItems.some((i) => i.id === item.id) ? (
-                                            <><Trash2 size={16} /> Remove</>
+                                            {catalogItems.some((i) => i.id === item.id) ? (
+                                            <><Trash2 size={16} /> إزالة</>
                                           ) : (
-                                            <><FileText size={16} /> Catalog</>
+                                            <><FileText size={16} /> الكتالوج</>
                                           )}
                                         </button>
                                       ) : (
@@ -6561,7 +6615,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
             style={{ writingMode: 'vertical-rl' }}
           >
-            View Catalog
+            عرض الكتالوج
           </button>
         )
       }
@@ -7199,14 +7253,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         showCatalogPanel && (
           <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60 transition-all duration-300">
             <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
-              <h2 className="text-base font-bold text-slate-800">Catalog <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
+              <h2 className="text-base font-bold text-slate-800">الكتالوج <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
               <button onClick={() => setShowCatalogPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5">
               {catalogItems.length === 0 ? (
                 <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                   <FileText className="mx-auto text-slate-400 mb-2" size={40} />
-                  <p className="text-sm font-medium">Selected items will appear here</p>
+                  <p className="text-sm font-medium">ستظهر المنتجات المختارة هنا</p>
                 </div>
               ) : (
                 catalogItems.map(item => (
@@ -7240,8 +7294,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
             {catalogItems.length > 0 && (
               <div className="p-3 border-t border-slate-200/60 bg-white/50 backdrop-blur-sm space-y-2">
-                <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">Print / View Catalog</button>
-                <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">Clear Catalog</button>
+                <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">طباعة / عرض الكتالوج</button>
+                <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">مسح الكتالوج</button>
               </div>
             )}
           </aside>
@@ -7902,7 +7956,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         setMode={setMode}
         cartCount={orderLines.length}
         onOpenCart={() => setShowOrderPanel(true)}
-        hasOffers={customOffers.length > 0}
+        hasOffers={userRole === 'customer' ? customOffers.some(o => o.items && o.items.length > 0 && o.showOnSalesScreen !== false) : customOffers.length > 0}
         cartButtonRef={cartNavRef}
       />
 

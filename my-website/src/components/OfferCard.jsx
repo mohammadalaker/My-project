@@ -102,6 +102,19 @@ export default function OfferCard({
                                 <span className="absolute left-6 z-20 text-white opacity-0 group-hover/btn:opacity-100 transition-opacity font-black text-xl">Add to Cart</span>
                             </button>
                         )}
+                        {userRole === 'admin' && (
+                            <button
+                                onClick={() => addOfferToOrder(offer)}
+                                className="group/btn w-full py-5 rounded-2xl bg-orange-500 text-white font-black text-xl hover:bg-orange-600 transition-colors flex items-center justify-between px-6 overflow-hidden relative border-2 border-orange-400 shadow-lg shadow-orange-500/30"
+                            >
+                                <span className="relative z-10">بيع العرض</span>
+                                <div className="relative z-10 w-10 h-10 rounded-full bg-white text-orange-600 flex items-center justify-center group-hover/btn:scale-110 transition-transform">
+                                    <ShoppingCart size={20} />
+                                </div>
+                                <div className="absolute inset-0 bg-orange-600 translate-x-full group-hover/btn:translate-x-0 transition-transform duration-300"></div>
+                                <span className="absolute left-6 z-20 text-white opacity-0 group-hover/btn:opacity-100 transition-opacity font-black text-xl">بيع العرض</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
