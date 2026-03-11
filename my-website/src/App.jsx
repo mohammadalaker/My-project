@@ -648,20 +648,59 @@ function App() {
   const [catalogItems, setCatalogItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [isSwitchingCategory, setIsSwitchingCategory] = useState(false);
-  const [orderItems, setOrderItems] = useState([]);
-  const [currentOrderId, setCurrentOrderId] = useState(null); // Track ID for supervisor review
-  const [orderInfo, setOrderInfo] = useState(() => ({
-    companyName: '',
-    merchantName: '',
-    phone: '',
-    address: '',
-    orderDate: new Date().toISOString().slice(0, 10),
-    customerNumber: '',
-    paymentMethod: '',
-    checksCount: '',
-    discountType: '', // '' | 'percentage' | 'amount'
-    discountValue: '',
-  }));
+  const [orderItems, setOrderItems] = useState(() => {
+    try {
+      const stored = localStorage.getItem('sales_order_items');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sales_order_items', JSON.stringify(orderItems));
+    } catch (e) { console.warn('Could not save order items:', e); }
+  }, [orderItems]);
+
+  const [currentOrderId, setCurrentOrderId] = useState(() => {
+    try {
+      return localStorage.getItem('sales_current_order_id') || null;
+    } catch { return null; }
+  });
+
+  useEffect(() => {
+    try {
+      if (currentOrderId) {
+        localStorage.setItem('sales_current_order_id', currentOrderId);
+      } else {
+        localStorage.removeItem('sales_current_order_id');
+      }
+    } catch (e) { console.warn('Could not save current order id:', e); }
+  }, [currentOrderId]);
+
+  const [orderInfo, setOrderInfo] = useState(() => {
+    try {
+      const stored = localStorage.getItem('sales_order_info');
+      if (stored) return JSON.parse(stored);
+    } catch { }
+    return {
+      companyName: '',
+      merchantName: '',
+      phone: '',
+      address: '',
+      orderDate: new Date().toISOString().slice(0, 10),
+      customerNumber: '',
+      paymentMethod: '',
+      checksCount: '',
+      discountType: '', // '' | 'percentage' | 'amount'
+      discountValue: '',
+    };
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sales_order_info', JSON.stringify(orderInfo));
+    } catch (e) { console.warn('Could not save order info:', e); }
+  }, [orderInfo]);
   const [submittedOrders, setSubmittedOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
