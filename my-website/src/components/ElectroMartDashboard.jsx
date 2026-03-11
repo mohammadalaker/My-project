@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Settings, 
@@ -113,8 +113,10 @@ const GlassCard = ({ title, value, icon: Icon, color, trend, trendValue, index, 
   );
 };
 
-const NavItem = ({ icon: Icon, label, active = false, badge, isDarkMode }) => (
+const NavItem = ({ icon: Icon, label, active = false, badge, isDarkMode, onClick }) => (
   <motion.button
+    type="button"
+    onClick={onClick}
     whileHover={{ x: 8, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}
     whileTap={{ scale: 0.96 }}
     className={`w-full flex items-center justify-between p-4.5 rounded-2xl transition-all duration-300 group ${
@@ -183,13 +185,23 @@ const SalesChart = ({ isDarkMode }) => (
   </div>
 );
 
-const RecentSalesTable = ({ isDarkMode }) => {
-  const sales = [
-    { id: '#4521', item: 'آيفون 15 برو', price: '₪5,200', time: 'منذ 5 دقائق', status: 'Completed' },
-    { id: '#4520', item: 'ساعة آبل 9', price: '₪1,850', time: 'منذ 12 دقيقة', status: 'Pending' },
-    { id: '#4519', item: 'ماك بوك آير', price: '₪4,100', time: 'منذ 45 دقيقة', status: 'Completed' },
-    { id: '#4518', item: 'سماعات سوني', price: '₪1,200', time: 'منذ ساعة', status: 'Completed' },
-  ];
+const RecentSalesTable = ({ isDarkMode, orders }) => {
+  const sales = (orders || []).slice(0, 10).map((o, i) => {
+    const total = o.total_amount ?? (o.items || []).reduce((s, it) => s + (it.total || 0), 0);
+    const firstItem = (o.items && o.items[0]) ? (o.items[0].name || o.items[0].barcode || '—') : 'طلب';
+    const dateStr = (o.order_date || o.created_at || '').slice(0, 10);
+    const status = o.status === 'completed' ? 'Completed' : 'Pending';
+    return { id: o.id || `#${i + 1}`, item: firstItem, price: `₪${Math.round(total)}`, time: dateStr, status };
+  });
+
+  if (sales.length === 0) {
+    return (
+      <div className={`py-12 text-center rounded-2xl border-2 border-dashed ${isDarkMode ? 'border-white/10 text-gray-500' : 'border-slate-200 text-slate-500'}`}>
+        <Package size={48} className="mx-auto mb-3 opacity-50" />
+        <p className="font-bold">لا توجد عمليات حديثة</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full overflow-x-auto">
@@ -237,147 +249,83 @@ const RecentSalesTable = ({ isDarkMode }) => {
   );
 };
 
-const ElectroMartDashboard = () => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+const ElectroMartDashboard = ({ items = [], orders = [], username, setMode }) => {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const stats = useMemo(() => {
+    const totalRevenue = orders.reduce((s, o) => s + (o.total_amount ?? (o.items || []).reduce((sum, it) => sum + (it.total || 0), 0)), 0);
+    const totalOrders = orders.length;
+    const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const lowStock = (items || []).filter((i) => (i.stock_count ?? i.stock ?? 0) <= 5).length;
+    return { totalRevenue, totalOrders, avgOrder, lowStock };
+  }, [orders, items]);
 
   return (
-    <div className={`min-h-screen flex font-sans leading-relaxed selection:bg-indigo-500/30 overflow-hidden transition-colors duration-700 ${isDarkMode ? 'bg-[#07080a] text-white' : 'bg-[#f1f5f9] text-slate-900'}`} dir="rtl">
+    <div className={`h-full min-h-screen w-full flex font-sans leading-relaxed selection:bg-indigo-500/30 overflow-hidden transition-colors duration-700 ${isDarkMode ? 'bg-[#07080a] text-white' : 'bg-[#f1f5f9] text-slate-900'}`} dir="ltr">
       <MeshBackground isDarkMode={isDarkMode} />
-
-      {/* Sidebar */}
-      <motion.aside 
-        initial={{ x: 120, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className={`w-80 backdrop-blur-3xl p-8 hidden lg:flex flex-col sticky top-0 h-screen z-50 transition-all duration-700 ${
-          isDarkMode 
-            ? 'bg-black/40 border-l border-white/5 shadow-[40px_0_80px_rgba(0,0,0,0.8)]' 
-            : 'bg-white/80 border-l border-slate-200 shadow-[40px_0_80px_rgba(0,0,0,0.05)]'
-        }`}
-      >
-        <div className="mb-14 px-2">
-          <motion.div 
-            initial={{ scale: 0.8, rotate: -5 }}
-            animate={{ scale: 1, rotate: 0 }}
-            className="flex items-center gap-4 mb-3"
-          >
-            <div className={isDarkMode ? '' : 'text-slate-900'}>
-              <h1 className={`text-2xl font-extrabold tracking-tight leading-none transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                Maslamani<span className={isDarkMode ? 'font-light text-white/95' : 'font-light text-slate-600'}>Sales</span>
-              </h1>
-              <p className={`text-[10px] font-black uppercase tracking-[0.3em] mt-1 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>system</p>
-            </div>
-          </motion.div>
-        </div>
-        
-        <nav className="space-y-3 flex-grow">
-          <div className={`px-4 mb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-700 ${isDarkMode ? 'text-gray-600' : 'text-slate-400'}`}>General</div>
-          <NavItem icon={LayoutDashboard} label="لوحة التحكم" active isDarkMode={isDarkMode} />
-          <NavItem icon={Package} label="المنتجات" badge="12" isDarkMode={isDarkMode} />
-          <NavItem icon={ShoppingCart} label="المبيعات" isDarkMode={isDarkMode} />
-          <NavItem icon={Users} label="العملاء" isDarkMode={isDarkMode} />
-          
-          <div className={`px-4 mt-8 mb-4 text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-700 ${isDarkMode ? 'text-gray-600' : 'text-slate-400'}`}>Analytics</div>
-          <NavItem icon={Activity} label="التقارير" isDarkMode={isDarkMode} />
-          <NavItem icon={CreditCard} label="المدفوعات" isDarkMode={isDarkMode} />
-          <NavItem icon={Settings} label="الإعدادات" isDarkMode={isDarkMode} />
-        </nav>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className={`mt-auto p-6 rounded-[32px] border relative overflow-hidden group shadow-inner transition-all duration-700 ${
-            isDarkMode ? 'bg-gradient-to-br from-indigo-600/10 to-purple-800/20 border-white/5' : 'bg-indigo-50/50 border-indigo-100 shadow-[inset_0_2px_10px_rgba(99,102,241,0.05)]'
-          }`}
-        >
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
-          <div className="flex items-center gap-3 mb-5 relative z-10">
-            <div className={`p-2.5 rounded-xl border transition-colors ${isDarkMode ? 'bg-indigo-500/20 border-indigo-400/20' : 'bg-white border-indigo-200'}`}>
-              <Star size={18} className="text-indigo-400 fill-indigo-400" />
-            </div>
-            <div className="text-xs">
-              <p className={`font-black transition-colors ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>النسخة الاحترافية</p>
-              <p className={`font-bold mt-0.5 transition-colors ${isDarkMode ? 'text-gray-500' : 'text-slate-500'}`}>احصل على كامل المزايا</p>
-            </div>
-          </div>
-          <button className={`w-full py-3.5 px-4 font-black text-[11px] rounded-[18px] transition-all active:scale-95 ${
-            isDarkMode ? 'bg-white text-black hover:bg-indigo-50 shadow-[0_15px_30px_rgba(255,255,255,0.1)]' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-[0_10px_20px_rgba(99,102,241,0.2)]'
-          }`}>
-            ترقية حسابك الآن
-          </button>
-        </motion.div>
-      </motion.aside>
 
       {/* Main Content */}
       <main className="flex-1 p-8 lg:p-14 overflow-y-auto custom-scrollbar relative">
         <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-20 gap-8">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className={`flex items-center gap-3 mb-4 w-fit px-4 py-1.5 rounded-full border backdrop-blur-md ${isDarkMode ? 'text-indigo-400 bg-white/5 border-white/10' : 'text-indigo-600 bg-indigo-50/80 border-indigo-200'}`}>
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-              </span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Live Statistics • March 2026</span>
-            </div>
-            <h2 className={`text-6xl font-black tracking-tighter mb-4 drop-shadow-2xl transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>أهلاً بك، محمد 👋</h2>
-            <p className={`text-xl font-medium max-w-2xl leading-relaxed transition-colors duration-700 ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>إليك نظرة شاملة على أداء مبيعات <span className={`font-extrabold tracking-tight transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Maslamani<span className={isDarkMode ? 'font-light text-white/90' : 'font-light text-slate-600'}>Sales</span></span> في فرعك اليوم.</p>
-          </motion.div>
-
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className={`flex gap-4 items-center p-3 rounded-[32px] border backdrop-blur-2xl shadow-2xl transition-all duration-700 ${
-              isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white/70 border-slate-200'
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className={`flex gap-1 items-center p-1.5 rounded-2xl transition-all duration-500 order-2 xl:order-1 ${
+              isDarkMode 
+                ? 'bg-white/[0.06] border border-white/[0.06] backdrop-blur-xl' 
+                : 'bg-white/50 border border-slate-200/60 backdrop-blur-xl shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
             }`}
           >
             {/* Theme Toggle Button */}
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-4 rounded-2xl border transition-all duration-500 flex items-center justify-center ${
+              className={`p-3 rounded-xl transition-all duration-300 flex items-center justify-center ${
                 isDarkMode 
-                  ? 'bg-white/5 border-white/10 text-yellow-500 hover:bg-white/10' 
-                  : 'bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100'
+                  ? 'text-slate-300 hover:bg-white/10 hover:text-white' 
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-indigo-600'
               }`}
             >
-              {isDarkMode ? <Sun size={22} fill="currentColor" /> : <Moon size={22} fill="currentColor" />}
+              {isDarkMode ? <Sun size={20} fill="currentColor" /> : <Moon size={20} fill="currentColor" />}
             </motion.button>
 
-            <div className={`relative p-4 text-gray-400 hover:text-white transition-all cursor-pointer rounded-2xl group ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-900'}`}>
-              <Search size={22} />
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-indigo-500 group-hover:w-4 transition-all duration-300" />
+            <div className={`relative p-3 rounded-xl transition-colors duration-300 cursor-pointer group ${isDarkMode ? 'text-slate-400 hover:bg-white/10 hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}>
+              <Search size={20} />
             </div>
-            <div className="relative p-4 text-gray-400 hover:text-white transition-all cursor-pointer hover:bg-white/5 rounded-2xl group">
-              <Bell size={22} />
-              <span className="absolute top-4 right-4 w-3 h-3 bg-gradient-to-tr from-rose-500 to-orange-500 rounded-full border-[3px] border-[#07080a] shadow-lg shadow-rose-500/40" />
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-indigo-500 group-hover:w-4 transition-all duration-300" />
+            <div className={`relative p-3 rounded-xl transition-colors duration-300 cursor-pointer group ${isDarkMode ? 'text-slate-400 hover:bg-white/10 hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}>
+              <Bell size={20} />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />
             </div>
-            <div className="h-10 w-px bg-white/10 mx-2" />
-            <div className="flex items-center gap-5 bg-white/10 p-2.5 pr-8 rounded-[24px] border border-white/10 hover:bg-white/15 transition-all cursor-pointer group shadow-inner">
-              <div className="text-right">
-                <p className="text-xs font-black text-white leading-none mb-1.5 group-hover:text-indigo-200 transition-colors">أحمد المصري</p>
-                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none group-hover:text-gray-400">مشرف الفرع (Supervisor)</p>
+            <div className={`w-px h-8 mx-0.5 transition-colors duration-500 ${isDarkMode ? 'bg-white/10' : 'bg-slate-200/80'}`} />
+            <div className={`flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-xl transition-all duration-300 group ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50/80'}`}>
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-none">
+                {(username || 'U').charAt(0).toUpperCase()}
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 flex items-center justify-center text-white font-black text-sm shadow-[0_8px_16px_rgba(99,102,241,0.3)] border border-white/20 group-hover:scale-105 transition-transform duration-500">
-                AM
+              <div className="text-left min-w-0">
+                <p className={`text-sm font-semibold truncate leading-none transition-colors duration-300 ${isDarkMode ? 'text-slate-200 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'}`}>{username || 'المستخدم'}</p>
               </div>
             </div>
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="order-1 xl:order-2 xl:text-right"
+          >
+            <h2 className={`text-6xl font-black tracking-tighter mb-4 drop-shadow-2xl transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>أهلاً بك محمد العكر 👋</h2>
+            <p className={`text-xl font-medium max-w-2xl leading-relaxed transition-colors duration-700 xl:ml-auto ${isDarkMode ? 'text-gray-400' : 'text-slate-600'}`}>نظرة شاملة على أداء مبيعات اليوم. <span className={`font-extrabold tracking-tight transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Maslamani<span className={isDarkMode ? 'font-light text-white/90' : 'font-light text-slate-600'}>Sales</span></span></p>
+          </motion.div>
         </header>
 
-        {/* Stats Grid */}
+        {/* Stats Grid — بيانات من مشروعك */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-16">
-          <GlassCard title="Revenue" value="₪4,520" icon={CreditCard} color="indigo" trend="up" trendValue="+12.5%" index={0} isDarkMode={isDarkMode} />
-          <GlassCard title="New Orders" value="24" icon={Zap} color="purple" trend="up" trendValue="+8.2%" index={1} isDarkMode={isDarkMode} />
-          <GlassCard title="Low Stock" value="5 items" icon={Package} color="rose" trend="down" trendValue="-3.1%" index={2} isDarkMode={isDarkMode} />
-          <GlassCard title="Churn Rate" value="1.2%" icon={Activity} color="emerald" trend="up" trendValue="+0.4%" index={3} isDarkMode={isDarkMode} />
+          <GlassCard title="Revenue" value={`₪${Math.round(stats.totalRevenue)}`} icon={CreditCard} color="indigo" trend="up" trendValue="—" index={0} isDarkMode={isDarkMode} />
+          <GlassCard title="New Orders" value={String(stats.totalOrders)} icon={Zap} color="purple" trend="up" trendValue="—" index={1} isDarkMode={isDarkMode} />
+          <GlassCard title="Low Stock" value={`${stats.lowStock} items`} icon={Package} color="rose" trend="down" trendValue="—" index={2} isDarkMode={isDarkMode} />
+          <GlassCard title="Avg Order" value={`₪${Math.round(stats.avgOrder)}`} icon={Activity} color="emerald" trend="up" trendValue="—" index={3} isDarkMode={isDarkMode} />
         </div>
 
         {/* Main Content Sections */}
@@ -402,7 +350,7 @@ const ElectroMartDashboard = () => {
                 عرض الكل
               </button>
             </div>
-            <RecentSalesTable isDarkMode={isDarkMode} />
+            <RecentSalesTable isDarkMode={isDarkMode} orders={orders} />
           </motion.div>
 
           {/* Sales Analytics Chart */}
@@ -417,8 +365,8 @@ const ElectroMartDashboard = () => {
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-12">
                 <div>
-                  <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-2 px-3 py-1 bg-white/10 rounded-full w-fit">Branch Overview</p>
-                  <h3 className="text-4xl font-black text-white tracking-tighter">أداء الفرع الحالي</h3>
+                  <p className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-2 px-3 py-1 bg-white/10 rounded-full w-fit">Overview</p>
+                  <h3 className="text-4xl font-black text-white tracking-tighter">أداء المبيعات</h3>
                 </div>
                 <div className="p-3 bg-white/10 rounded-2xl border border-white/20">
                   <TrendingUp size={24} className="text-white" />

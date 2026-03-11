@@ -34,6 +34,7 @@ import {
   Grid,
   Clock,
   ArrowUpDown,
+  ArrowLeft,
   Star,
   Gift,
   Sparkles,
@@ -222,6 +223,7 @@ import OfferCard from './components/OfferCard';
 import Dashboard from './components/Dashboard';
 import Sidebar from './components/Sidebar';
 import SmartScreensaver from './components/SmartScreensaver';
+import ElectroMartDashboard from './components/ElectroMartDashboard';
 
 function AddToOfferRow({ item, getImage, onAdd }) {
   const [qty, setQty] = useState(1);
@@ -707,7 +709,7 @@ function App() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderActionLoading, setOrderActionLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers'
+  const [mode, setMode] = useState('order'); // 'order' | 'catalog' | 'submitted' | 'offers' | 'dashboard_preview'
   const [sortMode, setSortMode] = useState('barcode'); // 'barcode' | 'name'
   const [isSortingMode, setIsSortingMode] = useState(false);
   const [sortingCategory, setSortingCategory] = useState(null); // 'electrical' | 'household'
@@ -3875,7 +3877,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
-  if (showSplash) {
+  if (showSplash && mode !== 'dashboard_preview') {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
@@ -3887,7 +3889,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && mode !== 'dashboard_preview') {
     return (
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
@@ -3896,6 +3898,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }>
         <Login onLogin={handleLogin} />
       </Suspense>
+    );
+  }
+
+  if (mode === 'dashboard_preview') {
+    return (
+      <div className="relative">
+        <ElectroMartDashboard />
+        <button 
+          onClick={() => setMode('order')} 
+          className="fixed bottom-6 left-6 z-[9999] bg-white hover:bg-indigo-50 text-black px-6 py-3 rounded-2xl text-sm font-black shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all hover:scale-105 active:scale-95 flex items-center gap-3 border border-indigo-100"
+        >
+          <ArrowLeft size={18} className="rotate-180" />
+          <span>الرجوع للنظام الأصلي</span>
+        </button>
+      </div>
     );
   }
 
@@ -4095,7 +4112,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 ${mode === 'dashboard' ? 'bg-amber-50 text-amber-700' : 'text-slate-700 hover:bg-slate-100 hover:text-amber-600'}`}
                             >
                               <LayoutDashboard size={18} />
-                              وضع الإدارة
+                              Dashboard
                             </button>
                           </>
                         )}
@@ -4147,6 +4164,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 getImage={getImage}
               />
             )}
+            {mode === 'dashboard' ? (
+              <div className="h-full min-h-[100vh] w-full flex flex-col">
+                <ElectroMartDashboard items={items} orders={submittedOrders} username={username} setMode={setMode} />
+              </div>
+            ) : (
             <div className="max-w-7xl mx-auto w-full pb-20">
 
               {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
@@ -4592,9 +4614,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   <Suspense fallback={<div className="min-h-[40svh] animate-pulse bg-slate-100/50 rounded-2xl" />}>
                     <SkeletonGrid />
                   </Suspense>
+                ) : mode === 'dashboard_preview' ? (
+                  <ElectroMartDashboard />
                 ) : mode === 'dashboard' ? (
-                  /* Dashboard View */
-                  <Dashboard items={items} orders={submittedOrders} />
+                  /* لوحة التحكم الجديدة مع بيانات المشروع الفعلية */
+                  <ElectroMartDashboard items={items} orders={submittedOrders} username={username} />
                 ) : mode === 'reports' ? (
                   /* التقارير — الشكل الخارجي: أولاً "أي تقرير تريد أن تراه؟" ثم محتوى التقرير */
                   <div className="max-w-6xl mx-auto animate-fade-in">
@@ -6630,6 +6654,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 )}
               </div>
             </div>
+            )}
           </div>
         </div >
       </div >
