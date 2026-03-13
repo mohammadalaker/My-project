@@ -65,6 +65,8 @@ import {
   TrendingUp,
   Bell,
   RefreshCw,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -224,6 +226,35 @@ import Dashboard from './components/Dashboard';
 import Sidebar from './components/Sidebar';
 import SmartScreensaver from './components/SmartScreensaver';
 import ElectroMartDashboard from './components/ElectroMartDashboard';
+
+// Mesh Gradient Component for "WOW" background
+const MeshBackground = () => (
+  <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f8fafc]">
+    {/* Floating Orbs with Blur */}
+    <motion.div 
+      animate={{ 
+        x: [0, 100, 0], 
+        y: [0, 50, 0],
+        scale: [1, 1.2, 1] 
+      }}
+      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] bg-indigo-400/30" 
+    />
+    <motion.div 
+      animate={{ 
+        x: [0, -80, 0], 
+        y: [0, 120, 0],
+        scale: [1.2, 1, 1.2] 
+      }}
+      transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+      className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] bg-purple-400/30" 
+    />
+    <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full blur-[100px] bg-blue-300/20" />
+    
+    {/* Subtle Grid overlay */}
+    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] contrast-150 brightness-100 mix-blend-overlay opacity-10" />
+  </div>
+);
 
 function AddToOfferRow({ item, getImage, onAdd }) {
   const [qty, setQty] = useState(1);
@@ -643,6 +674,7 @@ function App() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [showOrderPanel, setShowOrderPanel] = useState(false);
+  const [showCartOverlay, setShowCartOverlay] = useState(false);
   const [showCatalogPanel, setShowCatalogPanel] = useState(false);
   const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
   const [pdfPreviewBlobUrl, setPdfPreviewBlobUrl] = useState(null);
@@ -662,6 +694,7 @@ function App() {
       localStorage.setItem('sales_order_items', JSON.stringify(orderItems));
     } catch (e) { console.warn('Could not save order items:', e); }
   }, [orderItems]);
+
 
   const [currentOrderId, setCurrentOrderId] = useState(() => {
     try {
@@ -3918,6 +3951,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <>
+      <MeshBackground />
       {stockAlert && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] bg-red-600/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transform transition-all duration-300 pointer-events-auto shrink-0 border border-white/10" dir="rtl">
           <AlertOctagon size={22} className="shrink-0 animate-pulse text-red-200" />
@@ -3926,12 +3960,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         </div>
       )}
       <div
-        className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 text-slate-800 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'}`}
+        className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'} text-slate-800 bg-slate-50`}
       >
       <div
         className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
       >
-        <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'rounded-3xl shadow-xl border border-white/50 bg-white/40' : ''} ${(showOrderPanel || showCatalogPanel) ? 'shadow-xl' : ''}`}>
+        <div className={`flex-1 min-h-0 flex flex-col overflow-hidden relative transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'rounded-3xl shadow-xl border shadow-xl' : ''} border-white/50 bg-white/40 shadow-xl shadow-slate-200/20`}>
 
           <Sidebar
             isOpen={isSidebarOpen}
@@ -3947,64 +3981,68 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           />
 
           {/* Header */}
-          <header className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'sticky top-0 px-6 py-4 backdrop-blur-xl bg-white/70 border-b border-slate-200/50 shadow-sm'}`}>
+          <header className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'sticky top-0 px-6 py-4 backdrop-blur-xl border-b shadow-sm'} bg-white/70 border-slate-200/50`}>
             <div className="flex flex-wrap items-center justify-between gap-4 max-w-7xl mx-auto w-full">
               <div className="flex items-center gap-4 shrink-0">
                 {/* Full App Menu Toggle */}
                 {(userRole === 'admin' || userRole === 'supervisor') && (
                   <button
                     onClick={() => setSidebarOpen(true)}
-                    className="p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 transition-colors"
+                    className="p-2 -ml-2 rounded-xl transition-colors text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
                   >
                     <Menu size={24} />
                   </button>
                 )}
 
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/30 rotate-3' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30 -rotate-3'}`}>
-                  {mode === 'catalog' ? <Grid className="text-white drop-shadow-md" size={24} /> : <Package className="text-white drop-shadow-md" size={24} />}
+                  {mode === 'catalog' ? (
+                    <Grid className="text-white drop-shadow-md" size={24} />
+                  ) : (
+                    <Package className="text-white drop-shadow-md" size={24} />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">Maslamani<span className="font-light">Sales</span></h1>
+                     <h1 className="text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600">Maslamani<span className="font-light">Sales</span></h1>
                     {isOnline ? (
-                      <div className="flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full" title="متصل بالإنترنت">
+                      <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700" title="متصل بالإنترنت">
                         <Cloud size={12} className="fill-emerald-200" />
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full" title="غير متصل - سيتم المزامنة لاحقاً">
+                      <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700`} title="غير متصل - سيتم المزامنة لاحقاً">
                         <CloudOff size={12} />
                       </div>
                     )}
                   </div>
-                  <p className="text-slate-600 text-sm font-extrabold tracking-tight mt-0.5 text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-slate-500">Prime Devices</p>
-                  <p className="text-slate-500 text-xs font-medium tracking-wide uppercase mt-0.5">
+                   <p className="text-sm font-extrabold tracking-tight mt-0.5 text-transparent bg-clip-text bg-gradient-to-r from-slate-700 to-slate-500">Prime Devices</p>
+                   <p className="text-xs font-medium tracking-wide uppercase mt-0.5 text-slate-500">
                     {safeLocaleDate({ weekday: 'long', day: 'numeric', month: 'long' })}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 ml-auto shrink-0 relative" ref={profileMenuRef}>
+              <div className="flex items-center gap-2 ml-auto shrink-0 relative" ref={profileMenuRef}>
                 {username === 'mohammadalaker' || username === 'admin' || username === 'supervisor' ? (
                   <div
-                    className="flex items-center gap-3 bg-white/60 border border-slate-200/70 p-1.5 pr-5 rounded-full shadow-sm backdrop-blur-md transition-all hover:shadow-md cursor-pointer hover:bg-white/90"
+                    className="flex items-center gap-2 border p-1.5 pl-2 pr-4 rounded-full shadow-sm backdrop-blur-md transition-all cursor-pointer bg-white/60 border-slate-200/70 hover:shadow-md hover:bg-white/90"
                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                   >
-                    <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border-2 border-white shadow-sm shrink-0 flex items-center justify-center">
-                      <User className="w-6 h-6 text-slate-400 mt-2" />
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 shrink-0 flex items-center justify-center bg-slate-100 border-white shadow-sm">
+                      <User className="w-6 h-6 mt-2 text-slate-400" />
                     </div>
-                    <div className="hidden sm:flex flex-col">
-                      <span className="text-[13px] font-bold text-slate-800 leading-tight">
+                    <div className="hidden sm:flex flex-col items-start">
+                       <span className="text-[13px] font-bold leading-tight text-slate-800">
                         {username === 'mohammadalaker' ? 'Mohammed Alaker' : username === 'admin' ? 'Administrator' : 'Supervisor'}
                       </span>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider leading-none">{userRole}</span>
+                         <span className="text-[10px] uppercase font-bold tracking-wider leading-none text-slate-500">{userRole}</span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/50"></span>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div
-                    className="flex items-center justify-center p-2 bg-white/60 border border-slate-200/70 rounded-xl shadow-sm cursor-pointer hover:bg-white/90 transition-all"
+                    className="flex items-center justify-center p-2 rounded-xl shadow-sm cursor-pointer transition-all bg-white/60 border border-slate-200/70 hover:bg-white/90"
                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                   >
                     <User className="w-6 h-6 text-slate-500" />
@@ -4019,12 +4057,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute top-16 left-0 sm:right-0 sm:left-auto mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 text-right"
+                      className="absolute top-16 left-0 sm:right-0 sm:left-auto mt-2 w-56 rounded-2xl shadow-2xl overflow-hidden z-50 text-right border backdrop-blur-xl bg-white border-slate-100"
                       dir="rtl"
                     >
                       <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                         <p className="text-sm font-bold text-slate-800">{username}</p>
-                        <p className="text-xs text-slate-500 uppercase tracking-wider">{userRole}</p>
+                        <p className="text-xs uppercase tracking-wider text-slate-500">{userRole}</p>
                       </div>
 
                       <div className="p-2 space-y-1">
@@ -4153,7 +4191,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
 
 
-          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative">
+          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
             {isSortingMode && (
               <AdminSortProducts
                 items={sortingCategory === 'electrical' ? filteredItems.filter((i) => isElectricalGroup(i.group)) : filteredItems.filter((i) => !isElectricalGroup(i.group))}
@@ -4174,30 +4212,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {/* Hero Section + Categories — لا يظهران على صفحة إعدادات الحساب أو العملاء */}
               {mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && mode !== 'inventory' && !loading && !showOrderPanel && mode !== 'submitted' && mode !== 'offers' && mode !== 'dashboard' && mode !== 'sales_hub' && (
                 <div className="px-6 py-8 sm:py-12 flex flex-col items-center text-center animate-fade-in">
-                  {/* New Premium Header Design — بالعربية */}
                   <div className="flex flex-col items-center sm:items-start text-center sm:text-right w-full max-w-4xl mx-auto space-y-3 mb-6" dir="rtl">
-                    <span className="bg-indigo-600 text-white text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full inline-block shadow-sm">
+                    <span className="text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full inline-block shadow-sm bg-indigo-600 text-white">
                       جودة متميزة مضمونة
                     </span>
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] tracking-tight">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-[1.1] tracking-tight text-slate-900">
                       استكشف مجموعتنا المتميزة
                       <br className="hidden sm:block" />
                       <span className="text-blue-600"> من الأجهزة الكهربائية وأدوات المطبخ</span>
                     </h1>
-                    <p className="text-base sm:text-lg text-slate-600 font-medium">
+                    <p className="text-base sm:text-lg font-medium text-slate-600">
                       اختر العناصر لإنشاء طلب جديد أو لإدارة الكتالوج الخاص بك.
                     </p>
                   </div>
 
-                  {/* Search Bar & Sort */}
                   <div className="w-full max-w-2xl mt-8 flex flex-col sm:flex-row items-center gap-4 z-20">
                     <div className="relative group w-full flex-1">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
+                        <Search className="h-5 w-5 transition-colors text-indigo-500 group-focus-within:text-indigo-600" />
                       </div>
                       <input
                         type="text"
-                        className="block w-full pl-11 pr-4 py-4 bg-white/80 border-0 ring-1 ring-slate-200/60 rounded-2xl text-slate-900 placeholder:text-slate-400 shadow-lg shadow-indigo-500/5 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all duration-300 text-lg"
+                        className="block w-full pl-11 pr-4 py-4 border-0 rounded-2xl shadow-lg transition-all duration-300 text-lg bg-white/80 ring-1 ring-slate-200/60 text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                         placeholder="البحث بنوع المنتج أو الباركود..."
                         value={search}
                         onChange={(e) => { setSearch(e.target.value); setPage(0); }}
@@ -4205,7 +4241,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       />
                       {search ? (
                         <button
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-500 transition-colors"
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center transition-colors text-slate-400 hover:text-rose-500"
                           onClick={() => setSearch('')}
                           title="مسح البحث"
                         >
@@ -4224,9 +4260,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                     <button
                       onClick={() => setSortMode(s => s === 'barcode' ? 'name' : 'barcode')}
-                      className="px-6 py-4 rounded-2xl bg-white/80 hover:bg-white text-slate-600 font-bold shadow-lg shadow-indigo-500/5 hover:shadow-indigo-500/10 transition-all flex items-center gap-3 shrink-0 ring-1 ring-slate-200/60 hover:ring-indigo-500/50"
+                      className="px-6 py-4 rounded-2xl font-bold shadow-lg transition-all flex items-center gap-3 shrink-0 bg-white/80 hover:bg-white text-slate-600 ring-1 ring-slate-200/60 hover:ring-indigo-500/50 shadow-indigo-500/5 hover:shadow-indigo-500/10"
                     >
-                      <ArrowUpDown size={20} className={sortMode === 'name' ? 'text-indigo-600' : 'text-slate-400'} />
+                      <ArrowUpDown size={20} className={sortMode === 'name' ? 'text-indigo-400' : 'text-slate-400'} />
                       <span>{sortMode === 'barcode' ? 'By Name' : 'By Barcode'}</span>
                     </button>
                   </div>
@@ -4535,7 +4571,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               {/* Categories */}
               {!loading && mode !== 'submitted' && mode !== 'dashboard' && mode !== 'sales_hub' && mode !== 'offers' && mode !== 'settings' && mode !== 'customers' && mode !== 'reports' && mode !== 'inventory' && (
-                <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel && 'backdrop-blur-md bg-white/30 border-y border-white/40'}`}>
+                <div className={`sticky top-0 z-20 px-4 sm:px-6 py-4 transition-all duration-300 ${!showOrderPanel ? 'backdrop-blur-md bg-white/30 border-y border-white/40' : ''}`}>
                   <div className="flex flex-wrap justify-center gap-3">
                     {[
                       { key: null, label: 'All', count: items.length, icon: null, type: 'all' },
@@ -6357,7 +6393,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <Icon size={24} />
                             </div>
                             <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
-                            <span className="px-2.5 py-1 rounded-full bg-slate-200/50 text-slate-500 text-xs font-bold">{sorted.length}</span>
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-200/50 text-slate-500">{sorted.length}</span>
                           </div>
 
                           <motion.div
@@ -6392,24 +6428,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     transition: { duration: 0.2, ease: "easeOut" }
                                   }}
                                   key={item.id}
-                                  className="glass-card group flex flex-col h-full cursor-pointer transition-colors"
+                                  className="group flex flex-col h-full cursor-pointer transition-colors rounded-3xl overflow-hidden border glass-card border-white/80 shadow-lg hover:shadow-xl"
                                   onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
                                 >
                                   {getDisplayGroup(item) && (
                                     <div className="absolute top-0 left-3 z-10 -mt-1">
                                       {getLogoUrl(getDisplayGroup(item)) ? (
-                                        <div className="bg-white/95 shadow-sm border border-slate-100 rounded-lg py-1 px-1.5 flex items-center justify-center">
+                                        <div className="shadow-sm rounded-lg py-1 px-1.5 flex items-center justify-center bg-white/95 border border-slate-100">
                                           <img src={getLogoUrl(getDisplayGroup(item))} alt={getDisplayGroup(item)} loading="lazy" className="h-6 object-contain" />
                                         </div>
                                       ) : (
-                                        <span className="px-2.5 py-1 rounded-lg bg-white/95 text-[10px] font-bold text-slate-600 shadow-sm border border-slate-100 uppercase tracking-wide">
+                                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm uppercase tracking-wide bg-white/95 text-slate-600 border border-slate-100">
                                           {getDisplayGroup(item)}
                                         </span>
                                       )}
                                     </div>
                                   )}
 
-                                  <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-transparent to-slate-50/50">
+                                  <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-slate-50/80 to-slate-100/80">
                                     {getImage(item) ? (
                                       <img
                                         src={getImage(item)}
@@ -6466,7 +6502,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       <button
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); triggerCardImageUpload(item); }}
-                                        className="absolute bottom-3 right-3 p-2 rounded-full bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 shadow-md transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300"
+                                        className="absolute bottom-3 right-3 p-2 rounded-full shadow-md transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300 bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
                                       >
                                         {uploading && cardUploadItemRef.current?.id === item.id ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                                       </button>
@@ -6478,15 +6514,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <div className="flex justify-between items-start gap-2 mb-1">
                                       <div className="flex flex-col mb-1 min-h-[2.5em] justify-start w-full text-right" dir="rtl">
                                         {item.productType ? (
-                                          <h3 className="text-sm font-bold text-slate-800 leading-tight">
+                                          <h3 className="text-sm font-bold leading-tight text-slate-800">
                                             {item.productType}
                                           </h3>
                                         ) : (
-                                          <h3 className="text-sm font-bold text-slate-400 italic">
-                                            {/* Fallback if no product type is specified */}
+                                          <h3 className="text-sm font-bold italic text-slate-400">
                                           </h3>
                                         )}
-                                        <p className="text-xs text-slate-500 font-medium line-clamp-1 mt-0.5" title={item.name}>
+                                        <p className="text-xs font-medium line-clamp-1 mt-0.5 text-slate-500" title={item.name}>
                                           {item.name || 'Unknown Product'}
                                         </p>
                                       </div>
@@ -6494,14 +6529,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         <div className="flex flex-col gap-1 -mt-1 -mr-1">
                                           <button
                                             onClick={(e) => { e.stopPropagation(); openNameEditModal(item); }}
-                                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
+                                            className={`p-1.5 rounded-lg shrink-0 transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
                                             title="Quick Edit Name"
                                           >
                                             <FileText size={16} />
                                           </button>
                                           <button
                                             onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }}
-                                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
+                                            className={`p-1.5 rounded-lg shrink-0 transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
                                             title="Quick Edit Product Type"
                                           >
                                             <Tag size={16} />
@@ -6509,7 +6544,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         </div>
                                       )}
                                     </div>
-                                    <p className="text-sm font-mono text-slate-500 mb-1.5">{item.barcode}</p>
+                                    <p className="text-sm font-mono mb-1.5 text-slate-500">{item.barcode}</p>
                                     <div className="flex items-center gap-1 mb-4">
                                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-sm shadow-emerald-500/20 border border-white/20">
                                         <ShieldCheck size={10} className="opacity-90" />
@@ -6520,7 +6555,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <div className="mt-auto space-y-3">
                                       <div className="flex items-end justify-between">
                                         <div>
-                                          <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Price</p>
+                                          <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Price</p>
                                           <p className="text-3xl font-black text-slate-800">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
                                         </div>
                                         {item.priceAfterDiscount && item.priceAfterDiscount < item.price && (
@@ -6533,21 +6568,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                         )}
                                       </div>
 
-                                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 relative">
+                                      <div className="flex items-center justify-between pt-3 border-t relative border-slate-100">
                                         <div className="flex flex-col">
-                                          <span className="text-[10px] text-slate-400 font-bold uppercase">Stock</span>
+                                          <span className="text-[10px] font-bold uppercase text-slate-400">Stock</span>
                                           {getStockStatus(item) === 'Out of Stock' ? (
-                                            <span className="text-xs font-bold text-red-600">Out of Stock</span>
+                                            <span className="text-xs font-bold text-red-500">Out of Stock</span>
                                           ) : getStockStatus(item) === 'Low Stock' ? (
-                                            <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
+                                            <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
                                               {item.stock_count} <span className="text-[10px]">Last 5 units</span>
                                             </span>
                                           ) : (
-                                            <span className="text-xs font-bold text-emerald-600">Available</span>
+                                            <span className="text-xs font-bold text-emerald-500">Available</span>
                                           )}
                                         </div>
                                         <div className="flex flex-col items-end">
-                                          <span className="text-[10px] text-slate-400 font-bold uppercase">Box</span>
+                                          <span className="text-[10px] font-bold uppercase text-slate-400">Box</span>
                                           <span className="text-xs font-bold text-slate-700">{item.box || '-'}</span>
                                         </div>
 
@@ -6586,7 +6621,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                             else addToCatalog(item);
                                           }}
                                           className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all btn-modern ${catalogItems.some((i) => i.id === item.id)
-                                            ? 'bg-rose-100 text-rose-600 border border-rose-200'
+                                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
                                             : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
                                             }`}
                                         >
@@ -6631,10 +6666,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                   {userRole === 'admin' && (
                                     <div className="absolute top-3 right-3 flex gap-1 transform translate-x-full opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300">
-                                      <button onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-indigo-600 hover:bg-indigo-50" title="تعديل نوع المنتج"><Tag size={14} /></button>
-                                      <button onClick={(e) => { e.stopPropagation(); handlePrintQR(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="طباعة QR"><Smartphone size={14} /></button>
-                                      <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-indigo-600" title="تعديل"><FileText size={14} /></button>
-                                      <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg bg-white/90 shadow text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); openTypeEditModal(item); }} className="p-2 rounded-lg shadow bg-white/90 text-indigo-600 hover:bg-indigo-50" title="تعديل نوع المنتج"><Tag size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); handlePrintQR(item); }} className="p-2 rounded-lg shadow bg-white/90 text-slate-600 hover:text-indigo-600" title="طباعة QR"><Smartphone size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); openEditModal(item); }} className="p-2 rounded-lg shadow bg-white/90 text-slate-600 hover:text-indigo-600" title="تعديل"><FileText size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); handleDelete(item.barcode); }} className="p-2 rounded-lg shadow bg-white/90 text-slate-600 hover:text-rose-600" title="حذف"><Trash2 size={14} /></button>
                                     </div>
                                   )}
                                 </motion.div>
@@ -6649,7 +6684,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                 {hasMore && items.length > 0 && (
                   <div ref={loadMoreRef} className="flex justify-center py-12">
-                    {loadingMore && <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin"></div>}
+                    {loadingMore && <div className="w-10 h-10 border-4 rounded-full animate-spin border-indigo-200 border-t-indigo-500"></div>}
                   </div>
                 )}
               </div>
@@ -6660,10 +6695,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       </div >
 
       {
-        !showOrderPanel && mode === 'order' && (
+        !showOrderPanel && !showCartOverlay && mode === 'order' && (
           <button
             ref={cartIconRef}
-            onClick={() => setShowOrderPanel(true)}
+            onClick={() => setShowCartOverlay(true)}
             className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
             style={{ writingMode: 'vertical-rl' }}
           >
@@ -6671,6 +6706,116 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </button>
         )
       }
+
+      {/* Glassmorphism Slide-over Cart — سلة جانبية مع صور مصغرة وعداد كمية */}
+      <AnimatePresence>
+        {showCartOverlay && mode === 'order' && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[48] bg-black/25 backdrop-blur-sm"
+              onClick={() => setShowCartOverlay(false)}
+              aria-hidden="true"
+            />
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 w-[min(360px,100vw)] z-[49] flex flex-col overflow-hidden border-l border-white/40 shadow-2xl bg-white/70 backdrop-blur-2xl"
+            >
+              <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-200/60 bg-white/50">
+                <h3 className="text-lg font-black text-slate-800">سلة المشتريات</h3>
+                <button
+                  onClick={() => setShowCartOverlay(false)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+                {orderLines.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                      <ShoppingCart className="text-slate-400" size={28} strokeWidth={1.5} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-600">السلة فارغة</p>
+                    <p className="text-xs text-slate-500 mt-1">أضف منتجات من القائمة</p>
+                  </div>
+                ) : (
+                  orderLines.map((o) => (
+                    <motion.div
+                      key={o.id}
+                      layout
+                      className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 border border-slate-200/60 flex items-center justify-center">
+                        {getImage(o.item) ? (
+                          <img src={getImage(o.item)} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
+                        ) : (
+                          <Package size={20} className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">
+                          {o.customName || o.name || o.item?.name || '—'}
+                        </p>
+                        <p className="text-xs text-slate-500 font-mono">{o.item?.barcode}</p>
+                      </div>
+                      <div className="flex items-center gap-1 rounded-xl bg-slate-100 border border-slate-200/80 p-1 shrink-0" dir="ltr">
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => changeOrderQtyBy(o.id, -1)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-white hover:text-orange-500 transition-colors"
+                          aria-label="تقليل"
+                        >
+                          <Minus size={16} strokeWidth={2.5} />
+                        </motion.button>
+                        <span className="w-8 text-center text-sm font-black text-slate-800 tabular-nums">
+                          {o.qty ?? 0}
+                        </span>
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => changeOrderQtyBy(o.id, 1)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-white hover:text-orange-500 transition-colors"
+                          aria-label="زيادة"
+                        >
+                          <Plus size={16} strokeWidth={2.5} />
+                        </motion.button>
+                      </div>
+                      <button
+                        onClick={() => removeFromOrder(o.id)}
+                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0"
+                        aria-label="حذف"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+              {orderLines.length > 0 && (
+                <div className="flex-shrink-0 p-4 border-t border-slate-200/60 bg-white/60 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-600">المجموع</span>
+                    <span className="text-lg font-black text-slate-900" dir="ltr">₪{orderSubtotal.toFixed(2)}</span>
+                  </div>
+                  <button
+                    onClick={() => { setShowCartOverlay(false); setShowOrderPanel(true); setActiveTab('items'); }}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-orange-500/30 transition-all active:scale-[0.98]"
+                  >
+                    تفاصيل وإتمام الطلب
+                  </button>
+                </div>
+              )}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {
         !showCatalogPanel && mode === 'catalog' && (
@@ -6686,27 +6831,27 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {
         showOrderPanel && mode === 'order' && (
-          <aside className="pos-panel flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden bg-white/95 border-l border-slate-200 shadow-2xl z-50 transition-all duration-500 text-slate-800">
+          <aside className="pos-panel flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden border-l shadow-2xl z-50 transition-all duration-500 backdrop-blur-xl bg-white/95 border-slate-200 text-slate-800">
             {/* Header / Tabs */}
             <div className="flex-shrink-0 z-20">
               <div className="flex items-center justify-between px-8 py-6">
                 <div>
-                  <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                  <h2 className="text-2xl font-black tracking-tight flex items-center gap-3 text-slate-800">
                     <div className="flex items-center gap-1">
                       <span>Maslamani</span><span className="text-orange-500 font-light">POS</span>
                     </div>
                     {isOnline ? (
-                      <div className="flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full" title="متصل بالإنترنت">
-                        <Cloud size={12} className="fill-emerald-200" />
+                      <div className="flex items-center gap-1 text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full" title="متصل بالإنترنت">
+                        <Cloud size={12} className="fill-emerald-400/50" />
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full" title="غير متصل - سيتم المزامنة لاحقاً">
+                      <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700`} title="غير متصل - سيتم المزامنة لاحقاً">
                         <CloudOff size={12} />
                       </div>
                     )}
                   </h2>
                 </div>
-                <button onClick={() => setShowOrderPanel(false)} className="w-12 h-12 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all hover:rotate-90">
+                <button onClick={() => setShowOrderPanel(false)} className="w-12 h-12 rounded-full flex items-center justify-center transition-all hover:rotate-90 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800">
                   <X size={24} />
                 </button>
               </div>
@@ -6732,15 +6877,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
 
               {/* TAB: ITEMS */}
               {activeTab === 'items' && (
                 <div className="p-4 space-y-3">
                   {orderLines.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 bg-white rounded-2xl border border-slate-100">
-                      <ShoppingCart className="text-slate-400 mb-6" size={64} strokeWidth={1.5} />
-                      <p className="text-lg font-bold text-slate-800 mb-2">No items in cart</p>
+                    <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 rounded-2xl border bg-white border-slate-100">
+                      <ShoppingCart className="mb-6 text-slate-400" size={64} strokeWidth={1.5} />
+                      <p className="text-lg font-bold mb-2 text-slate-800">No items in cart</p>
                       <p className="text-sm text-slate-500">Click products to add</p>
                     </div>
                   ) : (
@@ -6753,7 +6898,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           {showBox && box && (
                             <div className="flex items-center gap-3 my-6 px-1">
                               <div className="h-px flex-1 bg-slate-200"></div>
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Box {box}</span>
+                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Box {box}</span>
                               <div className="h-px flex-1 bg-slate-200"></div>
                             </div>
                           )}
@@ -6779,40 +6924,40 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 <div className="flex-1 min-w-0">
                                   <div className="flex justify-between items-start gap-3">
                                     <input
-                                      className="text-base font-bold text-slate-800 leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400"
+                                      className="text-base font-bold leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400 text-slate-800"
                                       value={o.customName || o.name || o.item?.name || ''}
                                       onChange={(e) => setOrderLineName(o.id, e.target.value)}
                                       placeholder="Product Name"
                                       onPointerDown={(e) => e.stopPropagation()}
                                     />
-                                    <motion.button whileTap={{ scale: 0.8, rotate: 10 }} onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="text-slate-400 hover:text-rose-500 transition-colors bg-transparent p-2.5 rounded-xl hover:bg-rose-50 -mt-2 -mr-2 flex-shrink-0">
+                                    <motion.button whileTap={{ scale: 0.8, rotate: 10 }} onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="transition-colors bg-transparent p-2.5 rounded-xl -mt-2 -mr-2 flex-shrink-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50">
                                       <Trash2 size={16} />
                                     </motion.button>
                                   </div>
-                                  <p className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2 pointer-events-none">
-                                    <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">{o.item?.barcode}</span>
+                                  <p className={`text-[10px] font-mono mt-1 flex items-center gap-2 pointer-events-none text-slate-500`}>
+                                    <span className="px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">{o.item?.barcode}</span>
                                     {o.item?.group && <span className="text-slate-400 font-bold">• {o.item?.group}</span>}
                                   </p>
 
                                   <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate" dir="rtl">
                                     {/* Qty Control */}
-                                    <div className="flex flex-col justify-center items-center bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm shrink-0 w-14" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
+                                    <div className="flex flex-col justify-center items-center rounded-2xl p-1.5 border shadow-sm shrink-0 w-14 bg-white border-slate-200" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={() => changeOrderQtyBy(o.id, 1)}
-                                        className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        className={`w-full h-8 flex items-center justify-center rounded-lg transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
                                       >
                                         <Plus size={18} strokeWidth={3} />
                                       </motion.button>
                                       <input
-                                        className="w-full bg-transparent text-center text-lg font-black text-slate-700 outline-none my-1"
+                                        className="w-full bg-transparent text-center text-lg font-black outline-none my-1 text-slate-700"
                                         value={o.qty ?? ''}
                                         onChange={(e) => setOrderQty(o.id, e.target.value)}
                                       />
                                       <motion.button
                                         whileTap={{ scale: 0.8 }}
                                         onClick={() => changeOrderQtyBy(o.id, -1)}
-                                        className="w-full h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        className={`w-full h-8 flex items-center justify-center rounded-lg transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
                                       >
                                         <Minus size={18} strokeWidth={3} />
                                       </motion.button>
@@ -6822,25 +6967,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <div className="flex-1 w-full grid grid-cols-2 gap-3" onPointerDown={(e) => e.stopPropagation()}>
 
                                       {/* Card 1: Consumer Price */}
-                                      <div className="bg-gradient-to-br from-slate-50 to-slate-100/80 rounded-2xl p-3 border border-slate-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">سعر المستهلك</span>
-                                        <span className="font-bold text-slate-600 text-sm sm:text-base font-mono">₪{getLineOriginalPrice(o)}</span>
+                                      <div className="rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm bg-gradient-to-br from-slate-50 to-slate-100/80 border-slate-200/60">
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider text-slate-400`}>سعر المستهلك</span>
+                                        <span className="font-bold text-sm sm:text-base font-mono text-slate-600">₪{getLineOriginalPrice(o)}</span>
                                       </div>
 
                                       {/* Card 2: Discount */}
                                       <div className={`rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all ${getLineDiscountPercent(o) > 0 ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200' : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-100 opacity-60'}`}>
-                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${getLineDiscountPercent(o) > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>نسبة الخصم</span>
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider text-slate-400`}>نسبة الخصم</span>
                                         <span className={`font-bold text-sm sm:text-base font-mono ${getLineDiscountPercent(o) > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{getLineDiscountPercent(o)}%</span>
                                       </div>
 
                                       {/* Card 3: Price After Discount (Input) */}
-                                      <div className="bg-white rounded-2xl p-2 border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-1 text-center relative focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all hover:border-indigo-200">
+                                      <div className="rounded-2xl p-2 border shadow-sm flex flex-col items-center justify-center gap-1 text-center relative focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white border-slate-200 hover:border-indigo-200">
                                         <span className="text-[10px] font-bold text-indigo-500/80 uppercase tracking-wider">بعد الخصم</span>
                                         <div className="flex items-center justify-center gap-0.5" dir="ltr">
-                                          <span className="text-slate-400 font-bold text-xs mb-0.5">₪</span>
+                                          <span className={`font-bold text-xs mb-0.5 text-slate-400`}>₪</span>
                                           <input
                                             type="number"
-                                            className="w-20 bg-transparent text-center font-black text-slate-800 outline-none text-lg sm:text-lg"
+                                            className={`w-20 bg-transparent text-center font-black outline-none text-lg sm:text-lg text-slate-800`}
                                             value={getLineUnitPrice(o) || ''}
                                             onChange={(e) => setOrderLinePrice(o.id, e.target.value)}
                                             onFocus={(e) => e.target.select()}
@@ -6870,14 +7015,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {/* TAB: CUSTOMER */}
               {activeTab === 'customer' && (
                 <div className="p-6 animate-fade-in space-y-8">
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 border border-orange-100 rounded-3xl p-6 flex items-start gap-5 relative overflow-hidden">
+                  <div className="border rounded-3xl p-6 flex items-start gap-5 relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-100">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                    <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center shrink-0 border border-orange-200 text-orange-600">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-orange-100 border-orange-200 text-orange-600">
                       <span className="text-xl">👤</span>
                     </div>
                     <div className="relative z-10">
                       <p className="text-base font-bold text-orange-900">Customer Details</p>
-                      <p className="text-xs text-orange-800/60 mt-1 leading-relaxed">Details entered here will appear on the final invoice/receipt.</p>
+                      <p className="text-xs mt-1 leading-relaxed text-orange-800/60">Details entered here will appear on the final invoice/receipt.</p>
                     </div>
                   </div>
 
@@ -7154,33 +7299,33 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
             {/* Discount Section */}
             {orderLines.length > 0 && activeTab === 'items' && (
-              <div className="flex-shrink-0 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-t border-slate-200 p-4 z-10">
+              <div className="flex-shrink-0 border-t p-4 z-10 transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-200">
                 <div className="flex items-center gap-3">
                   <div className="flex-1 space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 mr-1">نوع الخصم إضافي</label>
+                    <label className="text-[10px] font-bold mr-1 text-slate-500">نوع الخصم إضافي</label>
                     <select
                       value={orderInfo.discountType || ''}
                       onChange={(e) => {
                         setOrderInfoField('discountType', e.target.value);
                         if (!e.target.value) setOrderInfoField('discountValue', '');
                       }}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 bg-white border-slate-200 text-slate-700 focus:border-indigo-500 focus:ring-indigo-100"
                     >
                       <option value="">لا يوجد خصم</option>
                       <option value="percentage">نسبة مئوية (%)</option>
                       <option value="amount">مبلغ مالي (₪)</option>
                     </select>
                   </div>
-                  {orderInfo.discountType && (
+                    {orderInfo.discountType && (
                     <div className="flex-1 space-y-1.5 animate-fade-in">
-                      <label className="text-[10px] font-bold text-slate-500 mr-1">قيمة الخصم</label>
+                      <label className="text-[10px] font-bold mr-1 text-slate-500">قيمة الخصم</label>
                       <input
                         type="number"
                         min="0"
                         step={orderInfo.discountType === 'percentage' ? "1" : "0.5"}
                         value={orderInfo.discountValue}
                         onChange={(e) => setOrderInfoField('discountValue', e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 font-mono text-left"
+                        className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 font-mono text-left bg-white border-slate-200 text-slate-800 focus:border-indigo-500 focus:ring-indigo-100"
                         placeholder="0"
                         dir="ltr"
                       />
@@ -7191,16 +7336,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             )}
 
             {/* Sticky Order Totals */}
-            <div className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-8 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
+            <div className="flex-shrink-0 backdrop-blur-xl border-t p-8 z-20 transition-colors duration-500 bg-white/90 border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
 
               {/* Discount Lines */}
               {finalOrderDiscount > 0 && (
-                <div className="flex flex-col gap-1 mb-4 border-b border-slate-100 pb-4">
-                  <div className="flex justify-between items-center text-sm text-slate-500 font-medium">
+                <div className="flex flex-col gap-1 mb-4 border-b pb-4 border-slate-100">
+                  <div className="flex justify-between items-center text-sm font-medium text-slate-500">
                     <span>المجموع قبل الخصم:</span>
                     <span className="font-mono text-slate-700">₪{orderSubtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm text-emerald-600 font-bold">
+                  <div className="flex justify-between items-center text-sm text-emerald-500 font-bold">
                     <span>الخصم الإضافي:</span>
                     <span className="font-mono">-₪{finalOrderDiscount.toFixed(2)}</span>
                   </div>
@@ -7209,20 +7354,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               <div className="flex justify-between items-end mb-5">
                 <div>
-                  <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase mb-1">
+                  <p className="text-[10px] font-bold tracking-widest uppercase mb-1 text-slate-500">
                     <span>{finalOrderDiscount > 0 ? "Final Total" : "Total Amount"}</span>
                   </p>
-                  <p className="text-4xl font-black text-slate-800 tracking-tighter drop-shadow-sm">
-                    <span className="text-2xl text-slate-400 mr-1">₪</span>
+                  <p className="text-4xl font-black tracking-tighter drop-shadow-sm text-slate-800">
+                    <span className="text-2xl mr-1 text-slate-400">₪</span>
                     <span>{itemTotalWithTax(orderLines).toFixed(2)}</span>
                   </p>
 
-                  {/* The Savings Hook */}
                   {(() => {
                     const totalOriginalPrice = orderLines.reduce((sum, o) => sum + (getLineOriginalPrice(o) * (o.qty || 0)), 0);
                     const totalSavings = Math.max(0, totalOriginalPrice - itemTotalWithTax(orderLines));
                     return totalSavings > 0 ? (
-                      <p className="text-emerald-600 text-[11px] font-bold mt-1.5 flex items-center justify-start gap-1 animate-fade-in" dir="rtl">
+                      <p className="text-emerald-500 text-[11px] font-bold mt-1.5 flex items-center justify-start gap-1 animate-fade-in" dir="rtl">
                         <span className="inline-block animate-bounce">🎉</span>
                         لقد وفرت {totalSavings.toFixed(2)} ₪ في هذا الطلب!
                       </p>
@@ -7230,8 +7374,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   })()}
                 </div>
                 <div className="text-right">
-                  <p className="text-slate-500 text-[10px] font-medium uppercase tracking-widest mb-1">Items Included</p>
-                  <div className="inline-flex items-center px-3 py-1 bg-slate-100 rounded-lg border border-slate-200">
+                  <p className="text-[10px] font-medium uppercase tracking-widest mb-1 text-slate-500">Items Included</p>
+                  <div className="inline-flex items-center px-3 py-1 rounded-lg border bg-slate-100 border-slate-200">
                     <span className="text-lg font-bold text-slate-700">{orderLines.length}</span>
                   </div>
                 </div>
@@ -7244,19 +7388,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <button onClick={handleSaveInvoice} className="py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/20 text-white font-bold rounded-2xl border transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
                   <span>Save + Export</span>
                 </button>
-                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold rounded-2xl border border-slate-200 transition-all hover:border-slate-300">
+                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="py-4 font-bold rounded-2xl border transition-all bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300">
                   <span>{activeTab === 'items' ? 'Next >' : '< Back'}</span>
                 </button>
               </div>
 
               <div className="flex justify-between mt-4 px-1 opacity-90 hover:opacity-100 transition-opacity">
-                <button onClick={clearOrder} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 uppercase tracking-widest transition-colors flex items-center gap-2">
+                <button onClick={clearOrder} className="text-[10px] font-bold text-rose-500 hover:text-rose-400 uppercase tracking-widest transition-colors flex items-center gap-2">
                   <Trash2 size={12} /> <span>Clear Order</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleHoldOrder}
-                  className="text-[10px] font-bold text-amber-600 hover:text-amber-700 uppercase tracking-widest transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100"
+                  className="text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100"
                 >
                   <Clock size={12} /> <span>تعليق الفاتورة</span>
                 </button>
@@ -7366,125 +7510,147 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         )
       }
 
+      {/* Modern Product Detail Modal */}
       {
         selectedItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedItem(null)}>
-            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90svh] overflow-hidden shadow-2xl border border-slate-100 flex flex-col" onClick={(e) => e.stopPropagation()} dir="rtl">
-              {/* Breadcrumb + Close */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-                <p className="text-sm text-slate-500">
-                  <span className="hover:text-slate-700">المنتجات</span>
-                  {selectedItem.group && <><span className="mx-1">/</span><span className="text-slate-700">{selectedItem.group}</span></>}
-                  <span className="mx-1">/</span>
-                  <span className="text-slate-800 font-semibold">{selectedItem.productType || selectedItem.name || '—'}</span>
-                </p>
-                <button onClick={() => setSelectedItem(null)} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" aria-label="إغلاق">✕</button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl px-4" onClick={() => setSelectedItem(null)}>
+            <motion.div
+              layoutId={`modal-${selectedItem.id}`}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="rounded-[2.5rem] max-w-5xl w-full max-h-[90svh] overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.6)] border flex flex-col transition-colors duration-500 bg-white border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+              dir="rtl"
+            >
+              {/* Header */}
+              <div className={`flex items-center justify-between px-8 py-6 border-b shrink-0 border-slate-100`}>
+                <div className="flex flex-col">
+                  <p className="text-[10px] uppercase font-black tracking-[0.2em] text-indigo-600">Product Selection</p>
+                  <h2 className="text-xl font-black mt-1 text-slate-900">{selectedItem.productType || 'Detailed Overview'}</h2>
+                </div>
+                <button 
+                  onClick={() => setSelectedItem(null)} 
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto">
-                <div className="grid md:grid-cols-2 gap-8 p-6">
-                  {/* Left: Image */}
-                  <div className="aspect-square max-h-[400px] rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center overflow-hidden">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+                <div className="grid md:grid-cols-2 gap-12">
+                  {/* Image Container */}
+                  <div className="aspect-square rounded-[2rem] relative flex items-center justify-center overflow-hidden transition-all duration-500 bg-gradient-to-br from-slate-50 to-slate-100">
+                    <div className="absolute inset-0 opacity-20" />
                     {getImage(selectedItem) ? (
-                      <img src={getImage(selectedItem)} alt="" loading="lazy" className="w-full h-full object-contain p-8" onError={(e) => (e.target.style.display = 'none')} />
+                      <motion.img 
+                        initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-12 z-10 filter drop-shadow-[0_20px_60px_rgba(0,0,0,0.3)]" 
+                      />
                     ) : (
-                      <Package size={120} className="text-slate-300" />
+                      <Package size={120} className="text-slate-200" />
                     )}
                   </div>
 
-                  {/* Right: Details */}
+                  {/* Details */}
                   <div className="flex flex-col">
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">{selectedItem.productType || selectedItem.name}</h2>
-                    <p className="text-xl font-bold text-amber-600 mb-4" dir="ltr">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</p>
-                    <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                      {selectedItem.name && selectedItem.name !== (selectedItem.productType || '') ? selectedItem.name : ''}
-                      {selectedItem.group && <span className="block mt-1 text-slate-500">الفئة: {selectedItem.group}</span>}
-                    </p>
-
-                    {/* Quantity */}
-                    <div className="mb-6">
-                      <label className="block text-sm font-bold text-slate-800 mb-2">الكمية</label>
-                      <div className="flex items-center gap-2 w-fit">
-                        <button
-                          type="button"
-                          onClick={() => setProductDetailQty((q) => Math.max(1, (q || 1) - 1))}
-                          className="w-11 h-11 flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
-                        >
-                          <Minus size={18} strokeWidth={2.5} />
-                        </button>
-                        <input
-                          type="number"
-                          min={1}
-                          value={productDetailQty}
-                          onChange={(e) => setProductDetailQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                          className="w-20 h-11 text-center text-lg font-bold rounded-xl border-2 border-slate-200 text-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setProductDetailQty((q) => (q || 1) + 1)}
-                          className="w-11 h-11 flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition-colors"
-                        >
-                          <Plus size={18} strokeWidth={2.5} />
-                        </button>
+                    <div className="mb-8">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600">
+                          {selectedItem.group || 'General'}
+                        </span>
+                        <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600">
+                          {getStockLabel(selectedItem)}
+                        </span>
+                      </div>
+                      <h1 className="text-4xl font-black leading-tight mb-4 text-slate-900">{selectedItem.name}</h1>
+                      <div className="flex items-baseline gap-4">
+                        <p className="text-5xl font-black text-slate-900" dir="ltr">
+                          <span className="text-xl font-medium opacity-50 mr-1">₪</span>
+                          {Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}
+                        </p>
+                        {selectedItem.priceAfterDiscount && selectedItem.priceAfterDiscount < selectedItem.price && (
+                          <p className="text-2xl text-slate-500 line-through opacity-50" dir="ltr">₪{selectedItem.price}</p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Add to cart / Actions */}
-                    <div className="flex flex-wrap gap-3 mt-auto">
+                    <div className="p-8 rounded-3xl mb-8 bg-slate-50 border border-slate-100">
+                      <h3 className="text-xs font-black uppercase tracking-widest mb-4 text-slate-500">Adjust Quantity</h3>
+                      <div className="flex items-center gap-5">
+                        <div className="flex items-center p-1.5 rounded-2xl border bg-white border-slate-200 shadow-sm">
+                          <button onClick={() => setProductDetailQty((q) => Math.max(1, (q || 1) - 1))} className="w-12 h-12 flex items-center justify-center rounded-xl transition-all hover:bg-slate-100 text-slate-800">
+                            <Minus size={20} />
+                          </button>
+                          <input type="number" min={1} value={productDetailQty} onChange={(e) => setProductDetailQty(Math.max(1, parseInt(e.target.value, 10) || 1))} className="w-20 text-center text-2xl font-black bg-transparent outline-none text-slate-900" />
+                          <button onClick={() => setProductDetailQty((q) => (q || 1) + 1)} className="w-12 h-12 flex items-center justify-center rounded-xl transition-all hover:bg-slate-100 text-slate-800">
+                            <Plus size={20} />
+                          </button>
+                        </div>
+                        <div className="flex flex-col">
+                          <p className="text-sm font-bold text-slate-700">
+                            {selectedItem.box ? `${selectedItem.box} Items per Box` : 'Single Item'}
+                          </p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.1em] mt-1 text-slate-400">Availability: High</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 mt-auto">
                       {mode !== 'catalog' && (
                         <button
-                          onClick={(e) => {
-                            addToOrder(selectedItem, productDetailQty, e);
-                            setSelectedItem(null);
-                          }}
-                          className="px-8 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold transition-colors"
+                          onClick={(e) => { addToOrder(selectedItem, productDetailQty, e); setSelectedItem(null); }}
+                          className="w-full py-5 rounded-3xl bg-indigo-600 hover:bg-indigo-500 text-white text-lg font-black shadow-xl shadow-indigo-600/30 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
-                          إضافة إلى السلة
+                          <ShoppingCart size={24} strokeWidth={2.5} />
+                          <span>Add to Selection</span>
                         </button>
                       )}
-                      {mode === 'catalog' && (
-                        <button onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} className={`px-8 py-3.5 rounded-xl font-bold transition-all ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500 hover:bg-rose-600 text-white' : 'border-2 border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-                          {catalogItems.some((i) => i.id === selectedItem.id) ? 'إزالة من الكتالوج' : 'إضافة إلى الكتالوج'}
-                        </button>
-                      )}
-                      {userRole === 'admin' && (
-                        <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="px-6 py-3.5 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors">تعديل</button>
-                      )}
+                      <div className="grid grid-cols-2 gap-4">
+                        {mode === 'catalog' && (
+                          <button 
+                            onClick={() => { catalogItems.some((i) => i.id === selectedItem.id) ? removeFromCatalog(selectedItem.id) : addToCatalog(selectedItem); setSelectedItem(null); }} 
+                            className={`py-4 rounded-2xl font-black transition-all border ${catalogItems.some((i) => i.id === selectedItem.id) ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                          >
+                            {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove Catalog' : 'Add to Catalog'}
+                          </button>
+                        )}
+                        {userRole === 'admin' && (
+                          <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="py-4 rounded-2xl font-black transition-all border bg-white border-slate-200 text-slate-700 hover:bg-slate-50">Edit Details</button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Tabs: Description / Additional info */}
-                <div className="border-t border-slate-100 px-6 py-4 bg-slate-50/50">
-                  <div className="flex gap-6 border-b border-slate-200 pb-2">
-                    <span className="text-sm font-bold text-slate-800 border-b-2 border-slate-900 pb-2">الوصف</span>
-                    <span className="text-sm font-semibold text-slate-500">معلومات إضافية</span>
-                  </div>
-                  <div className="pt-4 text-sm text-slate-600 leading-relaxed">
-                    <p><span className="font-semibold text-slate-700">السعر للمستهلك:</span> <span dir="ltr" className="font-bold text-slate-900">₪{selectedItem.price ?? 0}</span></p>
-                    <p className="mt-1"><span className="font-semibold text-slate-700">بعد الخصم:</span> <span dir="ltr" className="font-bold text-emerald-600">₪{Math.round(selectedItem.priceAfterDiscount ?? selectedItem.price ?? 0)}</span></p>
-                    <p className="mt-1"><span className="font-semibold text-slate-700">الصندوق:</span> {selectedItem.box || '—'}</p>
-                    <p className="mt-1"><span className="font-semibold text-slate-700">المخزون:</span> <span className={getStockStatus(selectedItem) === 'Out of Stock' ? 'text-red-600 font-bold' : getStockStatus(selectedItem) === 'Low Stock' ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>{getStockLabel(selectedItem)}</span></p>
-                    <p className="mt-1 font-mono text-xs"><span className="font-semibold text-slate-700">الباركود:</span> <span dir="ltr">{selectedItem.barcode || '—'}</span></p>
+                {/* Sub Features Section */}
+                <div className="mt-12 pt-8 border-t border-slate-100">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-slate-400">Product Specifications</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {[
+                      { label: 'Packaging', value: selectedItem.box || 'Standard Box' },
+                      { label: 'Warranty', value: selectedItem.warranty || '12 Months' },
+                      { label: 'List Price', value: `₪${selectedItem.price || 0}` },
+                      { label: 'SKU / Ident.', value: selectedItem.barcode || 'N/A' }
+                    ].map((spec, idx) => (
+                      <div key={idx} className="p-5 rounded-[1.5rem] border bg-slate-50 border-slate-100">
+                        <p className="text-[10px] font-black uppercase mb-1.5 opacity-40 text-slate-900">{spec.label}</p>
+                        <p className="font-black text-sm truncate text-slate-900">{spec.value}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         )
       }
 
-      {/* Quantity Modal */}
+      {/* Modern Quantity Modal */}
       {
         showQuantityModal && quantityItem && (() => {
           const boxCount = quantityItem.box ? parseInt(quantityItem.box, 10) : 1;
           const step = boxCount > 0 ? boxCount : 1;
-          const normalizeQty = (val) => {
-            if (val === '') return ''; // Allow empty while typing
-            const parsed = parseInt(val, 10);
-            if (isNaN(parsed) || parsed <= 0) return step;
-            return Math.max(step, Math.round(parsed / step) * step);
-          };
           const getValidQty = (val) => {
             const parsed = parseInt(val, 10);
             if (isNaN(parsed) || parsed <= 0) return step;
@@ -7492,102 +7658,77 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           };
 
           return (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuantityModal(false)}>
-              <div className="bg-white rounded-[24px] p-6 max-w-sm w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-xl font-bold text-slate-900 mb-3 text-left">Quantity</h3>
-                <p className="text-slate-600 font-bold mb-6 leading-relaxed text-right text-lg" dir="auto" style={{ direction: 'rtl' }}>
-                  {quantityItem.productType || quantityItem.name}
-                </p>
-
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl" onClick={() => setShowQuantityModal(false)}>
+              <div className="rounded-[2rem] p-8 max-w-sm w-full shadow-[0_30px_100px_rgba(0,0,0,0.6)] border transition-all duration-500 bg-white border-slate-100" onClick={(e) => e.stopPropagation()}>
                 <div className="mb-6">
-                  <label className="block text-sm font-semibold text-slate-700 mb-3 text-left w-full">Enter Quantity (multiples of {step})</label>
-                  <div className="flex items-center gap-2 max-w-[200px]">
+                  <p className="text-[10px] uppercase font-black tracking-[0.2em] mb-1 text-indigo-600">Stock Adjustment</p>
+                  <h3 className="text-xl font-black text-slate-900">Select Quantity</h3>
+                </div>
+
+                <div className="p-4 rounded-2xl mb-6 bg-slate-50 border border-slate-100">
+                    <p className="text-sm font-black mb-1 text-slate-700" dir="auto" style={{ direction: 'rtl' }}>
+                    {quantityItem.productType || quantityItem.name}
+                  </p>
+                  <p className={`text-[10px] font-black uppercase tracking-widest opacity-40 text-slate-900`}>
+                    Available in multiples of {step}
+                  </p>
+                </div>
+
+                <div className="mb-8">
+                  <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setQuantityValue((v) => Math.max(step, getValidQty(v) - step))}
-                      className="w-12 h-12 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 font-medium text-2xl hover:bg-slate-50 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-slate-300"
-                      aria-label="نقص"
+                      className={`w-14 h-14 flex items-center justify-center rounded-2xl border transition-all bg-white border-slate-200 text-slate-600 hover:bg-slate-50`}
                     >
-                      −
+                      <Minus size={24} />
                     </button>
                     <input
                       type="text"
                       inputMode="numeric"
-                      pattern="[0-9٠-٩]*"
                       value={quantityValue}
                       onChange={(e) => {
                         let val = e.target.value;
-                        // Convert Arabic numerals to English numerals
                         const arabicNumbers = [/٠/g, /١/g, /٢/g, /٣/g, /٤/g, /٥/g, /٦/g, /٧/g, /٨/g, /٩/g];
-                        for (let i = 0; i < 10; i++) {
-                          val = val.replace(arabicNumbers[i], i.toString());
-                        }
-                        // Strip anything that is not a digit
+                        for (let i = 0; i < 10; i++) val = val.replace(arabicNumbers[i], i.toString());
                         val = val.replace(/[^0-9]/g, '');
                         setQuantityValue(val);
                       }}
-                      onBlur={() => {
-                        // When they click away, correct it to the nearest valid multiple
-                        setQuantityValue(getValidQty(quantityValue));
-                      }}
-                      className="flex-1 h-12 w-full text-center text-xl font-bold rounded-xl border border-slate-200 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 text-slate-900 mx-1"
+                      onBlur={() => setQuantityValue(getValidQty(quantityValue))}
+                      className={`flex-1 h-14 text-center text-2xl font-black rounded-2xl border outline-none transition-all bg-white border-slate-200 text-slate-900 focus:border-indigo-400`}
                       autoFocus
                       onFocus={(e) => e.target.select()}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = getValidQty(quantityValue);
-                          setQuantityValue(val);
-                          if (quantityItem && val > 0) {
-                            addToOrder(quantityItem, val, quantityEventClick);
-                            setShowQuantityModal(false);
-                            setQuantityItem(null);
-                            setQuantityEventClick(null);
-                            setQuantityValue(1);
-                          }
-                        }
-                      }}
                     />
                     <button
                       type="button"
                       onClick={() => setQuantityValue((v) => getValidQty(v) + step)}
-                      className="w-12 h-12 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 font-medium text-2xl hover:bg-slate-50 transition-colors shrink-0 outline-none focus:ring-2 focus:ring-slate-300"
-                      aria-label="أضف"
+                      className={`w-14 h-14 flex items-center justify-center rounded-2xl border transition-all bg-white border-slate-200 text-slate-600 hover:bg-slate-50`}
                     >
-                      +
+                      <Plus size={24} />
                     </button>
                   </div>
-                  {quantityItem.box && (
-                    <p className="text-xs text-slate-500 mt-4 text-center flex items-center justify-center gap-1.5 flex-wrap" dir="ltr">
-                      <span className="font-medium text-slate-600">Box Count: {quantityItem.box}</span>
-                      <span className="text-slate-400 mx-1">—</span>
-                      <span dir="rtl">الكمية مضاعفات البوكس فقط (مثلاً {step}، {step * 2}، {step * 3}...)</span>
-                    </p>
-                  )}
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   <button
                     onClick={() => setShowQuantityModal(false)}
-                    className="flex-1 py-3.5 rounded-[14px] border border-slate-200 text-slate-700 font-bold text-sm hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors"
+                    className="flex-1 py-4 rounded-2xl font-black text-sm transition-all border bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => {
                       const finalVal = getValidQty(quantityValue);
-                      setQuantityValue(finalVal);
                       if (quantityItem && finalVal > 0) {
                         addToOrder(quantityItem, finalVal, quantityEventClick);
                         setShowQuantityModal(false);
                         setQuantityItem(null);
-                        setQuantityEventClick(null);
                         setQuantityValue(1);
                       }
                     }}
-                    className="flex-1 py-3.5 rounded-[14px] bg-[#6366f1] hover:bg-indigo-600 text-white font-bold text-sm transition-colors shadow-sm"
+                    className="flex-1 py-4 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-black text-sm transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
                   >
-                    Add to Cart
+                    Confirm
                   </button>
                 </div>
               </div>
@@ -7596,403 +7737,386 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         })()
       }
 
+      {/* Modern Admin Edit Modal */}
       {
         modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setModalOpen(false)}>
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90svh] overflow-y-auto shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-slate-800">{editingItem ? 'Edit Price & Qty' : 'Add Item'}</h2>
-                <button onClick={() => setModalOpen(false)} className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">✕</button>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl px-4" onClick={() => setModalOpen(false)}>
+            <div className="rounded-[2.5rem] max-lg w-full max-h-[90svh] overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.6)] border flex flex-col transition-all duration-500 bg-white border-slate-100" onClick={(e) => e.stopPropagation()}>
+              <div className={`flex items-center justify-between px-8 py-6 border-b shrink-0 border-slate-100`}>
+                <div className="flex flex-col">
+                  <p className="text-[10px] uppercase font-black tracking-[0.2em] text-indigo-600">Management</p>
+                  <h2 className="text-xl font-black mt-1 text-slate-900">{editingItem ? 'Edit Product' : 'Add New Entry'}</h2>
+                </div>
+                <button onClick={() => setModalOpen(false)} className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-slate-100 text-slate-500">✕</button>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <label><span className="text-xs block text-slate-600 font-medium mb-1">Barcode</span><input required value={formData.barcode} onChange={(e) => setFormData((p) => ({ ...p, barcode: e.target.value }))} disabled={!!editingItem} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 outline-none transition-shadow" /></label>
-                <label><span className="text-xs block text-slate-600 font-medium mb-1">Name</span><input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                <label><span className="text-xs block text-slate-600 font-medium mb-1">نوع المنتج</span><input value={formData.product_type} onChange={(e) => setFormData((p) => ({ ...p, product_type: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-amber-400 outline-none" placeholder="سخان ماء، عصارة حمضيات..." dir="rtl" /></label>
-                <label><span className="text-xs block text-slate-600 font-medium mb-1">Group</span><input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label>
-                    <span className="text-xs block text-slate-600 font-medium mb-1 flex items-center gap-2">
-                      Qty (Stock)
-                      {(formData.stock_count === '' || formData.stock_count == null || Number(formData.stock_count) <= 0) && (
-                        <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded">Out of Stock</span>
-                      )}
-                    </span>
-                    <input type="number" min={0} placeholder="0 = Out of Stock" value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" />
+
+              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-6">
+                <div className="space-y-4">
+                  <label className="block">
+                    <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Barcode Identifier</span>
+                    <input required value={formData.barcode} onChange={(e) => setFormData((p) => ({ ...p, barcode: e.target.value }))} disabled={!!editingItem} dir="ltr" className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-mono text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
                   </label>
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Box</span><input type="number" value={formData.box_count} onChange={(e) => setFormData((p) => ({ ...p, box_count: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Display Name</span>
+                      <input value={formData.eng_name} onChange={(e) => setFormData((p) => ({ ...p, eng_name: e.target.value }))} className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                    </label>
+                    <label className="block">
+                      <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Category Group</span>
+                      <input value={formData.brand_group} onChange={(e) => setFormData((p) => ({ ...p, brand_group: e.target.value }))} className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                    </label>
+                  </div>
+
+                  <label className="block">
+                    <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Product Type (Arabic)</span>
+                    <input value={formData.product_type} onChange={(e) => setFormData((p) => ({ ...p, product_type: e.target.value }))} dir="rtl" className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Stock Level</span>
+                      <input type="number" min={0} value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                    </label>
+                    <label className="block">
+                      <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Box Count</span>
+                      <input type="number" value={formData.box_count} onChange={(e) => setFormData((p) => ({ ...p, box_count: e.target.value }))} className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Standard Price</span>
+                      <input type="number" step="0.01" value={formData.full_price} onChange={(e) => setFormData((p) => ({ ...p, full_price: e.target.value }))} className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                    </label>
+                    <label className="block">
+                      <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Offer Price</span>
+                      <input type="number" step="0.01" value={formData.price_after_disc} onChange={(e) => setFormData((p) => ({ ...p, price_after_disc: e.target.value }))} className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                    </label>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Price</span><input type="number" step="0.01" value={formData.full_price} onChange={(e) => setFormData((p) => ({ ...p, full_price: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                  <label><span className="text-xs block text-slate-600 font-medium mb-1">Discounted</span><input type="number" step="0.01" value={formData.price_after_disc} onChange={(e) => setFormData((p) => ({ ...p, price_after_disc: e.target.value }))} dir="ltr" lang="en" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:ring-2 focus:ring-indigo-200 outline-none" /></label>
-                </div>
-                {/* إظهار المنتج للعملاء - داخل صفحة التعديل */}
-                {userRole === 'admin' && (
-                  <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-xl border border-slate-200 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
-                    <span className="text-xs font-medium text-slate-600">إظهار المنتج للعملاء</span>
+
+                <div className="p-6 rounded-3xl space-y-4 border bg-slate-50 border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Public Visibility</span>
                     <button
                       type="button"
                       onClick={() => setFormData((p) => ({ ...p, visible: !(p.visible !== false) }))}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-all ${formData.visible !== false ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-slate-300 text-slate-600 hover:bg-slate-400'}`}
-                      title={formData.visible !== false ? 'إخفاء المنتج من العملاء' : 'إظهار المنتج للعملاء'}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.visible !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}
                     >
-                      {formData.visible !== false ? <Eye size={18} /> : <EyeOff size={18} />}
-                      <span>{formData.visible !== false ? 'ظاهر' : 'مخفي'}</span>
+                      {formData.visible !== false ? <Eye size={14} /> : <EyeOff size={14} />}
+                      <span>{formData.visible !== false ? 'Live' : 'Hidden'}</span>
                     </button>
                   </div>
-                )}
-                <div className="space-y-2">
-                  <span className="text-xs block text-slate-600 font-medium">Image</span>
-                  <div className="flex gap-3 items-start">
-                    <div className="relative w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
-                      {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
-                        <img
-                          key={formData.image_url}
-                          src={getPublicImageUrl(formData.image_url)}
-                          alt=""
-                          loading="lazy"
-                          className="w-full h-full object-contain"
-                          onError={(e) => (e.target.style.display = 'none')}
+
+                  <div className="space-y-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Media Asset</span>
+                    <div className="flex gap-4">
+                      <div className="w-20 h-20 rounded-[1.5rem] flex-shrink-0 flex items-center justify-center overflow-hidden border transition-all duration-500 bg-white border-slate-200">
+                        {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
+                          <img key={formData.image_url} src={getPublicImageUrl(formData.image_url)} alt="" className="w-full h-full object-contain p-3" />
+                        ) : (
+                          <Package size={24} className="opacity-20" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        <input
+                          type="text"
+                          placeholder="Image URL..."
+                          value={formData.image_url || ''}
+                          onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value.trim() }))}
+                          className="w-full rounded-xl border px-3 py-2 text-xs outline-none bg-white border-slate-200"
                         />
-                      ) : (
-                        <Package size={28} className="text-slate-300" />
-                      )}
-                      {formData.image_url ? (
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          className="absolute bottom-1 right-1 w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow"
-                          title="Delete Image"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <input
-                        type="text"
-                        placeholder="Image path or URL (Optional)"
-                        value={formData.image_url || ''}
-                        onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value.trim() }))}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none"
-                        dir="ltr"
-                      />
-                      <label className={`block cursor-pointer ${uploading ? 'opacity-70' : ''}`}>
-                        <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={(e) => handleImageUpload(e, editingItem || { barcode: formData.barcode })} className="sr-only" />
-                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 text-xs font-medium transition-colors ${!formData.barcode ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
-                          {uploading ? <Loader2 size={14} className="animate-spin shrink-0" /> : <Upload size={14} className="shrink-0" />}
-                          {uploading ? 'Uploading...' : 'Upload'}
-                        </span>
-                      </label>
+                        <label className="block text-center cursor-pointer">
+                          <input ref={fileInputRef} type="file" accept="image/*" disabled={uploading || !formData.barcode} onChange={(e) => handleImageUpload(e, editingItem || { barcode: formData.barcode })} className="sr-only" />
+                          <div className={`py-2 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${uploading ? 'opacity-50' : 'border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'}`}>
+                            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                            {uploading ? 'Processing...' : 'Upload Asset'}
+                          </div>
+                        </label>
+                      </div>
                     </div>
                   </div>
-                  {!formData.barcode && <p className="text-[11px] text-amber-600">Enter barcode first to enable upload</p>}
-                  <p className="text-[11px] text-slate-500">Paste an image URL above or upload from your device.</p>
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] font-medium transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-semibold hover:bg-indigo-600 shadow-lg shadow-indigo-500/25 transition-all">Save</button>
+
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-4 rounded-2xl font-black text-sm border transition-all bg-white border-slate-200 text-slate-500 hover:bg-slate-50">Cancel</button>
+                  <button type="submit" className="flex-1 py-4 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-sm shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">
+                    Commit Changes
+                  </button>
                 </div>
               </form>
             </div>
           </div>
         )
       }
+      {/* Modern Edit Name Modal */}
       {
         editingNameItem && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditingNameItem(null)}>
-            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Edit Product Name</h3>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl" onClick={() => setEditingNameItem(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className={`rounded-[2rem] p-8 max-w-sm w-full shadow-[0_30px_100px_rgba(0,0,0,0.6)] border transition-all duration-500 bg-white border-slate-100`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-6">
+                <p className="text-[10px] uppercase font-black tracking-[0.2em] mb-1 text-indigo-600">Edit Meta</p>
+                <h3 className="text-xl font-black text-slate-900">Product Name</h3>
+              </div>
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all mb-6"
-                placeholder="Enter product name"
+                className="w-full rounded-2xl border px-5 py-4 text-sm font-bold outline-none transition-all mb-8 bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400"
+                placeholder="Entry name..."
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveNameEdit();
-                }}
+                onKeyDown={(e) => e.key === 'Enter' && saveNameEdit()}
               />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setEditingNameItem(null)}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveNameEdit}
-                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
-                >
-                  Save
-                </button>
+              <div className="flex gap-4">
+                <button onClick={() => setEditingNameItem(null)} className="flex-1 py-4 rounded-2xl font-black text-sm border transition-all bg-white border-slate-200 text-slate-500">Cancel</button>
+                <button onClick={saveNameEdit} className="flex-1 py-4 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-sm shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">Save Changes</button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )
       }
+
+      {/* Modern Edit Type Modal */}
       {
         editingTypeItem && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditingTypeItem(null)} dir="rtl">
-            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-slate-800 mb-4">تعديل نوع المنتج</h3>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl px-4" onClick={() => setEditingTypeItem(null)} dir="rtl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className={`rounded-[2rem] p-8 max-w-sm w-full shadow-[0_30px_100px_rgba(0,0,0,0.6)] border transition-all duration-500 bg-white border-slate-100`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-6 text-right">
+                <p className={`text-[10px] uppercase font-black tracking-[0.2em] mb-1 text-indigo-600`}>Edit Meta</p>
+                <h3 className="text-xl font-black text-slate-900">تغيير النوع</h3>
+              </div>
               <input
                 list="quick-edit-type-list"
                 value={newType}
                 onChange={(e) => setNewType(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all mb-6"
-                placeholder="اختر أو اكتب نوع المنتج (مثل: سخان ماء)"
+                className={`w-full rounded-2xl border px-5 py-4 text-sm font-bold outline-none transition-all mb-8 text-right bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400`}
+                placeholder="نوع المنتج..."
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveTypeEdit();
-                }}
+                onKeyDown={(e) => e.key === 'Enter' && saveTypeEdit()}
               />
               <datalist id="quick-edit-type-list">
                 {allProductTypes.map((t) => (
                   <option key={t} value={t} />
                 ))}
               </datalist>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setEditingTypeItem(null)}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
-                >
-                  إلغاء
-                </button>
-                <button
-                  onClick={saveTypeEdit}
-                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all"
-                >
-                  حفظ
-                </button>
+              <div className="flex gap-4">
+                <button onClick={() => setEditingTypeItem(null)} className="flex-1 py-4 rounded-2xl font-black text-sm border transition-all bg-white border-slate-200 text-slate-500">إلغاء</button>
+                <button onClick={saveTypeEdit} className="flex-1 py-4 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-sm shadow-xl shadow-indigo-600/20 active:scale-95 transition-all">حفظ النوع</button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )
       }
 
-      {/* مودال تعديل تصنيف المنتج سريعاً — شاشة الأدمن */}
+      {/* Modern Quick Category Modal */}
       {
         quickEditCategoryItem && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => !quickEditCategorySaving && setQuickEditCategoryItem(null)}>
-            <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100" onClick={(e) => e.stopPropagation()} dir="rtl">
-              <h3 className="text-lg font-bold text-slate-800 mb-1">تعديل تصنيف المنتج</h3>
-              <p className="text-sm text-slate-500 mb-4">{quickEditCategoryItem.name || quickEditCategoryItem.productType || quickEditCategoryItem.barcode}</p>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl" onClick={() => !quickEditCategorySaving && setQuickEditCategoryItem(null)} dir="rtl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="rounded-[2rem] p-8 max-w-sm w-full shadow-[0_30px_100px_rgba(0,0,0,0.6)] border transition-all duration-500 bg-white border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-6 text-right">
+                <p className="text-[10px] uppercase font-black tracking-[0.2em] mb-1 text-indigo-600">Edit Meta</p>
+                <h3 className="text-xl font-black text-slate-900">تغيير التصنيف</h3>
+                <p className="text-[10px] font-bold opacity-40 mt-1 text-slate-900">{quickEditCategoryItem.name || quickEditCategoryItem.productType || quickEditCategoryItem.barcode}</p>
+              </div>
               <input
                 list="quick-edit-category-list"
                 value={quickEditCategoryValue}
                 onChange={(e) => setQuickEditCategoryValue(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all mb-6"
-                placeholder="اختر أو اكتب التصنيف (الفئة)"
+                className="w-full rounded-2xl border px-5 py-4 text-sm font-bold outline-none transition-all mb-8 text-right bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400"
+                placeholder="اختر التصنيف..."
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.preventDefault(); handleQuickSaveCategory(); }
-                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickSaveCategory()}
               />
               <datalist id="quick-edit-category-list">
                 {allGroups.map((g) => (
                   <option key={g} value={g} />
                 ))}
               </datalist>
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <button
-                  type="button"
                   onClick={() => !quickEditCategorySaving && setQuickEditCategoryItem(null)}
                   disabled={quickEditCategorySaving}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  className="flex-1 py-4 rounded-2xl font-black text-sm border transition-all bg-white border-slate-200 text-slate-500"
                 >
                   إلغاء
                 </button>
                 <button
-                  type="button"
                   onClick={handleQuickSaveCategory}
                   disabled={quickEditCategorySaving}
-                  className="flex-1 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all disabled:opacity-70 flex items-center justify-center gap-2"
+                  className="flex-1 py-4 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-sm shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
-                  {quickEditCategorySaving ? <Loader2 size={18} className="animate-spin" /> : null}
-                  حفظ
+                  {quickEditCategorySaving && <Loader2 size={16} className="animate-spin" />}
+                  <span>حفظ التصنيف</span>
                 </button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )
       }
 
-      {/* Quick Add Customer Modal */}
+      {/* Modern Quick Add Customer Modal */}
       {
         showQuickAddCustomer && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onPointerDown={(e) => { if (e.target === e.currentTarget) setShowQuickAddCustomer(false); }}>
-            <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl border border-white/50 flex flex-col transform transition-all animate-fade-in" onPointerDown={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-indigo-50/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
-                    <span className="text-lg">👤</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800">إضافة زبون جديد سريعاً</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">سيتم حفظ الزبون واستخدامه في الفاتورة الحالية</p>
-                  </div>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl" onPointerDown={(e) => e.target === e.currentTarget && setShowQuickAddCustomer(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="rounded-[2.5rem] overflow-hidden w-full max-w-md shadow-[0_30px_100px_rgba(0,0,0,0.6)] border transform transition-all flex flex-col bg-white border-slate-100"
+              onPointerDown={(e) => e.stopPropagation()}
+              dir="rtl"
+            >
+              <div className="flex items-center justify-between px-8 py-6 border-b shrink-0 border-slate-100">
+                <div className="flex flex-col">
+                  <p className="text-[10px] uppercase font-black tracking-[0.2em] text-indigo-600">Registration</p>
+                  <h2 className="text-xl font-black mt-1 text-slate-900">Quick Customer Add</h2>
                 </div>
-                <button
-                  onClick={() => setShowQuickAddCustomer(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/50 hover:bg-slate-200 text-slate-500 transition-colors"
-                >
-                  <X size={16} strokeWidth={3} />
-                </button>
+                <button onClick={() => setShowQuickAddCustomer(false)} className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-slate-100 text-slate-500">✕</button>
               </div>
 
-              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <div className="p-8 space-y-5">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">رقم الهاتف <span className="text-rose-500">*</span></label>
+                  <label className="text-[10px] font-black uppercase tracking-widest block opacity-50 text-slate-900">رقم الجوال / معرف الزبون <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     value={quickAddCustomerData.phone}
                     onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, phone: toEnglishDigits(e.target.value) })}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none font-mono text-left transition-all"
+                    className="w-full rounded-2xl border px-5 py-4 text-sm font-bold outline-none transition-all text-left font-mono bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400"
                     placeholder="05..."
                     dir="ltr"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">اسم التاجر / المشتري <span className="text-rose-500">*</span></label>
+                  <label className="text-[10px] font-black uppercase tracking-widest block opacity-50 text-slate-900">اسم التاجر / المشتري <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     value={quickAddCustomerData.name}
                     onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, name: e.target.value })}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
-                    placeholder="اسم التاجر أو المشتري..."
+                    className="w-full rounded-2xl border px-5 py-4 text-sm font-bold outline-none transition-all bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400"
+                    placeholder="اسم المشتري..."
                     autoFocus
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">اسم المؤسسة / الشركة</label>
-                  <input
-                    type="text"
-                    value={quickAddCustomerData.companyName}
-                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, companyName: e.target.value })}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
-                    placeholder="اسم المؤسسة أو الشركة..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">العنوان</label>
-                  <input
-                    type="text"
-                    value={quickAddCustomerData.address}
-                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, address: e.target.value })}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
-                    placeholder="المدينة، الشارع..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">رقم الزبون (في الشركة)</label>
-                  <input
-                    type="text"
-                    value={quickAddCustomerData.customerNumber}
-                    onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, customerNumber: toEnglishDigits(e.target.value) })}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-mono text-left"
-                    placeholder="#"
-                    dir="ltr"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest block opacity-50 text-slate-900">المؤسسة</label>
+                    <input
+                      type="text"
+                      value={quickAddCustomerData.companyName}
+                      onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, companyName: e.target.value })}
+                      className="w-full rounded-2xl border px-5 py-4 text-xs font-bold outline-none transition-all bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400"
+                      placeholder="..."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest block opacity-50 text-slate-900">العنوان</label>
+                    <input
+                      type="text"
+                      value={quickAddCustomerData.address}
+                      onChange={(e) => setQuickAddCustomerData({ ...quickAddCustomerData, address: e.target.value })}
+                      className="w-full rounded-2xl border px-5 py-4 text-xs font-bold outline-none transition-all bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400"
+                      placeholder="..."
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="p-6 pt-0 flex gap-3">
-                <button
-                  onClick={() => setShowQuickAddCustomer(false)}
-                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm"
-                >
-                  إلغاء
-                </button>
+              <div className="p-8 pt-0 flex gap-4">
+                <button onClick={() => setShowQuickAddCustomer(false)} className={`flex-1 py-4 rounded-2xl font-black text-sm border transition-all bg-white border-slate-200 text-slate-500`}>إلغاء</button>
                 <button
                   onClick={handleQuickAddCustomer}
                   disabled={!quickAddCustomerData.name || !quickAddCustomerData.phone}
-                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-600/20 text-sm"
+                  className="flex-1 py-4 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-sm shadow-xl shadow-indigo-600/20 active:scale-95 transition-all"
                 >
-                  حفظ واختيار
+                  Commit Entry
                 </button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )
       }
 
-      {/* Held Orders Modal */}
+      {/* Modern Held Orders Modal */}
       {
         showHeldOrdersModal && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowHeldOrdersModal(false)}>
-            <div className="bg-white rounded-[24px] overflow-hidden w-full max-w-2xl shadow-2xl border border-white/50 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-                    <Clock size={20} />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl" onClick={() => setShowHeldOrdersModal(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="rounded-[2.5rem] overflow-hidden w-full max-w-2xl shadow-[0_30px_100px_rgba(0,0,0,0.6)] border flex flex-col max-h-[90vh] transition-all duration-500 bg-white border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-8 py-6 border-b shrink-0 border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center border transition-all bg-amber-100 border-amber-200 text-amber-600">
+                    <Clock size={24} />
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-800">الفواتير المعلقة</h3>
-                    <p className="text-sm text-slate-500 mt-0.5">يمكنك استعادة الفاتورة أو حذفها</p>
+                  <div className="flex flex-col text-left">
+                    <p className="text-[10px] uppercase font-black tracking-[0.2em] text-amber-600">Archived Slots</p>
+                    <h2 className="text-xl font-black mt-1 text-slate-900">Held Orders</h2>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowHeldOrdersModal(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                >
+                <button onClick={() => setShowHeldOrdersModal(false)} className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-slate-100 text-slate-500">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 bg-white min-h-[300px]">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
                 {heldOrders.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
-                    <Clock size={48} className="opacity-20" />
-                    <p className="text-lg font-medium">لا توجد فواتير معلقة حالياً</p>
+                  <div className="h-48 flex flex-col items-center justify-center opacity-20 space-y-4">
+                    <Clock size={48} />
+                    <p className="text-lg font-black uppercase tracking-widest text-center">No active holds</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4" dir="rtl">
                     {heldOrders.map((order) => {
                       const dateObj = new Date(order.timestamp);
                       const timeString = dateObj.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
                       const dateString = dateObj.toLocaleDateString('ar-SA');
-                      const firstItemNames = order.orderItems.slice(0, 2).map((i) => i.customName || i.name).join('، ');
+                      const firstItemNames = order.orderItems.slice(0, 2).map((i) => i.customName || i.name).join(', ');
 
                       return (
-                        <div key={order.id} className="group flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-amber-300 hover:shadow-md transition-all">
-                          <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] flex items-center justify-center border border-slate-100 shrink-0">
-                              <ShoppingCart size={20} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-bold text-slate-800 flex items-center gap-1"><Clock size={14} className="text-slate-400" /> {timeString}</span>
-                                <span className="text-xs text-slate-400">• {dateString}</span>
+                        <div key={order.id} className="group p-6 rounded-[2rem] border transition-all bg-white border-slate-100 hover:border-amber-200 shadow-sm">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                            <div className="flex gap-4 items-center">
+                              <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all bg-slate-50 text-slate-400 group-hover:text-amber-500">
+                                <ShoppingCart size={24} />
                               </div>
-                              <div className="text-sm text-slate-600 font-medium">
-                                {order.totalItems} أصناف <span className="text-slate-300 mx-1">|</span> الإجمالي: <span className="font-bold text-slate-800">₪{order.totalAmount?.toFixed(2) || (order.orderItems.reduce((acc, i) => acc + (i.qty * i.unitPrice), 0).toFixed(2))}</span>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm font-black text-slate-900">{timeString}</span>
+                                  <span className="opacity-40 text-[10px]">• {dateString}</span>
+                                </div>
+                                <p className="text-xs font-bold leading-relaxed mb-1 text-slate-500">
+                                  {order.totalItems} Items — <span className="text-slate-900">₪{order.totalAmount?.toFixed(2) || '0.00'}</span>
+                                </p>
+                                {firstItemNames && <p className="text-[10px] opacity-30 truncate max-w-[150px]">{firstItemNames}</p>}
                               </div>
-                              {firstItemNames && (
-                                <div className="text-xs text-slate-500 mt-1 truncate max-w-[200px] sm:max-w-xs" title={firstItemNames}>
-                                  أُضيف: {firstItemNames} {order.orderItems.length > 2 && '...'}
-                                </div>
-                              )}
-                              {(order.orderInfo?.customerNumber || order.orderInfo?.phone) && (
-                                <div className="text-xs text-indigo-500 font-medium mt-1">
-                                  {order.orderInfo.merchantName || order.orderInfo.companyName || order.orderInfo.phone || ('رقم الزبون: ' + order.orderInfo.customerNumber)}
-                                </div>
-                              )}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
-                            <button
-                              onClick={() => handleRestoreHeldOrder(order)}
-                              className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
-                            >
-                              <ShoppingCart size={16} /> استعادة
-                            </button>
-                            <button
-                              onClick={() => handleRemoveHeldOrder(order.id)}
-                              className="p-2.5 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors border border-slate-200 hover:border-rose-200"
-                              title="حذف نهائياً"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                              <button
+                                onClick={() => handleRestoreHeldOrder(order)}
+                                className="flex-1 sm:flex-none px-6 py-3 bg-amber-500 hover:bg-amber-400 text-white text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                              >
+                                <ShoppingCart size={16} /> Restore
+                              </button>
+                              <button
+                                onClick={() => handleRemoveHeldOrder(order.id)}
+                                className="p-3 rounded-xl transition-all bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 border border-slate-100"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -8000,26 +8124,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </div>
                 )}
               </div>
-
-              <div className="p-4 border-t border-slate-100 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
-                <button
-                  onClick={() => setShowHeldOrdersModal(false)}
-                  className="w-full py-3 bg-white border border-slate-200 text-slate-600 hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] font-bold rounded-xl transition-colors"
-                >
-                  إغلاق
-                </button>
+              <div className="p-8 border-t border-slate-100 bg-slate-50">
+                <button onClick={() => setShowHeldOrdersModal(false)} className="w-full py-4 rounded-2xl font-black text-sm transition-all border bg-white border-slate-200 text-slate-700 hover:bg-slate-50">إغلاق</button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )
       }
-
       {/* Mobile Bottom Nav */}
       <BottomNav
         mode={mode}
         setMode={setMode}
         cartCount={orderLines.length}
-        onOpenCart={() => setShowOrderPanel(true)}
+        onOpenCart={() => setShowCartOverlay(true)}
         hasOffers={userRole === 'customer' ? customOffers.some(o => o.items && o.items.length > 0 && o.showOnSalesScreen !== false) : customOffers.length > 0}
         cartButtonRef={cartNavRef}
       />
@@ -8051,9 +8168,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         );
       })}
-      </div >
-    </>
-  );
+    </div>
+  </>
+);
 }
 
 export default App;
