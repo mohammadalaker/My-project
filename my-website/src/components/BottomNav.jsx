@@ -1,7 +1,7 @@
 import React from 'react';
-import { Package, Grid, Gift } from 'lucide-react';
+import { Package, Grid, Gift, ShoppingCart } from 'lucide-react';
 
-export default function BottomNav({ mode, setMode, cartCount, onOpenCart, hasOffers, cartButtonRef }) {
+export default function BottomNav({ mode, setMode, cartCount, cartTotal = 0, onOpenCart, hasOffers, cartButtonRef }) {
     return (
         <div className="fixed bottom-0 left-0 right-0 glass-panel border-t-0 px-4 py-3 pb-safe z-50 flex items-center justify-around sm:hidden rounded-t-3xl backdrop-blur-xl">
             <button
@@ -20,16 +20,23 @@ export default function BottomNav({ mode, setMode, cartCount, onOpenCart, hasOff
                 <span className="text-[10px] font-bold">Offers</span>
             </button>
 
-            <div className="relative -top-8">
+            <div className="relative -top-6">
                 <button
                     ref={cartButtonRef}
                     onClick={onOpenCart}
-                    className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30 flex items-center justify-center border-4 border-white/80 backdrop-blur-sm relative transition-transform active:scale-95"
+                    className="flex items-center gap-2 py-2.5 pl-3 pr-4 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30 border-2 border-white/80 backdrop-blur-sm transition-transform active:scale-95"
                 >
-                    <span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 rounded-full text-xs font-bold flex items-center justify-center border-2 border-white shadow-sm">
-                        {cartCount}
-                    </span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
+                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                        <ShoppingCart size={18} strokeWidth={2.25} />
+                    </div>
+                    <div className="flex flex-col items-start gap-0">
+                        <span className="text-[10px] font-bold text-white/90 leading-tight">
+                            {cartCount} {cartCount === 1 ? 'قطعة' : 'قطع'}
+                        </span>
+                        <span className="text-sm font-black tracking-tight leading-tight" dir="ltr">
+                            ₪{typeof cartTotal === 'number' ? cartTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '0'}
+                        </span>
+                    </div>
                 </button>
             </div>
 

@@ -6696,14 +6696,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {
         !showOrderPanel && !showCartOverlay && mode === 'order' && (
-          <button
+          <motion.button
             ref={cartIconRef}
             onClick={() => setShowCartOverlay(true)}
-            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
-            style={{ writingMode: 'vertical-rl' }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex items-center gap-3 py-3 pl-4 pr-5 rounded-full bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xl shadow-orange-500/30 border border-white/20 hover:shadow-orange-500/40 transition-shadow"
           >
-            Open Cart
-          </button>
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <ShoppingCart size={20} strokeWidth={2.25} className="text-white" />
+            </div>
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-xs font-bold text-white/90 leading-none">
+                {orderLines.length} {orderLines.length === 1 ? 'قطعة' : 'قطع'}
+              </span>
+              <span className="text-base font-black tracking-tight leading-none" dir="ltr">
+                ₪{orderSubtotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </span>
+            </div>
+          </motion.button>
         )
       }
 
@@ -8136,6 +8147,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         mode={mode}
         setMode={setMode}
         cartCount={orderLines.length}
+        cartTotal={orderSubtotal}
         onOpenCart={() => setShowCartOverlay(true)}
         hasOffers={userRole === 'customer' ? customOffers.some(o => o.items && o.items.length > 0 && o.showOnSalesScreen !== false) : customOffers.length > 0}
         cartButtonRef={cartNavRef}
