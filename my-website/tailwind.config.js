@@ -13,15 +13,20 @@ export default {
       },
       colors: {
         primary: { DEFAULT: '#ea580c', light: '#fff7ed', dark: '#c2410c' },
+        obsidian: {
+          900: '#07080a',
+          800: '#0a0c10',
+          700: '#14171c',
+        },
+        slate: {
+          950: '#020617',
+          900: '#0f172a',
+          850: '#1e293b/50',
+        },
         pastel: {
           bg: '#F8FAFF',
           indigo: '#6366f1',
           'indigo-light': '#e0e7ff',
-          'emerald:': '#10b981', // Typo in original file? 'emerald:' key. I will fix it if I see it, or just keep as is? Original was 'emerald'. Wait.
-          // Let's look at original again.
-          // Original:
-          //           emerald: '#10b981',
-
           emerald: '#10b981',
           'emerald-light': '#d1fae5',
           'emerald-dark': '#059669',

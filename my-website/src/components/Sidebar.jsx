@@ -63,31 +63,31 @@ function Sidebar({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="fixed top-4 left-4 bottom-4 w-72 z-[101] flex flex-col overflow-hidden bg-white/60 backdrop-blur-2xl rounded-3xl border border-white/40 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.5)_inset]"
+                        className="fixed top-4 left-4 bottom-4 w-72 z-[101] flex flex-col overflow-hidden backdrop-blur-2xl rounded-3xl border shadow-xl bg-white/60 border-white/40 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1),0_0_0_1px_rgba(255,255,255,0.5)_inset]"
                     >
                         {/* Header / Brand */}
-                        <div className="flex items-center justify-between p-6 border-b border-white/30 bg-white/30 backdrop-blur-md rounded-t-3xl">
+                        <div className="flex items-center justify-between p-6 border-b backdrop-blur-md rounded-t-3xl border-white/30 bg-white/30">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center text-white font-bold text-lg rotate-3">
                                     MS
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600 tracking-tight">
+                                    <h2 className="text-xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-800 to-slate-600">
                                         Maslamani
                                     </h2>
-                                    <span className="text-xs font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-600 to-slate-500 tracking-tight">Premium Appliances</span>
+                                    <span className="text-xs font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-600 to-slate-500">Premium Appliances</span>
                                 </div>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                                className="p-2 rounded-xl transition-colors text-slate-400 hover:text-rose-500 hover:bg-rose-50"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
                         {/* Navigation — مؤشر نشط منزلق (Framer Motion) */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1 relative bg-white/20 backdrop-blur-sm">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1 relative backdrop-blur-sm bg-white/20">
                             {navItems.map((item) => {
                                 const isVisible = item.roles.includes(userRole);
                                 if (!isVisible) return null;
@@ -101,7 +101,7 @@ function Sidebar({
                                         {isActive && !isPlaceholder && (
                                             <motion.div
                                                 layoutId="sidebar-active"
-                                                className="absolute inset-0 rounded-xl bg-indigo-100/70 border border-indigo-200/50 shadow-sm backdrop-blur-sm"
+                                                className="absolute inset-0 rounded-xl backdrop-blur-sm bg-indigo-100/70 border border-indigo-200/50 shadow-sm"
                                                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                                                 style={{ zIndex: 0 }}
                                             />
@@ -142,10 +142,10 @@ function Sidebar({
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-white/30 bg-white/30 backdrop-blur-md rounded-b-3xl">
+                        <div className="p-4 border-t backdrop-blur-md rounded-b-3xl border-white/30 bg-white/30">
                             <button
                                 onClick={handleLogout}
-                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white/60 backdrop-blur-sm border border-white/50 text-rose-500 font-semibold hover:bg-rose-50/80 transition-colors shadow-sm"
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl backdrop-blur-sm font-semibold transition-colors shadow-sm bg-white/60 border border-white/50 text-rose-500 hover:bg-rose-50/80 border-white/50"
                             >
                                 <LogOut size={18} className="text-rose-500" />
                                 <span>تسجيل الخروج</span>

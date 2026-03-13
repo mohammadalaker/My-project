@@ -53,6 +53,7 @@ export function useBrandLogos() {
         if (normalizedGroup.includes('fresh')) return '/Logo/Fresh logo.png';
         if (normalizedGroup.includes('glemgas') || normalizedGroup.includes('glem gas')) return '/Logo/Glemgas logo.png';
         if (normalizedGroup.includes('grundig')) return '/Logo/Grundig Logo.png';
+        if (normalizedGroup.includes('jbl')) return '/Logo/JBL Logo.png';
         if (normalizedGroup.includes('kenwood')) return '/Logo/Kenwood Logo.png';
         if (normalizedGroup.includes('kmg')) return '/Logo/KMG Logo.png';
         if (normalizedGroup.includes('korkmaz')) return '/Logo/Korkmaz logo.png';
@@ -62,6 +63,7 @@ export function useBrandLogos() {
         if (normalizedGroup.includes('ocean')) return '/Logo/Ocean Logo.png';
         if (normalizedGroup.includes('panasonic')) return '/Logo/Panasonic Logo.png';
         if (normalizedGroup.includes('philips')) return '/Logo/Philips Logo.png';
+        if (normalizedGroup.includes('pyrex')) return '/Logo/Pyrex Logo.png';
         if (normalizedGroup.includes('russell') || normalizedGroup.includes('hobbs')) return '/Logo/Russell hobbs Logo.png';
         if (normalizedGroup.includes('samsung')) return '/Logo/Samsung Logo.png';
         if (normalizedGroup.includes('tefal')) return '/Logo/Tefal Logo.png';

@@ -1861,6 +1861,19 @@ function App() {
     [filteredByGroup, search, mode, userRole]
   );
 
+  /** Memoized sections (Electrical + Kitchenware) with sorted lists — avoids re-sort on every render for POS performance */
+  const productSections = useMemo(() => {
+    const electrical = filteredItems.filter((i) => isElectricalGroup(i.group));
+    const kitchenware = filteredItems.filter((i) => !isElectricalGroup(i.group));
+    const sortFn = sortMode === 'barcode'
+      ? (arr) => sortByBarcodeOrder(arr, dynamicBarcodeOrder)
+      : (arr) => [...arr].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' }));
+    return [
+      { title: 'Electrical Appliances', items: sortFn(electrical), color: 'indigo', icon: Zap },
+      { title: 'Kitchenware', items: sortFn(kitchenware), color: 'sky', icon: UtensilsCrossed },
+    ];
+  }, [filteredItems, sortMode, dynamicBarcodeOrder]);
+
   const filteredInventoryItems = useMemo(() => {
     let list = filteredItems || [];
     const raw = (inventorySearch || '').trim().toLowerCase();
@@ -1920,15 +1933,15 @@ function App() {
   }, [allGroups]);
   const kitchenwareIcons = [Home, Utensils, UtensilsCrossed, ChefHat, Wine, Flame, Cookie, Package];
 
-  /** Stock: red = out, yellow = last 5, green = plenty */
-  const getStockStatus = (item) => {
+  /** Stock: red = out, yellow = last 5, green = plenty — useCallback for ProductCard memo */
+  const getStockStatus = useCallback((item) => {
     const s = item?.stock ?? item?.stock_count;
     if (s == null || s === '') return 'Out of Stock';
     const n = Number(s);
     if (isNaN(n) || n <= 0) return 'Out of Stock';
-    if (n <= 5) return 'Low Stock'; // آخر 5 قطع
-    return 'In Stock'; // متوفر بكثرة
-  };
+    if (n <= 5) return 'Low Stock';
+    return 'In Stock';
+  }, []);
   const getStockLabel = (item) => {
     const status = getStockStatus(item);
     if (status === 'Out of Stock') return 'Out of Stock';
@@ -3591,7 +3604,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
-  const toggleOffer = async (item) => {
+  const toggleOffer = useCallback(async (item) => {
     if (userRole !== 'admin') return;
     const nextOffer = !item.isOffer;
     try {
@@ -3602,7 +3615,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       console.warn('toggleOffer:', err);
       alert(err.message || 'Failed to update offer status.');
     }
-  };
+  }, [userRole]);
 
   const fileInputRef = useRef(null);
 
@@ -3720,14 +3733,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     cardUploadRef.current?.click?.();
   };
 
-  const handleOpenQuantityModal = (item, event = null) => {
+  const handleOpenQuantityModal = useCallback((item, event = null) => {
     if (event) setQuantityEventClick({ clientX: event.clientX, clientY: event.clientY });
     setQuantityItem(item);
-    // Default to box count if available and valid number, otherwise 1
     const boxCount = item.box ? parseInt(item.box) : 1;
     setQuantityValue(boxCount > 0 ? boxCount : 1);
     setShowQuantityModal(true);
-  };
+  }, []);
 
   const handleConfirmQuantity = () => {
     if (!quantityItem || quantityValue <= 0) return;
@@ -6394,13 +6406,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </div>
                 ) : mode === 'submitted' ? null : (
                   <div className="space-y-12">
-                    {[
-                      { title: 'Electrical Appliances', items: filteredItems.filter((i) => isElectricalGroup(i.group)), color: 'indigo', icon: Zap },
-                      { title: 'Kitchenware', items: filteredItems.filter((i) => !isElectricalGroup(i.group)), color: 'sky', icon: UtensilsCrossed },
-                    ].map(({ title, items: sectionItems, color, icon: Icon }) => {
-                      const sorted = sortMode === 'barcode'
-                        ? sortByBarcodeOrder(sectionItems, dynamicBarcodeOrder)
-                        : [...sectionItems].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' }));
+                    {productSections.map(({ title, items: sorted, color, icon: Icon }) => {
                       if (sorted.length === 0) return null;
                       return (
                         <section key={title} className="animate-fade-in">
@@ -6428,7 +6434,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             className="product-grid"
                           >
                             <AnimatePresence mode="popLayout">
-                              {sorted.map((item, index) => (
+                              {sorted.map((item) => (
                                 <motion.div
                                   layout
                                   initial="hidden"
@@ -7705,14 +7711,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </p>
                 </div>
 
-                <div className="mb-8">
-                  <div className="flex items-center gap-3">
+                <div className="mb-8" dir="ltr">
+                  <div className="flex items-stretch rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                     <button
                       type="button"
                       onClick={() => setQuantityValue((v) => Math.max(step, getValidQty(v) - step))}
-                      className={`w-14 h-14 flex items-center justify-center rounded-2xl border transition-all bg-white border-slate-200 text-slate-600 hover:bg-slate-50`}
+                      className="w-14 h-14 flex items-center justify-center shrink-0 border-r border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                      aria-label="تقليل"
                     >
-                      <Minus size={24} />
+                      <Minus size={22} strokeWidth={2.5} />
                     </button>
                     <input
                       type="text"
@@ -7726,16 +7733,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         setQuantityValue(val);
                       }}
                       onBlur={() => setQuantityValue(getValidQty(quantityValue))}
-                      className={`flex-1 h-14 text-center text-2xl font-black rounded-2xl border outline-none transition-all bg-white border-slate-200 text-slate-900 focus:border-indigo-400`}
+                      className="flex-1 min-w-0 h-14 text-center text-2xl font-black outline-none bg-transparent text-slate-900 focus:ring-0 border-0"
                       autoFocus
                       onFocus={(e) => e.target.select()}
                     />
                     <button
                       type="button"
                       onClick={() => setQuantityValue((v) => getValidQty(v) + step)}
-                      className={`w-14 h-14 flex items-center justify-center rounded-2xl border transition-all bg-white border-slate-200 text-slate-600 hover:bg-slate-50`}
+                      className="w-14 h-14 flex items-center justify-center shrink-0 border-l border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                      aria-label="زيادة"
                     >
-                      <Plus size={24} />
+                      <Plus size={22} strokeWidth={2.5} />
                     </button>
                   </div>
                 </div>
