@@ -1,7 +1,8 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Package, Grid, Gift, ShoppingCart } from 'lucide-react';
 
-export default function BottomNav({ mode, setMode, cartCount, cartTotal = 0, onOpenCart, hasOffers, cartButtonRef }) {
+export default function BottomNav({ mode, setMode, cartCount, cartTotal = 0, cartPing = false, onOpenCart, hasOffers, cartButtonRef }) {
     return (
         <div className="fixed bottom-0 left-0 right-0 glass-panel border-t-0 px-4 py-3 pb-safe z-50 flex items-center justify-around sm:hidden rounded-t-3xl backdrop-blur-xl">
             <button
@@ -30,9 +31,13 @@ export default function BottomNav({ mode, setMode, cartCount, cartTotal = 0, onO
                         <ShoppingCart size={18} strokeWidth={2.25} />
                     </div>
                     <div className="flex flex-col items-start gap-0">
-                        <span className="text-[10px] font-bold text-white/90 leading-tight">
+                        <motion.span
+                            className="text-[10px] font-bold text-white/90 leading-tight inline-block origin-left"
+                            animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
+                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                        >
                             {cartCount} {cartCount === 1 ? 'قطعة' : 'قطع'}
-                        </span>
+                        </motion.span>
                         <span className="text-sm font-black tracking-tight leading-tight" dir="ltr">
                             ₪{typeof cartTotal === 'number' ? cartTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '0'}
                         </span>

@@ -675,6 +675,7 @@ function App() {
 
   const [showOrderPanel, setShowOrderPanel] = useState(false);
   const [showCartOverlay, setShowCartOverlay] = useState(false);
+  const [cartPing, setCartPing] = useState(false); // Ping على عدد السلة عند إضافة منتج
   const [showCatalogPanel, setShowCatalogPanel] = useState(false);
   const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
   const [pdfPreviewBlobUrl, setPdfPreviewBlobUrl] = useState(null);
@@ -750,6 +751,7 @@ function App() {
 
   const cartIconRef = useRef(null); // للأنيميشن fly-to-cart (زر السلة في الديسكتوب)
   const cartNavRef = useRef(null);  // زر السلة في الشريط السفلي (موبايل)
+  const cartCountPrevRef = useRef(null); // لتفعيل Ping عند زيادة عدد القطع
 
   // Held Orders State
   const [heldOrders, setHeldOrders] = useState(() => {
@@ -2333,6 +2335,20 @@ function App() {
   const orderLines = orderItems
     .map((o) => ({ ...o, item: items.find((i) => i.id === o.id) }))
     .filter((o) => o.item);
+
+  // إجمالي عدد القطع (لتفعيل Ping عند أي إضافة — صنف جديد أو زيادة كمية)
+  const totalCartPieces = orderLines.reduce((s, o) => s + (o.qty || 0), 0);
+
+  // Ping على زر السلة عند إضافة منتج (سطر جديد أو كمية أكثر)
+  useEffect(() => {
+    const prev = cartCountPrevRef.current;
+    if (prev !== null && totalCartPieces > prev) {
+      setCartPing(true);
+      const t = setTimeout(() => setCartPing(false), 550);
+      return () => clearTimeout(t);
+    }
+    cartCountPrevRef.current = totalCartPieces;
+  }, [totalCartPieces]);
 
   const getLineBox = (o) =>
     o.box ?? (o.item?.box != null ? String(o.item.box) : '—');
@@ -6707,9 +6723,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <ShoppingCart size={20} strokeWidth={2.25} className="text-white" />
             </div>
             <div className="flex flex-col items-start gap-0.5">
-              <span className="text-xs font-bold text-white/90 leading-none">
+              <motion.span
+                className="text-xs font-bold text-white/90 leading-none inline-block origin-left"
+                animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              >
                 {orderLines.length} {orderLines.length === 1 ? 'قطعة' : 'قطع'}
-              </span>
+              </motion.span>
               <span className="text-base font-black tracking-tight leading-none" dir="ltr">
                 ₪{orderSubtotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
@@ -8148,6 +8168,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         setMode={setMode}
         cartCount={orderLines.length}
         cartTotal={orderSubtotal}
+        cartPing={cartPing}
         onOpenCart={() => setShowCartOverlay(true)}
         hasOffers={userRole === 'customer' ? customOffers.some(o => o.items && o.items.length > 0 && o.showOnSalesScreen !== false) : customOffers.length > 0}
         cartButtonRef={cartNavRef}
