@@ -1474,6 +1474,21 @@ function App() {
   const setOrderInfoField = (key, value) =>
     setOrderInfo((prev) => ({ ...prev, [key]: value }));
 
+  /** مسح كامل معلومات العميل للاستبدال بعميل آخر */
+  const clearCustomerInfo = useCallback(() => {
+    setOrderInfo((prev) => ({
+      ...prev,
+      companyName: '',
+      merchantName: '',
+      phone: '',
+      address: '',
+      customerNumber: '',
+    }));
+    setCustomerSearch('');
+    setCustomerInsights(null);
+    setShowCustomerPredictions(false);
+  }, []);
+
 
 
   const getItemByBarcode = (barcode) => items.find((i) => String(i.barcode) === String(barcode));
@@ -7060,6 +7075,54 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <p className="text-xs mt-1 leading-relaxed text-orange-800/60">Details entered here will appear on the final invoice/receipt.</p>
                     </div>
                   </div>
+
+                  {/* بطاقة معلومات العميل الحالية + زر المسح */}
+                  {(orderInfo.phone || orderInfo.companyName || orderInfo.merchantName || orderInfo.address || orderInfo.customerNumber) && (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">معلومات العميل الحالية</p>
+                        <button
+                          type="button"
+                          onClick={clearCustomerInfo}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200/60 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                          مسح كامل واستبدال بعميل آخر
+                        </button>
+                      </div>
+                      <div className="grid gap-2 text-sm">
+                        {(orderInfo.companyName || orderInfo.merchantName) && (
+                          <>
+                            {orderInfo.companyName && (
+                              <p className="text-slate-800 font-bold">
+                                <span className="text-slate-500 font-normal">اسم الشركة:</span> {orderInfo.companyName}
+                              </p>
+                            )}
+                            {orderInfo.merchantName && (
+                              <p className="text-slate-800 font-bold">
+                                <span className="text-slate-500 font-normal">اسم التاجر:</span> {orderInfo.merchantName}
+                              </p>
+                            )}
+                          </>
+                        )}
+                        {orderInfo.phone && (
+                          <p className="text-slate-800 font-mono" dir="ltr">
+                            <span className="text-slate-500 font-normal">التلفون:</span> {orderInfo.phone}
+                          </p>
+                        )}
+                        {orderInfo.address && (
+                          <p className="text-slate-800">
+                            <span className="text-slate-500 font-normal">العنوان:</span> {orderInfo.address}
+                          </p>
+                        )}
+                        {orderInfo.customerNumber && (
+                          <p className="text-slate-800 font-mono" dir="ltr">
+                            <span className="text-slate-500 font-normal">رقم العميل:</span> {orderInfo.customerNumber}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-4">
                     {/* 1. التلفون (مع بحث تلقائي للزبائن) */}
