@@ -6723,23 +6723,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             onClick={() => setShowCartOverlay(true)}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
-            className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex items-center gap-3 py-3 pl-4 pr-5 rounded-full bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-xl shadow-orange-500/30 border border-white/20 hover:shadow-orange-500/40 transition-shadow"
+            className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 py-4 px-4 rounded-2xl bg-gradient-to-b from-orange-500 to-amber-600 text-white shadow-xl shadow-orange-500/30 border border-white/20 hover:shadow-orange-500/40 transition-shadow"
           >
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
               <ShoppingCart size={20} strokeWidth={2.25} className="text-white" />
             </div>
-            <div className="flex flex-col items-start gap-0.5">
-              <motion.span
-                className="text-xs font-bold text-white/90 leading-none inline-block origin-left"
-                animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-              >
-                {orderLines.length} {orderLines.length === 1 ? 'قطعة' : 'قطع'}
-              </motion.span>
-              <span className="text-base font-black tracking-tight leading-none" dir="ltr">
-                ₪{orderSubtotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </span>
-            </div>
+            <motion.span
+              className="text-xs font-bold text-white/90 leading-none inline-block"
+              animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
+              {orderLines.length} {orderLines.length === 1 ? 'قطعة' : 'قطع'}
+            </motion.span>
+            <span className="text-sm font-black tracking-tight leading-none" dir="ltr">
+              ₪{orderSubtotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
           </motion.button>
         )
       }

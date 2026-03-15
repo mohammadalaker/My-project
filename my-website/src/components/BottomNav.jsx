@@ -25,23 +25,21 @@ export default function BottomNav({ mode, setMode, cartCount, cartTotal = 0, car
                 <button
                     ref={cartButtonRef}
                     onClick={onOpenCart}
-                    className="flex items-center gap-2 py-2.5 pl-3 pr-4 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30 border-2 border-white/80 backdrop-blur-sm transition-transform active:scale-95"
+                    className="flex flex-col items-center gap-1 py-3 px-3 rounded-2xl bg-gradient-to-b from-orange-500 to-amber-500 text-white shadow-xl shadow-orange-500/30 border-2 border-white/80 backdrop-blur-sm transition-transform active:scale-95"
                 >
                     <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
                         <ShoppingCart size={18} strokeWidth={2.25} />
                     </div>
-                    <div className="flex flex-col items-start gap-0">
-                        <motion.span
-                            className="text-[10px] font-bold text-white/90 leading-tight inline-block origin-left"
-                            animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
-                            transition={{ duration: 0.5, ease: 'easeOut' }}
-                        >
-                            {cartCount} {cartCount === 1 ? 'قطعة' : 'قطع'}
-                        </motion.span>
-                        <span className="text-sm font-black tracking-tight leading-tight" dir="ltr">
-                            ₪{typeof cartTotal === 'number' ? cartTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '0'}
-                        </span>
-                    </div>
+                    <motion.span
+                        className="text-[10px] font-bold text-white/90 leading-tight inline-block"
+                        animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                    >
+                        {cartCount} {cartCount === 1 ? 'قطعة' : 'قطع'}
+                    </motion.span>
+                    <span className="text-xs font-black tracking-tight leading-tight" dir="ltr">
+                        ₪{typeof cartTotal === 'number' ? cartTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '0'}
+                    </span>
                 </button>
             </div>
 
