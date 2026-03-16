@@ -3,24 +3,46 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/triangle.svg" />
-  <link rel="alternate icon" href="/favicon.ico" type="image/x-icon" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="192x192" />
-  <link rel="mask-icon" href="/masked-icon.svg" color="#4f46e5" />
-  <meta name="theme-color" content="#ffffff" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="dns-prefetch" href="https://supabase.co" />
-  <!-- الخطوط: IBM Plex Sans Arabic + Geist تُحمّل عبر @fontsource في index.css -->
-  <title>MaslamaniSales</title>
+
+  <title>Maslamani Sales</title>
+
+  <!-- App icons -->
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+
   <style>
-    #root-loading{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(165deg,#f8fafc 0%,#f1f5f9 100%);font-family:system-ui,-apple-system,sans-serif;}
-    #root-loading .spinner{width:40px;height:40px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:root-spin .8s linear infinite;}
-    @keyframes root-spin{to{transform:rotate(360deg);}}
-    #root-loading .text{margin-top:1rem;font-size:.875rem;color:#64748b;font-weight:500;}
+    #root-loading {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    #root-loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: root-spin .8s linear infinite;
+    }
+
+    @keyframes root-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #root-loading .text {
+      margin-top: 1rem;
+      font-size: .875rem;
+      color: #64748b;
+      font-weight: 500;
+    }
   </style>
 </head>
 
@@ -38,7 +60,7 @@
       return false;
     };
     // إذا لم يُحمّل التطبيق خلال 12 ثانية (مثلاً فشل تحميل الملفات)، اعرض رسالة وزر تحديث
-    setTimeout(function() {
+    setTimeout(function () {
       var loading = document.getElementById('root-loading');
       if (!loading || loading.closest('#root') === null) return;
       loading.innerHTML = '<p class="text" style="margin-bottom:12px;">التطبيق لم يحمّل. تحقق من الاتصال أو حدّث الصفحة.</p><button type="button" onclick="location.reload()" style="padding:10px 24px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">تحديث الصفحة</button>';
