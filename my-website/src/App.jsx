@@ -1236,10 +1236,11 @@ function App() {
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
     setOrdersError(null);
+    // عرض كل الطلبات ما عدا المعتمدة: status = 'completed' فقط تُخفى. الطلبات القديمة (status = null) تظهر.
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .neq('status', 'completed')
+      .or('status.is.null,status.neq.completed')
       .order('created_at', { ascending: false });
     setOrdersLoading(false);
     if (error) {
