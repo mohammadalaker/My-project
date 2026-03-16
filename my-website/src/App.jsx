@@ -797,6 +797,18 @@ function App() {
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false);
   const [quickAddCustomerData, setQuickAddCustomerData] = useState({ companyName: '', name: '', phone: '', address: '', customerNumber: '' });
 
+  // مشتقات محسوبة لتقليل العمليات الثقيلة أثناء إدخال بيانات العميل
+  const currentCustomerByPhone = useMemo(
+    () => customers.find((c) => c.phone === orderInfo.phone),
+    [customers, orderInfo.phone]
+  );
+
+  const filteredCustomersByPhone = useMemo(() => {
+    const search = (customerSearch || '').trim();
+    if (!search || search.length < 2) return [];
+    return customers.filter((c) => c.phone && c.phone.includes(search));
+  }, [customers, customerSearch]);
+
   // Customers page (Sidebar) state
   const [customersPageSearch, setCustomersPageSearch] = useState('');
   const [inventorySearch, setInventorySearch] = useState('');
@@ -7129,17 +7141,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <div className="space-y-1.5 relative">
                       <label className="text-[11px] font-bold text-slate-500 mr-1 flex items-center justify-between">
                         <span>التلفون <span className="text-rose-500">*</span></span>
-                        {orderInfo.phone && customers.find(c => c.phone === orderInfo.phone) && (
+                        {orderInfo.phone && currentCustomerByPhone && (
                           <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
                             <Star size={10} fill="currentColor" />
-                            {customers.find(c => c.phone === orderInfo.phone).loyalty_points || 0} نقطة
+                            {currentCustomerByPhone.loyalty_points || 0} نقطة
                           </span>
                         )}
                       </label>
-                      {orderInfo.phone && (() => {
-                        const cust = customers.find(c => c.phone === orderInfo.phone);
-                        const debt = Number(cust?.outstanding_debt ?? 0);
-                        if (!cust || debt <= 0) return null;
+                      {orderInfo.phone && currentCustomerByPhone && (() => {
+                        const debt = Number(currentCustomerByPhone.outstanding_debt ?? 0);
+                        if (debt <= 0) return null;
                         return (
                           <div className="mb-1.5 rounded-2xl bg-rose-50 border border-rose-200 px-3 py-2 flex items-center justify-between text-[11px] text-rose-700 font-bold">
                             <span>تنبيه: هذا العميل لديه رصيد سابق غير مدفوع بقيمة ₪{debt.toFixed(0)}</span>
@@ -7185,7 +7196,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       {/* Customer Predictions Dropdown */}
                       {showCustomerPredictions && customerSearch.length >= 2 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                          {customers.filter(c => c.phone && c.phone.includes(customerSearch)).length === 0 ? (
+                          {filteredCustomersByPhone.length === 0 ? (
                             <div className="p-3 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-b border-slate-100 text-center">
                               <p className="text-sm text-slate-500 mb-2">زبون جديد (لم يسبق تسجيله)</p>
                               <button
@@ -7211,7 +7222,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </button>
                             </div>
                           ) : (
-                            customers.filter(c => c.phone && c.phone.includes(customerSearch)).map(cust => (
+                            filteredCustomersByPhone.map(cust => (
                               <div
                                 key={cust.id}
                                 onClick={() => {
