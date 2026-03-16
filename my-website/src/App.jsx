@@ -4050,14 +4050,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </button>
                 )}
 
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md bg-white border border-slate-200/80 overflow-hidden">
-                  <img
-                    src="/maslamani-logo.png"
-                    alt="Maslamani Sales Logo"
-                    className="w-8 h-8 object-contain"
-                    loading="eager"
-                    decoding="async"
-                  />
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/30 rotate-3' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30 -rotate-3'}`}>
+                  {mode === 'catalog' ? (
+                    <Grid className="text-white drop-shadow-md" size={24} />
+                  ) : (
+                    <Package className="text-white drop-shadow-md" size={24} />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
