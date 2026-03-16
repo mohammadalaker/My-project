@@ -4050,11 +4050,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </button>
                 )}
 
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-slate-700/60 shadow-slate-900/40 overflow-hidden">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md bg-white border border-slate-200/80 overflow-hidden">
                   <img
                     src="/maslamani-logo.png"
                     alt="Maslamani Sales Logo"
-                    className="w-9 h-9 object-contain invert"
+                    className="w-8 h-8 object-contain"
                     loading="eager"
                     decoding="async"
                   />
