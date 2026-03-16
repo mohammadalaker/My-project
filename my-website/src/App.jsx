@@ -1242,7 +1242,6 @@ function App() {
       .neq('status', 'completed')
       .order('created_at', { ascending: false });
     setOrdersLoading(false);
-    setOrdersLoading(false);
     if (error) {
       console.error('Orders fetch error:', error);
       const msg = error.message || '';
@@ -1257,6 +1256,7 @@ function App() {
 
         if (!retryError) {
           setSubmittedOrders(retryData ?? []);
+          setOrdersLoading(false);
           return;
         }
       }
@@ -4049,12 +4049,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </button>
                 )}
 
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${mode === 'catalog' ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-rose-500/30 rotate-3' : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30 -rotate-3'}`}>
-                  {mode === 'catalog' ? (
-                    <Grid className="text-white drop-shadow-md" size={24} />
-                  ) : (
-                    <Package className="text-white drop-shadow-md" size={24} />
-                  )}
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-slate-700/60 shadow-slate-900/40 overflow-hidden">
+                  <img
+                    src="/maslamani-logo.png"
+                    alt="Maslamani Sales Logo"
+                    className="w-9 h-9 object-contain invert"
+                    loading="eager"
+                    decoding="async"
+                  />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -4447,40 +4449,48 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           {/* Approve (Agree) Button -> PDF + Complete */}
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               if (!selectedOrder) return;
-                              // Load items into cart
-                              const newOrderItems = (selectedOrder.items || []).map(orderItem => {
-                                // Find original item data if possible to get full details (image, group, etc.)
+                              setOrderActionLoading(true);
+                              try {
+                                const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
+                                if (error) throw error;
+                                await fetchSubmittedOrders();
+                              } catch (e) {
+                                console.error(e);
+                                alert('تعذر تحديث حالة الطلب: ' + (e.message || e));
+                                setOrderActionLoading(false);
+                                return;
+                              }
+                              const orderToLoad = selectedOrder;
+                              const newOrderItems = (orderToLoad.items || []).map(orderItem => {
                                 const originalItem = items.find(i => i.barcode === orderItem.barcode) || {};
                                 return {
                                   id: originalItem.id || orderItem.barcode,
                                   qty: orderItem.qty,
                                   unitPrice: orderItem.unit_price || orderItem.price,
                                   box: originalItem.box,
-                                  item: { ...originalItem, ...orderItem }, // Merge to ensure we have display data
+                                  item: { ...originalItem, ...orderItem },
                                   customName: orderItem.name
                                 };
                               });
-
                               setOrderItems(newOrderItems);
                               setOrderInfo({
-                                companyName: selectedOrder.customer_name || '',
-                                merchantName: '', // Optional or from order if saved
-                                phone: selectedOrder.customer_phone || '',
-                                address: selectedOrder.customer_address || '',
-                                orderDate: selectedOrder.order_date || new Date().toISOString().slice(0, 10),
-                                customerNumber: selectedOrder.customer_number || '',
-                                paymentMethod: selectedOrder.payment_method || '', // Assuming these fields exist in saved details
+                                companyName: orderToLoad.customer_name || '',
+                                merchantName: '',
+                                phone: orderToLoad.customer_phone || '',
+                                address: orderToLoad.customer_address || '',
+                                orderDate: orderToLoad.order_date || new Date().toISOString().slice(0, 10),
+                                customerNumber: orderToLoad.customer_number || '',
+                                paymentMethod: orderToLoad.payment_method || '',
                                 checksCount: '',
                               });
-
                               setSelectedOrder(null);
-                              setCurrentOrderId(selectedOrder.id);
+                              setCurrentOrderId(orderToLoad.id);
                               setMode('order');
                               setShowOrderPanel(true);
-                              // Note: We do NOT changing status to 'completed' here. 
-                              // The supervisor will review in the main screen and then Print/Save from there.
+                            } finally {
+                              setOrderActionLoading(false);
                             }}
                             disabled={orderActionLoading}
                             className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold flex items-center justify-center gap-2 disabled:opacity-50"
