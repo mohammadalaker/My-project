@@ -4456,41 +4456,40 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
                                 if (error) throw error;
                                 await fetchSubmittedOrders();
+                                const orderToLoad = selectedOrder;
+                                const newOrderItems = (orderToLoad.items || []).map(orderItem => {
+                                  const originalItem = items.find(i => i.barcode === orderItem.barcode) || {};
+                                  return {
+                                    id: originalItem.id || orderItem.barcode,
+                                    qty: orderItem.qty,
+                                    unitPrice: orderItem.unit_price || orderItem.price,
+                                    box: originalItem.box,
+                                    item: { ...originalItem, ...orderItem },
+                                    customName: orderItem.name
+                                  };
+                                });
+                                setOrderItems(newOrderItems);
+                                setOrderInfo({
+                                  companyName: orderToLoad.customer_name || '',
+                                  merchantName: '',
+                                  phone: orderToLoad.customer_phone || '',
+                                  address: orderToLoad.customer_address || '',
+                                  orderDate: orderToLoad.order_date || new Date().toISOString().slice(0, 10),
+                                  customerNumber: orderToLoad.customer_number || '',
+                                  paymentMethod: orderToLoad.payment_method || '',
+                                  checksCount: '',
+                                });
+                                setSelectedOrder(null);
+                                setCurrentOrderId(orderToLoad.id);
+                                setMode('order');
+                                setShowOrderPanel(true);
                               } catch (e) {
                                 console.error(e);
                                 alert('تعذر تحديث حالة الطلب: ' + (e.message || e));
-                                setOrderActionLoading(false);
                                 return;
+                              } finally {
+                                setOrderActionLoading(false);
                               }
-                              const orderToLoad = selectedOrder;
-                              const newOrderItems = (orderToLoad.items || []).map(orderItem => {
-                                const originalItem = items.find(i => i.barcode === orderItem.barcode) || {};
-                                return {
-                                  id: originalItem.id || orderItem.barcode,
-                                  qty: orderItem.qty,
-                                  unitPrice: orderItem.unit_price || orderItem.price,
-                                  box: originalItem.box,
-                                  item: { ...originalItem, ...orderItem },
-                                  customName: orderItem.name
-                                };
-                              });
-                              setOrderItems(newOrderItems);
-                              setOrderInfo({
-                                companyName: orderToLoad.customer_name || '',
-                                merchantName: '',
-                                phone: orderToLoad.customer_phone || '',
-                                address: orderToLoad.customer_address || '',
-                                orderDate: orderToLoad.order_date || new Date().toISOString().slice(0, 10),
-                                customerNumber: orderToLoad.customer_number || '',
-                                paymentMethod: orderToLoad.payment_method || '',
-                                checksCount: '',
-                              });
-                              setSelectedOrder(null);
-                              setCurrentOrderId(orderToLoad.id);
-                              setMode('order');
-                              setShowOrderPanel(true);
-                            } finally {
-                              setOrderActionLoading(false);
                             }}
                             disabled={orderActionLoading}
                             className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold flex items-center justify-center gap-2 disabled:opacity-50"
