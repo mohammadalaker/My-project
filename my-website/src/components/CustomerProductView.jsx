@@ -4,12 +4,18 @@ import { Package, Smartphone, ShieldCheck, Zap, Info, Share2, Flame } from 'luci
 import { motion } from 'framer-motion';
 import { useBrandLogos } from '../hooks/useBrandLogos';
 import { getDisplayGroupForBarcode } from '../utils/displayGroupKMG';
+import { getLocalProducts } from '../lib/db';
 
 export default function CustomerProductView() {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [productSource, setProductSource] = useState(''); // cache | supabase
     const { getLogoUrl } = useBrandLogos();
+
+    const debug =
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('debug') === '1';
 
     // Parse barcode from URL query string
     const getBarcodeFromUrl = () => {
@@ -28,14 +34,104 @@ export default function CustomerProductView() {
             }
 
             try {
-                const { data, error: dbError } = await supabase
-                    .from('items')
-                    .select('barcode, eng_name, brand_group, full_price, price_after_disc, stock_count, image_url, product_type')
-                    .eq('barcode', barcode)
-                    .single();
+                const cleanBarcode = String(barcode).trim();
+                const digitsBarcode = cleanBarcode.replace(/[^\d]/g, '');
+                const stripLeadingZeros = (s) => String(s || '').replace(/^0+/, '');
+                const cleanNoZeros = stripLeadingZeros(cleanBarcode);
+                const digitsNoZeros = stripLeadingZeros(digitsBarcode);
 
-                if (dbError) throw dbError;
-                setProduct(data);
+                // نستخدم نفس الأعمدة التي يعتمدها كرت المنتج في الصفحة الرئيسية (App.jsx)
+                const selectCols = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer, visible, product_type';
+
+                // 1) محاولة من الكاش المحلي أولاً (نفس البيانات التي تعرضها الصفحة الرئيسية)
+                try {
+                    const localItems = await getLocalProducts();
+                    if (Array.isArray(localItems) && localItems.length > 0) {
+                        const candidates = new Set();
+                        candidates.add(cleanBarcode);
+                        candidates.add(digitsBarcode);
+                        candidates.add(cleanNoZeros);
+                        candidates.add(digitsNoZeros);
+                        const qNum = Number(digitsNoZeros);
+                        if (Number.isFinite(qNum)) candidates.add(String(qNum));
+
+                        // محرك المطابقة: App.jsx يستخدم id = String(row.barcode ?? '').trim()
+                        // لذا نطابق على li.id أيضاً إن وُجد.
+                        const localMatch = localItems.find((li) => {
+                            const liBarcode = String(li?.barcode ?? '').trim();
+                            const liId = String(li?.id ?? '').trim();
+
+                            const liDigits = liBarcode.replace(/[^\d]/g, '');
+                            const liNoZeros = stripLeadingZeros(liBarcode);
+                            const liDigitsNoZeros = stripLeadingZeros(liDigits);
+
+                            const liCandidates = new Set([
+                                liBarcode,
+                                liDigits,
+                                liNoZeros,
+                                liDigitsNoZeros,
+                                liId,
+                            ]);
+
+                            for (const c of liCandidates) {
+                                if (c && candidates.has(c)) return true;
+                            }
+                            return false;
+                        });
+                        if (localMatch) {
+                            setProduct(localMatch);
+                            setProductSource('cache');
+                            return;
+                        }
+                    }
+                } catch (cacheErr) {
+                    // ignore cache errors and fallback to supabase
+                    console.warn('Local cache lookup failed:', cacheErr);
+                }
+
+                // 2) إذا لم نجد في الكاش، نجلب من Supabase
+                // بعض قواعد البيانات تخزن barcode كنص، وبعضها كرقم.
+                // نحاول أولاً كنص، وإذا لم نجد نحاول كرقم.
+                let res = await supabase
+                    .from('items')
+                    .select(selectCols)
+                    .eq('barcode', cleanBarcode)
+                    .maybeSingle();
+
+                const trySupabaseEq = async (value) => {
+                    return supabase
+                        .from('items')
+                        .select(selectCols)
+                        .eq('barcode', value)
+                        .maybeSingle();
+                };
+
+                if (!res.data && !res.error && digitsBarcode) {
+                    // try string no-zeros
+                    if (cleanNoZeros && cleanNoZeros !== cleanBarcode) {
+                        const r2 = await trySupabaseEq(cleanNoZeros);
+                        if (r2.data) res = r2;
+                    }
+                    // try digits no-zeros
+                    if ((!res.data || res.error) && digitsNoZeros && digitsNoZeros !== digitsBarcode) {
+                        const r3 = await trySupabaseEq(digitsNoZeros);
+                        if (r3.data) res = r3;
+                    }
+                    // try numeric
+                    if ((!res.data || res.error) && digitsNoZeros) {
+                        const asNum = Number(digitsNoZeros);
+                        if (Number.isFinite(asNum)) {
+                            const r4 = await trySupabaseEq(asNum);
+                            if (r4.data) res = r4;
+                        }
+                    }
+                }
+
+                if (res.error) throw res.error;
+                if (!res.data) throw new Error('NOT_FOUND');
+
+                setProduct(res.data);
+                setProductSource('supabase');
             } catch (err) {
                 console.warn('Error fetching product for customer view:', err);
                 setError('Product not found or unavailable. Please try again.');
@@ -66,7 +162,8 @@ export default function CustomerProductView() {
 
     const parsePrice = (val) => {
         if (val === null || val === undefined || val === '') return null;
-        const str = String(val).replace(/[^\\d.-]/g, '');
+        // Regex الصحيح: أبقِ على الأرقام + '.' و '-' فقط
+        const str = String(val).replace(/[^\d.-]/g, '');
         const num = Number(str);
         return isNaN(num) ? null : num;
     };
@@ -97,13 +194,15 @@ export default function CustomerProductView() {
         );
     }
 
+    // منطق السعر مطابق تماماً لـ App.jsx (normalizeItemFromSupabase)
     const price = parsePrice(product.full_price) || 0;
-    const priceAfterDisc = parsePrice(product.price_after_disc);
-    const finalPrice = (priceAfterDisc !== null && !isNaN(priceAfterDisc) && priceAfterDisc !== 0) ? priceAfterDisc : price;
+    const disc = parsePrice(product.price_after_disc);
+    const finalPrice = (disc !== null && !isNaN(disc) && disc !== 0) ? disc : price;
     const hasDiscount = finalPrice < price;
     const discountPercent = hasDiscount ? Math.round(((price - finalPrice) / price) * 100) : 0;
     const stockCount = Number(product.stock_count) || 0;
     const displayGroup = getDisplayGroupForBarcode(product.barcode, product.brand_group);
+    const urlBarcode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('barcode') : '';
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 font-sans selection:bg-indigo-100 pb-24" dir="rtl">
@@ -170,8 +269,16 @@ export default function CustomerProductView() {
                     <div className="bg-white/70 backdrop-blur-2xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-[2.5rem] p-6 sm:p-8">
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                             <p className="text-xs font-mono text-slate-400 mb-2">{product.barcode}</p>
-                            <h2 className="text-2xl font-black text-slate-800 leading-snug mb-2">
-                                {product.eng_name || displayGroup || 'منتج غير معروف'}
+                            <h2
+                                className="text-base sm:text-lg font-black text-slate-800 leading-snug mb-2 break-words"
+                                style={{
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 3,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                {product.eng_name || product.name || displayGroup || 'منتج غير معروف'}
                             </h2>
                             {product.product_type && (
                                 <p className="text-sm font-bold text-indigo-500 mb-6 bg-indigo-50 inline-block px-3 py-1 rounded-lg">
@@ -180,20 +287,50 @@ export default function CustomerProductView() {
                             )}
                         </motion.div>
 
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="flex items-end gap-4 mb-8">
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">السعر</p>
-                                <div className="flex items-baseline gap-1 relative">
-                                    <span className="text-lg font-bold text-slate-800">₪</span>
-                                    <span className="text-5xl font-black text-slate-800 tracking-tighter">{Math.round(finalPrice)}</span>
-                                    {hasDiscount && (
-                                        <div className="absolute -top-4 -right-12">
-                                            <span className="text-sm text-slate-400 line-through font-bold">₪{Math.round(price)}</span>
-                                        </div>
-                                    )}
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
+                            <div className="flex items-end justify-between gap-6" dir="ltr">
+                                {/* Final price (big) */}
+                                <div>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.18em] mb-1">PRICE</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-lg font-bold text-slate-800">₪</span>
+                                        <span className="text-5xl font-black text-slate-900 tracking-tight">
+                                            {Math.round(finalPrice)}
+                                        </span>
+                                    </div>
                                 </div>
+
+                                {/* Original price + discount percent */}
+                                {hasDiscount && (
+                                    <div className="text-right">
+                                        <p className="text-xs font-semibold text-slate-400 mb-1">₪{Math.round(price)}</p>
+                                        <p className="text-sm font-black text-emerald-600">
+                                            -{discountPercent}%
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
+
+                        {debug && (
+                          <div className="fixed bottom-0 left-0 right-0 z-[999999] bg-black/85 text-white p-4 border-t border-white/15">
+                            <div className="max-w-5xl mx-auto">
+                              <div className="font-black text-[18px] text-amber-200 mb-3">DEBUG (Product Lookup)</div>
+                              <div className="text-[14px] font-mono leading-6 text-white/90 space-y-1">
+                                <div>source: {String(productSource || 'unknown')}</div>
+                                <div>urlBarcode: {String(urlBarcode || '')}</div>
+                                <div>product.barcode: {String(product?.barcode || '')}</div>
+                                <div>product.eng_name: {String(product?.eng_name || '')}</div>
+                                <div>product.product_type: {String(product?.product_type || '')}</div>
+                                <div>full_price(raw): {String(product?.full_price ?? '')} (type: {typeof product?.full_price})</div>
+                                <div>price_after_disc(raw): {String(product?.price_after_disc ?? '')} (type: {typeof product?.price_after_disc})</div>
+                                <div>computed price(base): {String(price)}</div>
+                                <div>computed finalPrice: {String(finalPrice)}</div>
+                                <div>hasDiscount: {String(hasDiscount)} | discountPercent: {String(discountPercent)}</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Stock Warning (Urgency) */}
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
