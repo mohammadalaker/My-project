@@ -220,6 +220,7 @@ const Login = lazy(() => import('./components/Login'));
 const SkeletonGrid = lazy(() => import('./components/SkeletonLoader'));
 const CustomerDisplay = lazy(() => import('./components/CustomerDisplay'));
 const CustomerProductView = lazy(() => import('./components/CustomerProductView'));
+const ProductLookup = lazy(() => import('./components/ProductLookup'));
 import BottomNav from './components/BottomNav';
 import OfferCard from './components/OfferCard';
 import Dashboard from './components/Dashboard';
@@ -348,6 +349,7 @@ function App() {
 
   const isCustomerDisplayMode = typeof window !== 'undefined' && window.location.search.includes('mode=display');
   const isCustomerProductMode = typeof window !== 'undefined' && window.location.search.includes('barcode=');
+  const isProductLookupMode = typeof window !== 'undefined' && window.location.search.includes('mode=lookup');
 
   /* Dropdown Menu State */
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -440,6 +442,22 @@ function App() {
         </div>
       }>
         <CustomerProductView />
+      </Suspense>
+    );
+  }
+
+  // Return Product Lookup Early (new tab utility)
+  if (isProductLookupMode) {
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
+          <div className="animate-pulse text-indigo-500 flex flex-col items-center">
+            <Package size={48} className="mb-4" />
+            <span className="font-bold">Loading Lookup...</span>
+          </div>
+        </div>
+      }>
+        <ProductLookup />
       </Suspense>
     );
   }
@@ -588,6 +606,37 @@ function App() {
       loginSuccess('supervisor');
     } else {
       setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+    }
+  };
+
+  const handleBiometricLogin = async (setError, rememberMe = true) => {
+    try {
+      const storedUsername = localStorage.getItem('sales_bio_username');
+      const storedRole = localStorage.getItem('sales_bio_role') || 'customer';
+
+      if (!storedUsername) {
+        setError?.('البصمة غير مفعلة على هذا الجهاز. استخدم رقم السري.');
+        return;
+      }
+
+      localStorage.setItem('sales_auth', 'true');
+      localStorage.setItem('sales_role', storedRole);
+      localStorage.setItem('sales_username', storedUsername);
+      localStorage.setItem('sales_login_time', Date.now().toString());
+
+      if (rememberMe) {
+        localStorage.setItem('sales_remember_me', 'true');
+      } else {
+        localStorage.removeItem('sales_remember_me');
+      }
+
+      setIsAuthenticated(true);
+      setUserRole(storedRole);
+      setUsername(storedUsername);
+      if (storedRole === 'customer') setMode('order');
+    } catch (e) {
+      console.warn('handleBiometricLogin failed:', e);
+      setError?.(e?.message || 'فشل الدخول بالبصمة');
     }
   };
 
@@ -3985,7 +4034,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           <div className="animate-pulse text-slate-400 text-sm font-medium">Loading…</div>
         </div>
       }>
-        <Login onLogin={handleLogin} />
+        <Login onLogin={handleLogin} onBiometricLogin={handleBiometricLogin} />
       </Suspense>
     );
   }

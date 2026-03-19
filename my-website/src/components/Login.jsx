@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, ArrowRight, Lock, Delete } from 'lucide-react';
 import { motion } from 'framer-motion';
 import supabase from '../lib/supabaseClient';
@@ -7,11 +7,62 @@ import supabase from '../lib/supabaseClient';
 const ARABIC_TO_ENGLISH_DIGIT = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9' };
 const toEnglishDigit = (key) => ARABIC_TO_ENGLISH_DIGIT[key] ?? (/\d/.test(key) ? key : null);
 
-export default function Login({ onLogin }) {
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return window.btoa(binary);
+};
+
+const base64ToArrayBuffer = (base64) => {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+};
+
+const sha256Bytes = async (str) => {
+  const data = new TextEncoder().encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return new Uint8Array(hashBuffer);
+};
+
+export default function Login({ onLogin, onBiometricLogin }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shake, setShake] = useState(false);
+  const [fingerprintSupported, setFingerprintSupported] = useState(false);
+  const [fingerprintEnabled, setFingerprintEnabled] = useState(false);
+  const [fingerprintBusy, setFingerprintBusy] = useState(false);
+  const enableFingerprintOnThisDevice = true; // always register after first PIN success
+
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const supported =
+        typeof window !== 'undefined' &&
+        !!window.PublicKeyCredential &&
+        !!navigator.credentials &&
+        typeof navigator.credentials.get === 'function' &&
+        typeof navigator.credentials.create === 'function';
+
+      setFingerprintSupported(supported);
+      const credId = localStorage.getItem('sales_bio_credential_id');
+      setFingerprintEnabled(!!credId);
+    } catch (e) {
+      setFingerprintSupported(false);
+      setFingerprintEnabled(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -50,6 +101,89 @@ export default function Login({ onLogin }) {
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [isSubmitting, error, pin]);
 
+  const authenticateWithFingerprint = async () => {
+    const credIdB64 = localStorage.getItem('sales_bio_credential_id');
+    if (!credIdB64) throw new Error('لا توجد بصمة مسجلة على هذا الجهاز');
+
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const allowCredentials = [{ type: 'public-key', id: base64ToArrayBuffer(credIdB64) }];
+
+    const publicKey = {
+      challenge,
+      allowCredentials,
+      userVerification: 'required',
+      timeout: 60000,
+      rpId: window.location.hostname,
+    };
+
+    const assertion = await navigator.credentials.get({ publicKey });
+    if (!assertion) throw new Error('فشل التحقق من البصمة');
+    return true;
+  };
+
+  const registerFingerprintForThisDevice = async (username, role) => {
+    const storedUser = localStorage.getItem('sales_bio_username');
+    const storedCredId = localStorage.getItem('sales_bio_credential_id');
+    if (storedUser && storedUser === username && storedCredId) return false;
+
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = await sha256Bytes(`sales_bio_user:${username}`);
+
+    const publicKey = {
+      challenge,
+      rp: { name: 'Maslamani Sales', id: window.location.hostname },
+      user: {
+        id: userId,
+        name: username,
+        displayName: username,
+      },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }], // ES256
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+        residentKey: 'preferred',
+      },
+      timeout: 60000,
+    };
+
+    const credential = await navigator.credentials.create({ publicKey });
+    if (!credential) throw new Error('فشل تسجيل البصمة');
+
+    const rawIdB64 = arrayBufferToBase64(credential.rawId);
+    localStorage.setItem('sales_bio_credential_id', rawIdB64);
+    localStorage.setItem('sales_bio_username', username);
+    localStorage.setItem('sales_bio_role', role || 'customer');
+    return true;
+  };
+
+  const handleBiometricLogin = async () => {
+    if (fingerprintBusy || !fingerprintSupported) return;
+    setFingerprintBusy(true);
+
+    // Silent setError: biometric flow must not show any fingerprint/PIN-related messages.
+    const localSetError = () => {};
+
+    try {
+      await authenticateWithFingerprint();
+      if (typeof onBiometricLogin !== 'function') throw new Error('ميزة البصمة غير مفعلة');
+      await onBiometricLogin(localSetError);
+    } catch (e) {
+      // Silent failure: keep the PIN UI usable without showing biometric-related errors.
+    } finally {
+      if (isMountedRef.current) setFingerprintBusy(false);
+    }
+  };
+
+  // Auto-attempt biometric login (if enabled on this device) without showing choices.
+  useEffect(() => {
+    if (!fingerprintSupported || !fingerprintEnabled) return;
+    const t = setTimeout(() => {
+      handleBiometricLogin();
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fingerprintSupported, fingerprintEnabled]);
+
   const handlePinInput = (num) => {
     if (error) setError('');
     if (pin.length < 10) {
@@ -67,6 +201,7 @@ export default function Login({ onLogin }) {
     setIsSubmitting(true);
 
     let foundUsername = null;
+    let foundRole = null;
     let _err = null;
     const localSetError = (msg) => {
       _err = msg;
@@ -85,6 +220,7 @@ export default function Login({ onLogin }) {
 
       if (data && !dbErr) {
         foundUsername = data.username;
+        foundRole = data.role || 'customer';
       }
     } catch (err) {
       console.warn('DB lookup failed, failing over to hardcoded users', err);
@@ -97,12 +233,34 @@ export default function Login({ onLogin }) {
     }
 
     if (foundUsername) {
+      if (!foundRole) {
+        if (foundUsername === 'mohammadalaker') foundRole = 'admin';
+        else if (foundUsername === 'sale') foundRole = 'customer';
+        else if (foundUsername === 'supervisor') foundRole = 'supervisor';
+        else foundRole = 'customer';
+      }
+
+      // تسجيل البصمة على هذا الجهاز (إن كان مفعلاً) كخطوة أول دخول بعد نجاح رقم السر
+      if (enableFingerprintOnThisDevice && fingerprintSupported) {
+        try {
+          const bioCred = localStorage.getItem('sales_bio_credential_id');
+          const bioUser = localStorage.getItem('sales_bio_username');
+          const needsRegister = !bioCred || bioUser !== foundUsername;
+          if (needsRegister) {
+            await registerFingerprintForThisDevice(foundUsername, foundRole);
+            if (isMountedRef.current) setFingerprintEnabled(true);
+          }
+        } catch (e) {
+          console.warn('Fingerprint registration failed (fallback to PIN only):', e);
+        }
+      }
+
       await onLogin(foundUsername, pin, localSetError, true);
-      if (!_err) {
+      if (!_err && isMountedRef.current) {
         setIsSubmitting(false);
       }
     } else {
-      localSetError('الرمز السري غير صحيح');
+      localSetError('رمز الدخول غير صحيح');
     }
   };
 
@@ -125,7 +283,7 @@ export default function Login({ onLogin }) {
           </h1>
           <p className="text-white font-medium tracking-tight text-center mt-1 text-base opacity-90">Premium Appliances</p>
           <p className="text-white/50 font-medium mt-1">
-            يرجى إدخال الرمز السري
+            يرجى الدخول
           </p>
         </motion.div>
 
@@ -141,7 +299,7 @@ export default function Login({ onLogin }) {
               {pin.length === 0 && !error && (
                 <div className="absolute inset-0 flex items-center justify-center text-white/30 text-sm font-medium">
                   <Lock size={16} className="ml-2" />
-                  أدخل رقمك السري...
+                  أدخل رمز الدخول...
                 </div>
               )}
               {error && (
@@ -164,6 +322,8 @@ export default function Login({ onLogin }) {
               )}
             </div>
           </div>
+
+          {/* no explicit fingerprint/PIN UI choice */}
 
           <div className="grid grid-cols-3 gap-3 w-full">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
