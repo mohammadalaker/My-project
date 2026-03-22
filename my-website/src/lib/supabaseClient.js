@@ -37,7 +37,27 @@ function createMockClient() {
     removeChannel: noopRemoveChannel,
     storage: {
       from: () => ({
-        getPublicUrl: (path) => ({ data: { publicUrl: path ? `/${path}` : '' } }),
+        getPublicUrl: (path, options) => {
+          if (!path) return { data: { publicUrl: '' } };
+          const objectBase = supabaseUrl
+            ? `${supabaseUrl}/storage/v1/object/public/bucket/${path}`
+            : `/${path}`;
+          if (options?.transform && supabaseUrl) {
+            const q = new URLSearchParams();
+            const t = options.transform;
+            if (t.width != null) q.set('width', String(t.width));
+            if (t.height != null) q.set('height', String(t.height));
+            if (t.quality != null) q.set('quality', String(t.quality));
+            if (t.resize) q.set('resize', t.resize);
+            const qs = q.toString();
+            return {
+              data: {
+                publicUrl: `${supabaseUrl}/storage/v1/render/image/public/bucket/${path}${qs ? `?${qs}` : ''}`,
+              },
+            };
+          }
+          return { data: { publicUrl: objectBase } };
+        },
         upload: () => emptyPromise,
         remove: () => emptyPromise,
       }),

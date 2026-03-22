@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useBrandLogos } from '../hooks/useBrandLogos';
 import { getDisplayGroupForBarcode } from '../utils/displayGroupKMG';
 import { getLocalProducts } from '../lib/db';
+import { getStoragePublicImageUrl } from '../lib/storageImageUrl';
 
 export default function CustomerProductView() {
     const [product, setProduct] = useState(null);
@@ -152,14 +153,6 @@ export default function CustomerProductView() {
         return () => { document.title = 'Maslamani Sales'; };
     }, [product]);
 
-    const getPublicImageUrl = (img) => {
-        if (!img) return null;
-        if (img.startsWith('http')) return img;
-        const path = img.startsWith('/') ? img.slice(1) : img;
-        const { data } = supabase.storage.from('Pic_of_items').getPublicUrl(path);
-        return data?.publicUrl || null;
-    };
-
     const parsePrice = (val) => {
         if (val === null || val === undefined || val === '') return null;
         // Regex الصحيح: أبقِ على الأرقام + '.' و '-' فقط
@@ -203,6 +196,7 @@ export default function CustomerProductView() {
     const stockCount = Number(product.stock_count) || 0;
     const displayGroup = getDisplayGroupForBarcode(product.barcode, product.brand_group);
     const urlBarcode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('barcode') : '';
+    const productImageUrl = getStoragePublicImageUrl(product.image_url, { size: 'medium' });
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 font-sans selection:bg-indigo-100 pb-24" dir="rtl">
@@ -236,8 +230,8 @@ export default function CustomerProductView() {
                     <div className="absolute inset-0 bg-grid-slate-200/50 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] pointer-events-none" />
 
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 w-full h-full flex items-center justify-center">
-                        {getPublicImageUrl(product.image_url) ? (
-                            <img src={getPublicImageUrl(product.image_url)} alt={product.eng_name || ''} loading="lazy" decoding="async" className="max-w-full max-h-full object-contain filter drop-shadow-2xl" />
+                        {productImageUrl ? (
+                            <img src={productImageUrl} alt={product.eng_name || ''} loading="lazy" decoding="async" className="max-w-full max-h-full object-contain filter drop-shadow-2xl" />
                         ) : (
                             <Package size={100} className="text-slate-300" />
                         )}

@@ -78,10 +78,10 @@ import SplashScreen from './components/SplashScreen';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
 import { useBrandLogos } from './hooks/useBrandLogos';
 import { getDisplayGroupForBarcode } from './utils/displayGroupKMG';
+import { getStoragePublicImageUrl as getPublicImageUrl } from './lib/storageImageUrl';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /** Safe date format so changing browser language never crashes the app. */
 function safeLocaleDate(options = {}) {
@@ -90,35 +90,6 @@ function safeLocaleDate(options = {}) {
   } catch {
     return new Date().toISOString().slice(0, 10);
   }
-}
-
-/**
- * Returns public URL for image from bucket Pic_of_items; external http(s) URLs returned as-is.
- * @param {{ thumb?: boolean }} [options] — `thumb: true` uses Supabase Image Transformation (smaller payload for lists/grids; requires plan support).
- */
-const PRODUCT_LIST_IMAGE_TRANSFORM = {
-  width: 400,
-  quality: 72,
-  resize: 'contain',
-};
-
-function getPublicImageUrl(imageValue, options = {}) {
-  const thumb = !!options.thumb;
-  if (!imageValue || typeof imageValue !== 'string') return null;
-  const img = String(imageValue).trim();
-  if (!img) return null;
-  if (img.startsWith('http://') || img.startsWith('https://')) return img;
-  const path = img.replace(/^\//, '');
-
-  if (thumb) {
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path, {
-      transform: PRODUCT_LIST_IMAGE_TRANSFORM,
-    });
-    if (data?.publicUrl) return data.publicUrl;
-  }
-
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-  return data?.publicUrl ?? (SUPABASE_URL ? `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}` : img);
 }
 
 /** Electrical Appliances: Tefal Electric, Moulinex, Braun, Kenwood, Babyliss, Babyliss Pro, KMG midea SDA/VC/ACE/MWO */
@@ -8002,8 +7973,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Media Asset</span>
                     <div className="flex gap-4">
                       <div className="w-20 h-20 rounded-[1.5rem] flex-shrink-0 flex items-center justify-center overflow-hidden border transition-all duration-500 bg-white border-slate-200">
-                        {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
-                          <img key={formData.image_url} src={getPublicImageUrl(formData.image_url)} alt="" className="w-full h-full object-contain p-3" />
+                        {(formData.image_url && getPublicImageUrl(formData.image_url, { thumb: false })) ? (
+                          <img key={formData.image_url} src={getPublicImageUrl(formData.image_url, { thumb: false })} alt="" className="w-full h-full object-contain p-3" />
                         ) : (
                           <Package size={24} className="opacity-20" />
                         )}

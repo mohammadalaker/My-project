@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import supabase from '../lib/supabaseClient';
+import { STORAGE_IMAGE_TRANSFORMS } from '../lib/storageImageUrl';
 
 export function useBrandLogos() {
     const [logos, setLogos] = useState([]);
@@ -33,9 +34,13 @@ export function useBrandLogos() {
             });
 
             if (file) {
-                const { data } = supabase.storage.from('Pic_of_items').getPublicUrl(`logos/${file.name}`);
+                const { data } = supabase.storage.from('Pic_of_items').getPublicUrl(`logos/${file.name}`, {
+                    transform: STORAGE_IMAGE_TRANSFORMS.tiny,
+                });
                 // Use updated_at timestamp to avoid caching issues when overwriting
-                return `${data.publicUrl}?t=${new Date(file.updated_at).getTime()}`;
+                const base = data.publicUrl;
+                const sep = base.includes('?') ? '&' : '?';
+                return `${base}${sep}t=${new Date(file.updated_at).getTime()}`;
             }
         }
 

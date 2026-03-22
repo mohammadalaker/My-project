@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getStoragePublicImageUrl } from '../lib/storageImageUrl';
 
 export default function SmartScreensaver({ active, onWake, items }) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -53,7 +54,7 @@ export default function SmartScreensaver({ active, onWake, items }) {
                         {/* Image */}
                         <div className="w-64 h-64 md:w-96 md:h-96 mb-12 relative flex items-center justify-center">
                             <img
-                                src={currentItem.image.startsWith('http') ? currentItem.image : `https://hytncdomjctqihrqfswh.supabase.co/storage/v1/object/public/Pic_of_items/${currentItem.image.replace(/^\//, '')}`}
+                                src={currentItem.image.startsWith('http') ? currentItem.image : getStoragePublicImageUrl(currentItem.image.replace(/^\//, ''), { size: 'medium' })}
                                 alt={currentItem.name}
                                 className="max-w-full max-h-full object-contain filter drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                             />

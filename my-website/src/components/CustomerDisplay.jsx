@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import supabase from '../lib/supabaseClient';
+import { getStoragePublicImageUrl } from '../lib/storageImageUrl';
 import { Package, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -70,23 +71,15 @@ export default function CustomerDisplay() {
         };
     }, []);
 
-    const getPublicImageUrl = (img) => {
-        if (!img) return null;
-        if (img.startsWith('http')) return img;
-        const path = img.startsWith('/') ? img.slice(1) : img;
-        const { data } = supabase.storage.from('Pic_of_items').getPublicUrl(path);
-        return data?.publicUrl || null;
-    };
-
     const getImageFallback = (item) => {
-        const primary = getPublicImageUrl(item?.image);
+        const primary = getStoragePublicImageUrl(item?.image, { size: 'thumb' });
         if (primary) return primary;
         if (!item?.barcode) return null;
         const b = String(item.barcode).trim();
         if (!b) return null;
         const paths = [`electric/${b}.jpg`, `electric/${b}.jpeg`, `electric/${b}.png`, `${b}.jpg`, `${b}.jpeg`];
         for (const p of paths) {
-            const url = getPublicImageUrl(p);
+            const url = getStoragePublicImageUrl(p, { size: 'thumb' });
             if (url) return url;
         }
         return null;
@@ -247,8 +240,8 @@ export default function CustomerDisplay() {
                                                     className="bg-white border border-slate-100 p-4 rounded-2xl flex items-center gap-6 shadow-sm"
                                                 >
                                                     <div className="w-20 h-20 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100 overflow-hidden shrink-0">
-                                                        {getPublicImageUrl(line.image) ? (
-                                                            <img src={getPublicImageUrl(line.image)} alt="" loading="lazy" className="w-full h-full object-contain p-2" />
+                                                        {getStoragePublicImageUrl(line.image, { size: 'thumb' }) ? (
+                                                            <img src={getStoragePublicImageUrl(line.image, { size: 'thumb' })} alt="" loading="lazy" className="w-full h-full object-contain p-2" />
                                                         ) : (
                                                             <Package size={24} className="text-slate-300" />
                                                         )}
