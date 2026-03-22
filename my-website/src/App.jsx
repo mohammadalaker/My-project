@@ -791,6 +791,7 @@ function App() {
   const cartIconRef = useRef(null); // للأنيميشن fly-to-cart (زر السلة في الديسكتوب)
   const cartNavRef = useRef(null);  // زر السلة في الشريط السفلي (موبايل)
   const cartCountPrevRef = useRef(null); // لتفعيل Ping عند زيادة عدد القطع
+  const posCatalogSearchInputRef = useRef(null); // حقل البحث + مسح الباركود (HID + Enter)
 
   // Held Orders State
   const [heldOrders, setHeldOrders] = useState(() => {
@@ -3819,6 +3820,40 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     setShowQuantityModal(true);
   }, []);
 
+  /**
+   * مسح باركود من قارئ/موبايل مع «Append Enter» أو «Send Enter»:
+   * يطابق الباركود بالكامل ويفتح نافذة الكمية دون الضغط على زر.
+   */
+  const handlePosCatalogSearchKeyDown = useCallback(
+    (e) => {
+      if (e.key !== 'Enter') return;
+      const raw = (search || '').trim();
+      if (!raw) return;
+      const q = toEnglishDigits(raw.replace(/\s/g, ''));
+      if (!q) return;
+
+      const item = items.find((i) => String(i.barcode || '').trim() === q);
+      if (item) {
+        e.preventDefault();
+        if (userRole !== 'admin' && item.visible === false) {
+          playError();
+          return;
+        }
+        handleOpenQuantityModal(item, null);
+        setSearch('');
+        setPage(0);
+        return;
+      }
+
+      const digitsOnly = /^\d+$/.test(q);
+      if (digitsOnly && q.length >= 4) {
+        e.preventDefault();
+        playError();
+      }
+    },
+    [search, items, userRole, handleOpenQuantityModal, playError]
+  );
+
   const handleConfirmQuantity = () => {
     if (!quantityItem || quantityValue <= 0) return;
     const stock = quantityItem.stock_count ?? quantityItem.stock;
@@ -4338,12 +4373,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <Search className="h-5 w-5 transition-colors text-indigo-500 group-focus-within:text-indigo-600" />
                       </div>
                       <input
+                        ref={posCatalogSearchInputRef}
                         type="text"
                         className="block w-full pl-11 pr-4 py-4 border-0 rounded-2xl shadow-lg transition-all duration-300 text-lg bg-white/80 ring-1 ring-slate-200/60 text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:bg-white"
                         placeholder="البحث بنوع المنتج أو الباركود..."
                         value={search}
                         onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                        onKeyDown={handlePosCatalogSearchKeyDown}
+                        enterKeyHint="search"
                         autoComplete="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        dir="ltr"
+                        aria-label="بحث ومسح الباركود"
                       />
                       {search ? (
                         <button
@@ -4372,6 +4414,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <span>{sortMode === 'barcode' ? 'By Name' : 'By Barcode'}</span>
                     </button>
                   </div>
+                  <p className="w-full max-w-2xl mt-3 text-[11px] text-slate-500 leading-relaxed px-1">
+                    قارئ باركود أو تطبيق موبايل: فعّل «Send Enter» / «Append Enter» في إعدادات التطبيق، ثم اضغط هنا للتركيز على الحقل قبل المسح — عند الإرسال يُفتح صنف المنتج مباشرة.
+                    <button
+                      type="button"
+                      onClick={() => posCatalogSearchInputRef.current?.focus?.()}
+                      className="mr-2 font-bold text-indigo-600 hover:text-indigo-800 underline-offset-2 hover:underline"
+                    >
+                      جاهز للمسح
+                    </button>
+                  </p>
                 </div>
               )}
 
