@@ -79,6 +79,7 @@ import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, re
 import { useBrandLogos } from './hooks/useBrandLogos';
 import { getDisplayGroupForBarcode } from './utils/displayGroupKMG';
 import { getStoragePublicImageUrl as getPublicImageUrl } from './lib/storageImageUrl';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
@@ -334,7 +335,7 @@ function SwipeToDeleteItem({ children, onDelete }) {
 
 function App() {
   const { getLogoUrl, uploadLogo, removeLogo, logos, loading: logosLoading, fetchLogos } = useBrandLogos();
-
+  const queryClient = useQueryClient();
 
   const isCustomerDisplayMode = typeof window !== 'undefined' && window.location.search.includes('mode=display');
   const isCustomerProductMode = typeof window !== 'undefined' && window.location.search.includes('barcode=');
@@ -1657,40 +1658,35 @@ function App() {
     }
   };
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    itemsUseBaseSelectRef.current = false;
+  /** جلب المنتجات: نفس منطق الأوفلاين + IndexedDB + دمج المخزون — يُستخدم مع React Query للكاش */
+  const loadItemsFromSources = useCallback(async () => {
+    let useBaseSelect = false;
     let allItems = [];
 
-    // عند عدم الاتصال: تحميل من الكاش المحلي فوراً دون انتظار فشل Supabase
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       try {
         allItems = await getLocalProducts();
         const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
         const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
-        setItems(sorted);
-        setHasMore(false);
-        setLoading(false);
-        setLoadingMore(false);
-        return;
+        return {
+          items: sorted,
+          useBaseSelect: false,
+          accumulatedRaw: [],
+          rawCount: 0,
+        };
       } catch (idbErr) {
         console.warn('Offline: no local cache', idbErr);
       }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('items')
-        .select(ITEMS_SELECT);
+      const { data, error } = await supabase.from('items').select(ITEMS_SELECT);
 
       if (error) {
         if (error.message?.includes('column items.is_offer does not exist') || error.message?.includes('column items.visible does not exist') || error.code === '42703') {
           console.warn('items column missing (is_offer/visible), falling back to base items query...');
-          itemsUseBaseSelectRef.current = true;
-          const { data: retryData, error: retryError } = await supabase
-            .from('items')
-            .select(ITEMS_BASE_SELECT);
-
+          useBaseSelect = true;
+          const { data: retryData, error: retryError } = await supabase.from('items').select(ITEMS_BASE_SELECT);
           if (retryError) throw retryError;
           allItems = retryData || [];
         } else {
@@ -1700,66 +1696,64 @@ function App() {
         allItems = data || [];
       }
 
-      itemsOffsetRef.current = allItems.length;
-      accumulatedRawItemsRef.current = [...allItems];
-      setHasMore(false);
+      const rawCount = allItems.length;
+      const accumulatedRaw = [...allItems];
 
-      // Cache the successfully fetched items locally
-      const itemsToCache = allItems.map(item => ({ ...item, id: String(item.barcode ?? '').trim() }));
+      const itemsToCache = allItems.map((item) => ({ ...item, id: String(item.barcode ?? '').trim() }));
       await saveProductsLocally(itemsToCache);
 
-      // After fetching from Supabase, also try to get local items to merge stock updates
       try {
         const localItems = await getLocalProducts();
         const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
 
-        // 5. Merge stock updates from local items
-        const mergedItems = normalized.map(item => {
-          const localMatch = localItems.find(li => String(li.id) === String(item.id));
+        const mergedItems = normalized.map((item) => {
+          const localMatch = localItems.find((li) => String(li.id) === String(item.id));
           if (!localMatch || localMatch.stock_delta === 0) return item;
 
           const deltaQty = localMatch.stock_delta || 0;
-          const stockMatch = item.stock_count != null ? { quantity: item.stock_count } :
-            item.stock != null ? { quantity: item.stock } :
-              0;
+          const stockMatch =
+            item.stock_count != null ? { quantity: item.stock_count } : item.stock != null ? { quantity: item.stock } : 0;
 
           return { ...item, quantity: parseFloat(stockMatch.quantity) + deltaQty };
         });
 
-        // 6. Merge with missing Supabase items that somehow are locally cached but not returned
-        // Make sure to only merge them if they aren't already fetched
-        const localOnly = localItems.filter(li => !normalized.some(ni => String(ni.id) === String(li.id)));
+        const localOnly = localItems.filter((li) => !normalized.some((ni) => String(ni.id) === String(li.id)));
         const combined = [...mergedItems, ...localOnly.map(normalizeItemFromSupabase)];
 
-        // 7. Sort final list by dynamicBarcodeOrder instead of static BARCODE_ORDER
         const sorted = sortByBarcodeOrder(combined, dynamicBarcodeOrder);
-        setItems(sorted);
+        return { items: sorted, useBaseSelect, accumulatedRaw, rawCount };
       } catch (innerErr) {
         console.warn('Error merging local items or sorting:', innerErr);
-        // Fallback to just Supabase items if local merge fails
         const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
         const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
-        setItems(sorted);
+        return { items: sorted, useBaseSelect, accumulatedRaw, rawCount };
       }
     } catch (err) {
       console.error('Supabase fetch error, trying local IndexedDB:', err);
-      // Fallback to local IndexedDB if offline or API fails
       try {
         const localItems = await getLocalProducts();
         const normalized = localItems.map(normalizeItemFromSupabase).filter(Boolean);
         const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
-        setItems(sorted);
-        setHasMore(false);
+        return { items: sorted, useBaseSelect: false, accumulatedRaw: [], rawCount: 0 };
       } catch (idbErr) {
         console.error('Failed to load from local DB', idbErr);
-        setItems([]);
-        setHasMore(false);
+        return { items: [], useBaseSelect: false, accumulatedRaw: [], rawCount: 0 };
       }
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
     }
   }, [dynamicBarcodeOrder]);
+
+  const itemsQuery = useQuery({
+    queryKey: ['items', dynamicBarcodeOrder],
+    queryFn: loadItemsFromSources,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    setLoading(itemsQuery.isPending);
+  }, [itemsQuery.isPending]);
 
   // Sync offline orders on startup and when online event fires
   const syncOfflineOrders = useCallback(async () => {
@@ -1800,18 +1794,20 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetchItems();
     syncOfflineOrders();
     refreshPendingSyncCount();
 
-    // Listen to online events to trigger background sync immediately
-    window.addEventListener('online', syncOfflineOrders);
-    window.addEventListener('online', refreshPendingSyncCount);
-    return () => {
-      window.removeEventListener('online', syncOfflineOrders);
-      window.removeEventListener('online', refreshPendingSyncCount);
+    const onOnline = () => {
+      syncOfflineOrders();
+      refreshPendingSyncCount();
+      queryClient.invalidateQueries({ queryKey: ['items'] });
     };
-  }, [fetchItems, syncOfflineOrders, refreshPendingSyncCount]);
+
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+    };
+  }, [syncOfflineOrders, refreshPendingSyncCount, queryClient]);
 
   // Removed pagination and server-side search effects
   const loadMore = useCallback(async () => {
@@ -1875,6 +1871,16 @@ function App() {
   const itemsOffsetRef = useRef(0);
   const accumulatedRawItemsRef = useRef([]);
   const itemsUseBaseSelectRef = useRef(false);
+
+  useEffect(() => {
+    if (!itemsQuery.data) return;
+    const d = itemsQuery.data;
+    setItems(d.items);
+    itemsUseBaseSelectRef.current = d.useBaseSelect;
+    itemsOffsetRef.current = d.rawCount ?? 0;
+    accumulatedRawItemsRef.current = d.accumulatedRaw ?? [];
+    setHasMore(false);
+  }, [itemsQuery.data]);
 
   const filteredByGroup = useMemo(
     () =>
@@ -3410,7 +3416,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
       setModalOpen(false);
       setShowCatalogPanel(false);
-      fetchItems(true);
+      queryClient.invalidateQueries({ queryKey: ['items'] });
     } catch (err) {
       alert(err.message || 'Save failed');
     }
@@ -4222,7 +4228,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               طابعة الفواتير — طباعة الآن
                             </button>
                             <button
-                              onClick={() => { setShowProfileMenu(false); fetchItems(); }}
+                              onClick={() => { setShowProfileMenu(false); queryClient.invalidateQueries({ queryKey: ['items'] }); }}
                               className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
                             >
                               <RefreshCw size={18} />
