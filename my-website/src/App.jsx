@@ -92,13 +92,31 @@ function safeLocaleDate(options = {}) {
   }
 }
 
-/** Returns public URL for image from bucket Pic_of_items; external http(s) URLs returned as-is. */
-function getPublicImageUrl(imageValue) {
+/**
+ * Returns public URL for image from bucket Pic_of_items; external http(s) URLs returned as-is.
+ * @param {{ thumb?: boolean }} [options] — `thumb: true` uses Supabase Image Transformation (smaller payload for lists/grids; requires plan support).
+ */
+const PRODUCT_LIST_IMAGE_TRANSFORM = {
+  width: 400,
+  quality: 72,
+  resize: 'contain',
+};
+
+function getPublicImageUrl(imageValue, options = {}) {
+  const thumb = !!options.thumb;
   if (!imageValue || typeof imageValue !== 'string') return null;
   const img = String(imageValue).trim();
   if (!img) return null;
   if (img.startsWith('http://') || img.startsWith('https://')) return img;
   const path = img.replace(/^\//, '');
+
+  if (thumb) {
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path, {
+      transform: PRODUCT_LIST_IMAGE_TRANSFORM,
+    });
+    if (data?.publicUrl) return data.publicUrl;
+  }
+
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return data?.publicUrl ?? (SUPABASE_URL ? `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}` : img);
 }
@@ -2197,16 +2215,19 @@ function App() {
     return { text: `${stockNum} Pcs`, hasStock };
   };
 
-  const getImage = (item) => getPublicImageUrl(item?.image);
+  /** مصغّرات لقائمة المنتجات والكروت الصغيرة — أقل حجم تحميل عبر Supabase Image Transformation */
+  const getImage = (item) => getPublicImageUrl(item?.image, { thumb: true });
+  /** صورة كاملة (مثلاً نافذة تفاصيل المنتج) */
+  const getImageFull = (item) => getPublicImageUrl(item?.image, { thumb: false });
   const getImageFallback = (item) => {
-    const primary = getPublicImageUrl(item?.image);
+    const primary = getPublicImageUrl(item?.image, { thumb: true });
     if (primary) return primary;
     if (!item?.barcode) return null;
     const b = String(item.barcode).trim();
     if (!b) return null;
     const paths = [`electric/${b}.jpg`, `electric/${b}.jpeg`, `electric/${b}.png`, `${b}.jpg`, `${b}.jpeg`];
     for (const p of paths) {
-      const url = getPublicImageUrl(p);
+      const url = getPublicImageUrl(p, { thumb: true });
       if (url) return url;
     }
     return null;
@@ -2560,7 +2581,7 @@ function App() {
         const displayName = prodType ? prodType : rawName;
         const productTypeStr = ''; // Removed the badge since we are replacing the name entirely
         const barcode = barcodeToLookup.replace(/</g, '&lt;');
-        const imgUrl = !isSubmitted && o.item?.image ? getPublicImageUrl(o.item.image) : null;
+        const imgUrl = !isSubmitted && o.item?.image ? getPublicImageUrl(o.item.image, { thumb: true }) : null;
         const imgSrc = imgUrl ? String(imgUrl).replace(/"/g, '&quot;') : '';
         const imgCell = imgSrc ? `<td class="inv-td-img"><img src="${imgSrc}" alt="" loading="lazy" /></td>` : '<td class="inv-td-img">—</td>';
 
@@ -3841,7 +3862,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   const getCatalogHtml = useCallback((items) => {
     const cards = items.map(item => {
-      const imgUrl = getPublicImageUrl(item.image);
+      const imgUrl = getPublicImageUrl(item.image, { thumb: true });
       const img = imgUrl
         ? `<div class="cat-img"><img src="${imgUrl}" alt="${item.name}" loading="lazy" /></div>`
         : `<div class="cat-img"><div class="cat-no-img">📦</div></div>`;
@@ -7708,10 +7729,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   {/* Image Container */}
                   <div className="aspect-square rounded-[2rem] relative flex items-center justify-center overflow-hidden transition-all duration-500 bg-gradient-to-br from-slate-50 to-slate-100">
                     <div className="absolute inset-0 opacity-20" />
-                    {getImage(selectedItem) ? (
+                    {getImageFull(selectedItem) ? (
                       <motion.img 
                         initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                        src={getImage(selectedItem)} alt="" className="w-full h-full object-contain p-12 z-10 filter drop-shadow-[0_20px_60px_rgba(0,0,0,0.3)]" 
+                        src={getImageFull(selectedItem)} alt="" className="w-full h-full object-contain p-12 z-10 filter drop-shadow-[0_20px_60px_rgba(0,0,0,0.3)]" 
                       />
                     ) : (
                       <Package size={120} className="text-slate-200" />
