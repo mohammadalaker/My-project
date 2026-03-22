@@ -1,5 +1,8 @@
 -- ذمم العملاء (Accounts Receivable): سجل مديونيات ودفعات لكل عميل
--- شغّل هذا الملف في Supabase → SQL Editor بعد وجود جدول customers و orders.
+-- شغّل في Supabase → SQL Editor بعد وجود جداول customers و orders.
+--
+-- ملاحظة: إذا كان customers.id من نوع UUID (الافتراضي في كثير من مشاريع Supabase)،
+-- يجب أن يكون customer_id من نوع UUID وليس BIGINT.
 
 -- سقف ائتمان اختياري لكل عميل (بالشيكل؛ NULL = بدون سقف محدد في النظام)
 ALTER TABLE public.customers
@@ -7,13 +10,17 @@ ALTER TABLE public.customers
 
 COMMENT ON COLUMN public.customers.credit_limit IS 'Max allowed outstanding debt in ILS; NULL = no limit';
 
-CREATE TABLE IF NOT EXISTS public.customer_ar_ledger (
+-- إن وُجد جدول قديم بنوع أعمدة خاطئ، احذفه ثم أعد الإنشاء
+DROP TABLE IF EXISTS public.customer_ar_ledger CASCADE;
+
+CREATE TABLE public.customer_ar_ledger (
   id BIGSERIAL PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  customer_id BIGINT NOT NULL REFERENCES public.customers (id) ON DELETE CASCADE,
+  customer_id UUID NOT NULL REFERENCES public.customers (id) ON DELETE CASCADE,
   entry_type TEXT NOT NULL CHECK (entry_type IN ('debit', 'credit')),
   amount_ils NUMERIC NOT NULL CHECK (amount_ils > 0),
   description TEXT,
+  -- orders.id غالباً BIGSERIAL في هذا المشروع؛ إذا كان عندك uuid على orders غيّر السطر التالي إلى UUID
   order_id BIGINT REFERENCES public.orders (id) ON DELETE SET NULL,
   created_by TEXT
 );
@@ -27,5 +34,3 @@ CREATE POLICY "Allow select ar ledger"
 
 CREATE POLICY "Allow insert ar ledger"
   ON public.customer_ar_ledger FOR INSERT TO anon WITH CHECK (true);
-
--- إن رغبت بالتحديث/الحذف لاحقاً للمشرفين فقط، أضف سياسات منفصلة أو استخدم مصادقة حقيقية.
