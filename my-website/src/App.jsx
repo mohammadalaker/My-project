@@ -890,6 +890,8 @@ function App() {
   const [arLedgerLoading, setArLedgerLoading] = useState(false);
   const [arPaymentAmount, setArPaymentAmount] = useState('');
   const [arPaymentNotes, setArPaymentNotes] = useState('');
+  const [arOpeningAmount, setArOpeningAmount] = useState('');
+  const [arOpeningNotes, setArOpeningNotes] = useState('');
   const [arPaymentSubmitting, setArPaymentSubmitting] = useState(false);
 
   // Sales stats (last 7 days) for Reports
@@ -1166,6 +1168,43 @@ function App() {
       setArPaymentSubmitting(false);
     }
   }, [arLedgerCustomer, arPaymentAmount, arPaymentNotes, fetchCustomers, fetchArLedger]);
+
+  /** دين سابق / رصيد قبل استخدام النظام — يُسجَّل كـ debit في السجل */
+  const submitArOpeningDebit = useCallback(async () => {
+    if (!arLedgerCustomer?.id) return;
+    const amt = Number(toEnglishDigits(String(arOpeningAmount || '')));
+    if (!(amt > 0)) {
+      alert('أدخل مبلغ الدين السابق (أكبر من صفر).');
+      return;
+    }
+    setArPaymentSubmitting(true);
+    try {
+      const username = localStorage.getItem('sales_username') || 'user';
+      const desc = (arOpeningNotes || '').trim() || 'دين سابق / رصيد مرحّل';
+      const { error: e1 } = await supabase.from('customer_ar_ledger').insert([{
+        customer_id: arLedgerCustomer.id,
+        entry_type: 'debit',
+        amount_ils: amt,
+        description: desc,
+        created_by: username,
+      }]);
+      if (e1) throw e1;
+      const { data: c } = await supabase.from('customers').select('outstanding_debt').eq('id', arLedgerCustomer.id).single();
+      const prev = Number(c?.outstanding_debt || 0);
+      const nextDebt = prev + amt;
+      await supabase.from('customers').update({ outstanding_debt: nextDebt }).eq('id', arLedgerCustomer.id);
+      setArOpeningAmount('');
+      setArOpeningNotes('');
+      setArLedgerCustomer((prev) => (prev ? { ...prev, outstanding_debt: nextDebt } : null));
+      await fetchCustomers();
+      await fetchArLedger(arLedgerCustomer.id);
+    } catch (e) {
+      console.warn('submitArOpeningDebit', e);
+      alert(e?.message || 'فشل تسجيل الدين السابق.');
+    } finally {
+      setArPaymentSubmitting(false);
+    }
+  }, [arLedgerCustomer, arOpeningAmount, arOpeningNotes, fetchCustomers, fetchArLedger]);
 
   const fetchActivityLogs = useCallback(async () => {
     setActivityLogsLoading(true);
@@ -6786,7 +6825,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             {arLedgerLoading ? (
                               <div className="flex justify-center py-12"><Loader2 className="animate-spin text-emerald-600" size={36} /></div>
                             ) : arLedgerEntries.length === 0 ? (
-                              <p className="text-center text-slate-500 text-sm py-8">لا توجد حركات مسجّلة بعد. عند البيع بخيار «آجل / ذمم» أو «تقسيط» يُضاف صف تلقائياً.</p>
+                              <p className="text-center text-slate-500 text-sm py-8">لا توجد حركات مسجّلة بعد. يمكنك أدناه تسجيل <strong className="text-slate-700">دين سابق</strong>، أو يُضاف تلقائياً عند البيع بـ «آجل / ذمم» أو «تقسيط».</p>
                             ) : (
                               <ul className="space-y-2">
                                 {arLedgerEntries.map((row) => (
@@ -6806,36 +6845,74 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </ul>
                             )}
                           </div>
-                          <div className="px-6 py-4 border-t border-slate-100 space-y-3 bg-white">
-                            <p className="text-sm font-bold text-slate-700">تسجيل دفعة (يقلّل الرصيد)</p>
-                            <input
-                              type="number"
-                              min={0}
-                              step={0.01}
-                              value={arPaymentAmount}
-                              onChange={(e) => setArPaymentAmount(e.target.value)}
-                              placeholder="المبلغ ₪"
-                              className="w-full px-4 py-3 rounded-xl border border-slate-200 font-mono text-left"
-                              dir="ltr"
-                              disabled={arPaymentSubmitting}
-                            />
-                            <input
-                              type="text"
-                              value={arPaymentNotes}
-                              onChange={(e) => setArPaymentNotes(e.target.value)}
-                              placeholder="ملاحظة (اختياري)"
-                              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-right"
-                              disabled={arPaymentSubmitting}
-                            />
-                            <button
-                              type="button"
-                              onClick={submitArPayment}
-                              disabled={arPaymentSubmitting}
-                              className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                              {arPaymentSubmitting ? <Loader2 size={20} className="animate-spin" /> : <Banknote size={20} />}
-                              حفظ الدفعة
-                            </button>
+                          <div className="px-6 py-4 border-t border-slate-100 space-y-4 bg-white">
+                            <div className="rounded-2xl border border-rose-200 bg-rose-50/50 p-4 space-y-3">
+                              <p className="text-sm font-bold text-rose-900 flex items-center gap-2">
+                                <AlertTriangle size={18} className="shrink-0 text-rose-600" />
+                                تسجيل دين سابق (قبل النظام أو ترحيل)
+                              </p>
+                              <p className="text-xs text-rose-800/90 leading-relaxed">يُضاف للرصيد ويظهر في السجل كـ «عليه». استخدمه للزبائن الذين كان عليهم دين قبل استخدام التطبيق.</p>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={arOpeningAmount}
+                                onChange={(e) => setArOpeningAmount(e.target.value)}
+                                placeholder="مبلغ الدين السابق ₪"
+                                className="w-full px-4 py-3 rounded-xl border border-rose-200 bg-white font-mono text-left"
+                                dir="ltr"
+                                disabled={arPaymentSubmitting}
+                              />
+                              <input
+                                type="text"
+                                value={arOpeningNotes}
+                                onChange={(e) => setArOpeningNotes(e.target.value)}
+                                placeholder="ملاحظة (مثلاً: فاتورة قديمة، رقم مرجعي)"
+                                className="w-full px-4 py-3 rounded-xl border border-rose-200 bg-white text-right"
+                                disabled={arPaymentSubmitting}
+                              />
+                              <button
+                                type="button"
+                                onClick={submitArOpeningDebit}
+                                disabled={arPaymentSubmitting}
+                                className="w-full py-3 rounded-xl bg-rose-600 text-white font-bold hover:bg-rose-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                {arPaymentSubmitting ? <Loader2 size={20} className="animate-spin" /> : <TrendingUp size={20} />}
+                                حفظ الدين السابق
+                              </button>
+                            </div>
+
+                            <div className="border-t border-slate-200 pt-4 space-y-3">
+                              <p className="text-sm font-bold text-slate-700">تسجيل دفعة (يقلّل الرصيد)</p>
+                              <input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={arPaymentAmount}
+                                onChange={(e) => setArPaymentAmount(e.target.value)}
+                                placeholder="المبلغ ₪"
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 font-mono text-left"
+                                dir="ltr"
+                                disabled={arPaymentSubmitting}
+                              />
+                              <input
+                                type="text"
+                                value={arPaymentNotes}
+                                onChange={(e) => setArPaymentNotes(e.target.value)}
+                                placeholder="ملاحظة (اختياري)"
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-right"
+                                disabled={arPaymentSubmitting}
+                              />
+                              <button
+                                type="button"
+                                onClick={submitArPayment}
+                                disabled={arPaymentSubmitting}
+                                className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                {arPaymentSubmitting ? <Loader2 size={20} className="animate-spin" /> : <Banknote size={20} />}
+                                حفظ الدفعة
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>,
