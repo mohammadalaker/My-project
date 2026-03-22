@@ -4302,8 +4302,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             badgeHeld={heldOrders.length}
           />
 
-          {/* Header */}
-          <header className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'sticky top-0 px-6 py-4 backdrop-blur-xl border-b shadow-sm'} bg-white/70 border-slate-200/50`}>
+          {/* Header: dir=ltr يحافظ على توزيع الشعار/الملف الشخصي (flex+justify-between) دون انعكاس بسبب RTL العام */}
+          <header dir="ltr" className={`flex-shrink-0 z-30 transition-all duration-300 ${(showOrderPanel || showCatalogPanel) ? 'rounded-t-3xl pt-4 px-6 pb-2' : 'sticky top-0 px-6 py-4 backdrop-blur-xl border-b shadow-sm'} bg-white/70 border-slate-200/50`}>
             <div className="flex flex-wrap items-center justify-between gap-4 max-w-7xl mx-auto w-full">
               <div className="flex items-center gap-4 shrink-0">
                 {/* Full App Menu Toggle */}
@@ -4516,7 +4516,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
 
 
-          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
+          <div ref={scrollContainerRef} dir="rtl" className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
             {isSortingMode && (
               <AdminSortProducts
                 items={sortingCategory === 'electrical' ? filteredItems.filter((i) => isElectricalGroup(i.group)) : filteredItems.filter((i) => !isElectricalGroup(i.group))}
