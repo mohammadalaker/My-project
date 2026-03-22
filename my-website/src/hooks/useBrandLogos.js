@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import supabase from '../lib/supabaseClient';
-import { STORAGE_IMAGE_TRANSFORMS } from '../lib/storageImageUrl';
+import { STORAGE_IMAGE_TRANSFORMS, STORAGE_UPLOAD_CACHE_CONTROL } from '../lib/storageImageUrl';
 
 export function useBrandLogos() {
     const [logos, setLogos] = useState([]);
@@ -96,7 +96,7 @@ export function useBrandLogos() {
         
         const { error } = await supabase.storage.from('Pic_of_items').upload(`logos/${fileName}`, file, {
             upsert: true,
-            cacheControl: '3600'
+            cacheControl: STORAGE_UPLOAD_CACHE_CONTROL,
         });
         
         if (!error) {

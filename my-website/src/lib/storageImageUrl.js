@@ -12,6 +12,9 @@ export const STORAGE_IMAGE_TRANSFORMS = {
   tiny: { width: 128, quality: 70, resize: 'contain' },
 };
 
+/** قيمة max-age (بالثواني) لـ Cache-Control عند رفع الملفات إلى Storage — تُخزَّن على الـ CDN/المتصفح وتقلل الـ egress */
+export const STORAGE_UPLOAD_CACHE_CONTROL = '31536000';
+
 /**
  * رابط عام لصورة في Storage مع تحويل اختياري.
  *

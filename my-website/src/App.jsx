@@ -78,7 +78,7 @@ import SplashScreen from './components/SplashScreen';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
 import { useBrandLogos } from './hooks/useBrandLogos';
 import { getDisplayGroupForBarcode } from './utils/displayGroupKMG';
-import { getStoragePublicImageUrl as getPublicImageUrl } from './lib/storageImageUrl';
+import { getStoragePublicImageUrl as getPublicImageUrl, STORAGE_UPLOAD_CACHE_CONTROL } from './lib/storageImageUrl';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const BUCKET = 'Pic_of_items';
@@ -3773,7 +3773,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
-        .upload(fileName, fileToUpload, { upsert: true });
+        .upload(fileName, fileToUpload, {
+          upsert: true,
+          cacheControl: STORAGE_UPLOAD_CACHE_CONTROL,
+        });
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase
