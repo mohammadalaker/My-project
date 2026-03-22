@@ -7,6 +7,7 @@ import {
   connectWebSerialScanner,
   connectWebBluetoothUartScanner,
 } from '../lib/webBarcodeBridge';
+import { detectBarcodeFromImageFile, hasNativeBarcodeDetector } from '../lib/barcodeFromFile';
 
 function toEnglishDigits(input) {
   return String(input || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
@@ -37,22 +38,7 @@ const BARCODE_DETECTOR_FORMATS = [
   'qr_code',
 ];
 
-async function detectBarcodeFromFile(file) {
-  if (!file) return null;
-  if (typeof window === 'undefined') return null;
-
-  // BarcodeDetector is supported in Chromium-based browsers.
-  const BarcodeDetector = window.BarcodeDetector;
-  if (!BarcodeDetector) return null;
-
-  const bitmap = await createImageBitmap(file);
-  const detector = new BarcodeDetector({
-    formats: BARCODE_DETECTOR_FORMATS,
-  });
-
-  const results = await detector.detect(bitmap);
-  return results?.[0]?.rawValue || null;
-}
+const HTML5_CAMERA_HOST_ID = 'product-lookup-html5-camera';
 
 export default function ProductLookup() {
   const [query, setQuery] = useState('');
@@ -75,6 +61,9 @@ export default function ProductLookup() {
   const cameraStreamRef = useRef(null);
   const cameraRafRef = useRef(null);
   const cameraCancelledRef = useRef(false);
+  const html5CameraInstanceRef = useRef(null);
+
+  const nativeBarcodeCamera = useMemo(() => hasNativeBarcodeDetector(), []);
 
   const qNorm = useMemo(() => toEnglishDigits(query).trim(), [query]);
 
@@ -90,15 +79,16 @@ export default function ProductLookup() {
       cameraStreamRef.current = null;
     }
     if (videoRef.current) videoRef.current.srcObject = null;
+    const h5 = html5CameraInstanceRef.current;
+    if (h5) {
+      html5CameraInstanceRef.current = null;
+      h5.stop().catch(() => {});
+    }
     setCameraOpen(false);
   }, []);
 
   const handleOpenCamera = useCallback(() => {
     setError(null);
-    if (typeof window === 'undefined' || !window.BarcodeDetector) {
-      setError('المتصفح لا يدعم مسح الباركود بالكاميرا. جرّب Chrome أو Edge على أندرويد أو كمبيوتر.');
-      return;
-    }
     if (!navigator.mediaDevices?.getUserMedia) {
       setError('الكاميرا غير متاحة من هذا المتصفح.');
       return;
@@ -107,12 +97,7 @@ export default function ProductLookup() {
   }, []);
 
   useEffect(() => {
-    if (!cameraOpen) return;
-    if (typeof window === 'undefined' || !window.BarcodeDetector) {
-      setError('المتصفح لا يدعم مسح الباركود من الكاميرا. جرّب Chrome أو Edge (على أندرويد أو كمبيوتر).');
-      setCameraOpen(false);
-      return;
-    }
+    if (!cameraOpen || !nativeBarcodeCamera) return;
 
     cameraCancelledRef.current = false;
 
@@ -186,7 +171,57 @@ export default function ProductLookup() {
       }
       if (videoRef.current) videoRef.current.srcObject = null;
     };
-  }, [cameraOpen, stopCameraScan]);
+  }, [cameraOpen, nativeBarcodeCamera, stopCameraScan]);
+
+  /** كاميرا عبر html5-qrcode (ZXing) — Chrome على iPhone، Safari، إلخ */
+  useEffect(() => {
+    if (!cameraOpen || nativeBarcodeCamera) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        await new Promise((r) => requestAnimationFrame(r));
+        if (cancelled) return;
+
+        const qr = new Html5Qrcode(HTML5_CAMERA_HOST_ID, { verbose: false });
+        html5CameraInstanceRef.current = qr;
+
+        await qr.start(
+          { facingMode: 'environment' },
+          { fps: 8, qrbox: { width: 280, height: 180 } },
+          (decodedText) => {
+            if (cancelled || !decodedText) return;
+            openedRef.current = true;
+            const code = String(decodedText).trim();
+            qr.stop()
+              .catch(() => {})
+              .finally(() => {
+                html5CameraInstanceRef.current = null;
+                stopCameraScan();
+                openProduct(toEnglishDigits(code).trim() || code);
+              });
+          },
+          () => {}
+        );
+      } catch (e) {
+        if (!cancelled) {
+          setError(e?.message || 'تعذّر تشغيل الكاميرا لمسح الباركود.');
+          setCameraOpen(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      const q = html5CameraInstanceRef.current;
+      html5CameraInstanceRef.current = null;
+      if (q) q.stop().catch(() => {});
+    };
+  }, [cameraOpen, nativeBarcodeCamera, stopCameraScan]);
 
   const focusScanField = useCallback(() => {
     inputRef.current?.focus?.({ preventScroll: false });
@@ -434,7 +469,7 @@ export default function ProductLookup() {
                     setFileBusy(true);
                     setError(null);
                     try {
-                      const code = await detectBarcodeFromFile(file);
+                      const code = await detectBarcodeFromImageFile(file);
                       if (!code) {
                         setError('لم نستطع قراءة الباركود من الصورة. جرّب صورة أوضح أو أدخل الباركود يدوياً.');
                         return;
@@ -475,12 +510,6 @@ export default function ProductLookup() {
               محدد مثل إذن «الكاميرا» — لذلك أضفنا «مسح بالكاميرا» داخل الصفحة نفسها.
             </p>
           </div>
-
-          {typeof window !== 'undefined' && !window.BarcodeDetector && (
-            <p className="mt-3 text-[11px] text-amber-700 bg-amber-50 border border-amber-200/60 rounded-xl px-3 py-2">
-              ملاحظة: قراءة الباركود من صورة قد لا تعمل على هذا المتصفح. يمكنك دائماً إدخال الباركود يدوياً.
-            </p>
-          )}
 
           {error && (
             <p className="mt-3 text-[12px] text-rose-700 bg-rose-50 border border-rose-200/60 rounded-xl px-3 py-2">
@@ -573,12 +602,19 @@ export default function ProductLookup() {
                   إغلاق
                 </button>
               </div>
-              <video
-                ref={videoRef}
-                className="w-full aspect-[4/3] rounded-xl bg-black object-cover"
-                playsInline
-                muted
-              />
+              {nativeBarcodeCamera ? (
+                <video
+                  ref={videoRef}
+                  className="w-full aspect-[4/3] rounded-xl bg-black object-cover"
+                  playsInline
+                  muted
+                />
+              ) : (
+                <div
+                  id={HTML5_CAMERA_HOST_ID}
+                  className="w-full aspect-[4/3] rounded-xl bg-black min-h-[200px] overflow-hidden"
+                />
+              )}
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 سيُطلب منك السماح للمتصفح باستخدام الكاميرا. وجّه الكاميرا نحو الباركود حتى يُقرأ تلقائياً.
               </p>
