@@ -471,7 +471,9 @@ export default function ProductLookup() {
                     try {
                       const code = await detectBarcodeFromImageFile(file);
                       if (!code) {
-                        setError('لم نستطع قراءة الباركود من الصورة. جرّب صورة أوضح أو أدخل الباركود يدوياً.');
+                        setError(
+                          'لم نستطع قراءة الباركود من الصورة. جرّب صورة أوضح (JPG/PNG)، اقترب من الباركود، إضاءة أقوى، أو استخدم «مسح بالكاميرا» أو الإدخال اليدوي.'
+                        );
                         return;
                       }
                       openProduct(code);
