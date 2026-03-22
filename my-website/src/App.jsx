@@ -67,6 +67,7 @@ import {
   RefreshCw,
   Sun,
   Moon,
+  Wallet,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -74,6 +75,7 @@ import { useDrag } from '@use-gesture/react';
 import supabase from './lib/supabaseClient';
 import { BARCODE_ORDER, sortByBarcodeOrder } from './barcodeOrder';
 import AdminSortProducts from './components/AdminSortProducts';
+import CustomerArPanel from './components/CustomerArPanel';
 import SplashScreen from './components/SplashScreen';
 import { saveProductsLocally, getLocalProducts, addToSyncQueue, getSyncQueue, removeFromSyncQueue } from './lib/db';
 import { useBrandLogos } from './hooks/useBrandLogos';
@@ -166,6 +168,9 @@ function amountToEnglishWords(amount) {
   }
   return str + ' Only';
 }
+
+/** بيع بالذمم/تقسيط — يُسجَّل في customer_ar_ledger ويزيد outstanding_debt */
+const AR_DEBIT_PAYMENT_METHODS = new Set(['Credit', 'Installment']);
 
 const ITEMS_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, is_offer, visible, product_type';
 const ITEMS_BASE_SELECT = 'barcode, eng_name, brand_group, box_count, full_price, price_after_disc, stock_count, image_url, product_type';
@@ -876,6 +881,16 @@ function App() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [customersLoading, setCustomersLoading] = useState(false);
+  /** صفحة العملاء: دليل العملاء | ذمم العملاء */
+  const [customersSectionTab, setCustomersSectionTab] = useState('directory');
+  const [arSearch, setArSearch] = useState('');
+  const [arFilter, setArFilter] = useState('all');
+  const [arLedgerCustomer, setArLedgerCustomer] = useState(null);
+  const [arLedgerEntries, setArLedgerEntries] = useState([]);
+  const [arLedgerLoading, setArLedgerLoading] = useState(false);
+  const [arPaymentAmount, setArPaymentAmount] = useState('');
+  const [arPaymentNotes, setArPaymentNotes] = useState('');
+  const [arPaymentSubmitting, setArPaymentSubmitting] = useState(false);
 
   // Sales stats (last 7 days) for Reports
   const [salesLast7, setSalesLast7] = useState([]);
@@ -1036,7 +1051,7 @@ function App() {
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, company_name, name, phone, address, customer_number, loyalty_points, total_spent, outstanding_debt')
+        .select('id, company_name, name, phone, address, customer_number, loyalty_points, total_spent, outstanding_debt, credit_limit')
         .order('id', { ascending: false });
 
       if (error) throw error;
@@ -1063,6 +1078,94 @@ function App() {
       setCustomersLoading(false);
     }
   }, [customers.length]);
+
+  const applyCreditAfterOrder = useCallback(async (orderData, orderId) => {
+    try {
+      const det = orderData?.details;
+      const details = typeof det === 'object' && det !== null ? det : {};
+      const pm = details.paymentMethod || '';
+      if (!AR_DEBIT_PAYMENT_METHODS.has(pm)) return;
+      const phone = String(orderData.customer_phone || '').trim();
+      if (!phone) return;
+      const total = Number(orderData.total_amount || 0);
+      if (!(total > 0)) return;
+      const { data: cust, error: e1 } = await supabase.from('customers').select('id, outstanding_debt').eq('phone', phone).maybeSingle();
+      if (e1 || !cust?.id) return;
+      const username = localStorage.getItem('sales_username') || 'system';
+      const { error: e2 } = await supabase.from('customer_ar_ledger').insert([{
+        customer_id: cust.id,
+        entry_type: 'debit',
+        amount_ils: total,
+        description: pm === 'Installment' ? 'بيع بالتقسيط — طلب' : 'بيع بالذمم / آجل — طلب',
+        order_id: orderId ?? null,
+        created_by: username,
+      }]);
+      if (e2) {
+        console.warn('customer_ar_ledger insert:', e2);
+        return;
+      }
+      await supabase.from('customers').update({
+        outstanding_debt: Number(cust.outstanding_debt || 0) + total,
+      }).eq('id', cust.id);
+    } catch (e) {
+      console.warn('applyCreditAfterOrder', e);
+    }
+  }, []);
+
+  const fetchArLedger = useCallback(async (customerId) => {
+    if (!customerId) return;
+    setArLedgerLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('customer_ar_ledger')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setArLedgerEntries(data || []);
+    } catch (e) {
+      console.warn('fetchArLedger', e);
+      setArLedgerEntries([]);
+      alert('تعذر تحميل سجل الذمم. أنشئ جدول customer_ar_ledger من ملف supabase/customer_ar_ledger.sql في Supabase.');
+    } finally {
+      setArLedgerLoading(false);
+    }
+  }, []);
+
+  const submitArPayment = useCallback(async () => {
+    if (!arLedgerCustomer?.id) return;
+    const amt = Number(toEnglishDigits(String(arPaymentAmount || '')));
+    if (!(amt > 0)) {
+      alert('أدخل مبلغ الدفعة (أكبر من صفر).');
+      return;
+    }
+    setArPaymentSubmitting(true);
+    try {
+      const username = localStorage.getItem('sales_username') || 'user';
+      const { error: e1 } = await supabase.from('customer_ar_ledger').insert([{
+        customer_id: arLedgerCustomer.id,
+        entry_type: 'credit',
+        amount_ils: amt,
+        description: (arPaymentNotes || '').trim() || 'دفعة نقدية',
+        created_by: username,
+      }]);
+      if (e1) throw e1;
+      const { data: c } = await supabase.from('customers').select('outstanding_debt').eq('id', arLedgerCustomer.id).single();
+      const prev = Number(c?.outstanding_debt || 0);
+      const nextDebt = Math.max(0, prev - amt);
+      await supabase.from('customers').update({ outstanding_debt: nextDebt }).eq('id', arLedgerCustomer.id);
+      setArPaymentAmount('');
+      setArPaymentNotes('');
+      setArLedgerCustomer((prev) => (prev ? { ...prev, outstanding_debt: nextDebt } : null));
+      await fetchCustomers();
+      await fetchArLedger(arLedgerCustomer.id);
+    } catch (e) {
+      console.warn('submitArPayment', e);
+      alert(e?.message || 'فشل تسجيل الدفعة.');
+    } finally {
+      setArPaymentSubmitting(false);
+    }
+  }, [arLedgerCustomer, arPaymentAmount, arPaymentNotes, fetchCustomers, fetchArLedger]);
 
   const fetchActivityLogs = useCallback(async () => {
     setActivityLogsLoading(true);
@@ -1157,6 +1260,9 @@ function App() {
         loyalty_points: Math.max(0, Number(payload.loyalty_points) || 0),
         total_spent: Math.max(0, Number(payload.total_spent) || 0),
         outstanding_debt: Math.max(0, Number(payload.outstanding_debt) || 0),
+        credit_limit: payload.credit_limit === '' || payload.credit_limit == null
+          ? null
+          : Math.max(0, Number(payload.credit_limit)),
       };
       if (payload.id) {
         const { error } = await supabase.from('customers').update(row).eq('id', payload.id);
@@ -1799,10 +1905,12 @@ function App() {
         // Remove local id/timestamp properties added by IDB before sending to Supabase
         const { id, timestamp, ...orderDataToSync } = order;
 
-        const { error } = await supabase.from('orders').insert([orderDataToSync]);
+        const { data: insertedSync, error } = await supabase.from('orders').insert([orderDataToSync]).select('id').single();
         if (!error) {
-          // If successful, remove from the local sync queue
           await removeFromSyncQueue(order.id);
+          if (insertedSync?.id) {
+            await applyCreditAfterOrder(orderDataToSync, insertedSync.id);
+          }
           console.log(`Successfully synced offline order ${order.id}`);
         } else {
           console.error(`Failed to sync offline order ${order.id}:`, error);
@@ -1814,7 +1922,7 @@ function App() {
     } catch (err) {
       console.error('Offline sync failed:', err);
     }
-  }, []);
+  }, [applyCreditAfterOrder]);
 
   const refreshPendingSyncCount = useCallback(async () => {
     try {
@@ -2947,8 +3055,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
 
     try {
-      const { error } = await supabase.from('orders').insert([orderData]);
+      const { data: insertedOrder, error } = await supabase.from('orders').insert([orderData]).select('id').single();
       if (error) throw error;
+      const newOrderId = insertedOrder?.id ?? null;
 
       // Update Customer Loyalty Points and Total Spent automatically
       if (orderInfo.phone) {
@@ -2987,6 +3096,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         } catch (custErr) {
           console.warn('Failed to update customer points:', custErr);
         }
+      }
+
+      if (newOrderId) {
+        await applyCreditAfterOrder(orderData, newOrderId);
       }
 
       alert('Order submitted successfully space to supervisor!');
@@ -6268,14 +6381,50 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <p className="text-slate-500 text-sm sm:text-base mt-1">إدارة بيانات العملاء ونقاط الولاء</p>
                         </div>
                       </div>
+                      {customersSectionTab === 'directory' && (
+                        <button
+                          onClick={() => setEditingCustomer({ company_name: '', name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0, outstanding_debt: 0, credit_limit: null })}
+                          className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all duration-300"
+                        >
+                          <Plus size={22} /> إضافة عميل
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 p-1 rounded-2xl bg-slate-100/80 border border-slate-200/80">
                       <button
-                        onClick={() => setEditingCustomer({ company_name: '', name: '', phone: '', address: '', customer_number: '', loyalty_points: 0, total_spent: 0, outstanding_debt: 0 })}
-                        className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all duration-300"
+                        type="button"
+                        onClick={() => setCustomersSectionTab('directory')}
+                        className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${customersSectionTab === 'directory' ? 'bg-white text-indigo-700 shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
                       >
-                        <Plus size={22} /> إضافة عميل
+                        <Users size={18} /> دليل العملاء
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomersSectionTab('ar')}
+                        className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${customersSectionTab === 'ar' ? 'bg-white text-emerald-700 shadow-md' : 'text-slate-600 hover:text-slate-900'}`}
+                      >
+                        <Wallet size={18} /> ذمم العملاء (A/R)
                       </button>
                     </div>
 
+                    {customersSectionTab === 'ar' ? (
+                      <CustomerArPanel
+                        customers={customers}
+                        loading={customersLoading}
+                        search={arSearch}
+                        onSearchChange={setArSearch}
+                        filter={arFilter}
+                        onFilterChange={setArFilter}
+                        onOpenLedger={(c) => {
+                          setArLedgerCustomer(c);
+                          fetchArLedger(c.id);
+                        }}
+                      />
+                    ) : null}
+
+                    {customersSectionTab === 'directory' && (
+                    <>
                     <div className="relative">
                       <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                       <input
@@ -6351,6 +6500,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                       )}
                     </div>
+                    </>
+                    )}
 
                     {/* مودال عرض تفاصيل العميل — النقر على عميل يفتح بياناته، ومنها يمكن التعديل */}
                     {viewingCustomer && createPortal(
@@ -6408,6 +6559,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   </p>
                                 </div>
                               </div>
+                              {viewingCustomer.credit_limit != null && Number(viewingCustomer.credit_limit) > 0 && (
+                                <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200">
+                                  <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">سقف الذمم المسموح</p>
+                                  <p className="text-emerald-900 font-black text-lg">₪{Number(viewingCustomer.credit_limit).toFixed(0)}</p>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="px-6 py-4 flex flex-wrap gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
@@ -6423,12 +6580,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   loyalty_points: viewingCustomer.loyalty_points ?? 0,
                                   total_spent: viewingCustomer.total_spent ?? 0,
                                   outstanding_debt: viewingCustomer.outstanding_debt ?? 0,
+                                  credit_limit: viewingCustomer.credit_limit ?? null,
                                 });
                                 setViewingCustomer(null);
                               }}
                               className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-500/30 transition-all"
                             >
                               <Pencil size={18} /> تعديل
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setArLedgerCustomer(viewingCustomer);
+                                fetchArLedger(viewingCustomer.id);
+                                setViewingCustomer(null);
+                                setCustomersSectionTab('ar');
+                              }}
+                              className="px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-500/30 transition-all"
+                            >
+                              <Wallet size={18} /> سجل الذمم
                             </button>
                             <button
                               onClick={() => {
@@ -6551,6 +6721,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
                               />
                             </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2 text-right">سقف الذمم المسموح (₪) — اختياري</label>
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={editingCustomer.credit_limit == null ? '' : editingCustomer.credit_limit}
+                                onChange={e => {
+                                  const v = e.target.value;
+                                  setEditingCustomer(prev => ({
+                                    ...prev,
+                                    credit_limit: v === '' ? null : Math.max(0, +v || 0),
+                                  }));
+                                }}
+                                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                                placeholder="اتركه فارغاً إذا لا يوجد سقف"
+                              />
+                            </div>
                           </div>
                           <div className="px-6 py-4 flex gap-3 justify-start border-t border-slate-100 bg-slate-50/50">
                             <button
@@ -6566,6 +6754,87 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               className="px-5 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-all"
                             >
                               إلغاء
+                            </button>
+                          </div>
+                        </div>
+                      </div>,
+                      document.body
+                    )}
+
+                    {arLedgerCustomer && createPortal(
+                      <div className="fixed inset-0 z-[115] flex items-center justify-center min-h-screen w-full p-4 bg-slate-900/60 backdrop-blur-md" dir="rtl" onClick={() => !arPaymentSubmitting && setArLedgerCustomer(null)}>
+                        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-lg max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                          <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-l from-emerald-50/90 to-white flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="text-lg font-black text-slate-900 truncate">سجل الذمم</h3>
+                              <p className="text-sm text-slate-600 truncate">{arLedgerCustomer.company_name || arLedgerCustomer.name}</p>
+                              <p className="text-xs font-mono text-slate-500">{arLedgerCustomer.phone}</p>
+                            </div>
+                            <button type="button" onClick={() => !arPaymentSubmitting && setArLedgerCustomer(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-500"><X size={22} /></button>
+                          </div>
+                          <div className="px-6 py-3 flex flex-wrap gap-2 border-b border-slate-100 bg-slate-50/50">
+                            <span className="inline-flex px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-sm font-bold">
+                              رصيد: ₪{Number(arLedgerCustomer.outstanding_debt ?? 0).toFixed(2)}
+                            </span>
+                            {arLedgerCustomer.credit_limit != null && Number(arLedgerCustomer.credit_limit) > 0 && (
+                              <span className="inline-flex px-3 py-1.5 rounded-xl bg-slate-200 text-slate-800 text-sm font-bold">
+                                سقف: ₪{Number(arLedgerCustomer.credit_limit).toFixed(0)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+                            {arLedgerLoading ? (
+                              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-emerald-600" size={36} /></div>
+                            ) : arLedgerEntries.length === 0 ? (
+                              <p className="text-center text-slate-500 text-sm py-8">لا توجد حركات مسجّلة بعد. عند البيع بخيار «آجل / ذمم» أو «تقسيط» يُضاف صف تلقائياً.</p>
+                            ) : (
+                              <ul className="space-y-2">
+                                {arLedgerEntries.map((row) => (
+                                  <li key={row.id} className="rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                    <div>
+                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${row.entry_type === 'debit' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                        {row.entry_type === 'debit' ? 'عليه' : 'دفعة'}
+                                      </span>
+                                      <p className="text-sm text-slate-700 mt-1">{row.description || '—'}</p>
+                                      <p className="text-[11px] text-slate-400 font-mono">{row.created_at ? new Date(row.created_at).toLocaleString('ar-SA') : ''}</p>
+                                    </div>
+                                    <div className="font-black text-slate-900" dir="ltr">
+                                      {row.entry_type === 'debit' ? '+' : '−'}₪{Number(row.amount_ils || 0).toFixed(2)}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          <div className="px-6 py-4 border-t border-slate-100 space-y-3 bg-white">
+                            <p className="text-sm font-bold text-slate-700">تسجيل دفعة (يقلّل الرصيد)</p>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={arPaymentAmount}
+                              onChange={(e) => setArPaymentAmount(e.target.value)}
+                              placeholder="المبلغ ₪"
+                              className="w-full px-4 py-3 rounded-xl border border-slate-200 font-mono text-left"
+                              dir="ltr"
+                              disabled={arPaymentSubmitting}
+                            />
+                            <input
+                              type="text"
+                              value={arPaymentNotes}
+                              onChange={(e) => setArPaymentNotes(e.target.value)}
+                              placeholder="ملاحظة (اختياري)"
+                              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-right"
+                              disabled={arPaymentSubmitting}
+                            />
+                            <button
+                              type="button"
+                              onClick={submitArPayment}
+                              disabled={arPaymentSubmitting}
+                              className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {arPaymentSubmitting ? <Loader2 size={20} className="animate-spin" /> : <Banknote size={20} />}
+                              حفظ الدفعة
                             </button>
                           </div>
                         </div>
@@ -7506,8 +7775,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     {/* 7. Payment Method */}
                     <div className="space-y-3 pt-2 border-t border-slate-100">
                       <p className="text-[11px] font-bold text-slate-500">طريقة الدفع</p>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 flex-1 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
                           <input
                             type="radio"
                             name="paymentMethod"
@@ -7518,7 +7787,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           />
                           <span className="font-bold text-sm">نقدي (Cash)</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 flex-1 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
                           <input
                             type="radio"
                             name="paymentMethod"
@@ -7528,6 +7797,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             className="w-4 h-4 text-orange-500 focus:ring-orange-500"
                           />
                           <span className="font-bold text-sm">شيكات (Checks)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-rose-300 transition-colors has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 has-[:checked]:text-rose-800">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="Credit"
+                            checked={orderInfo.paymentMethod === 'Credit'}
+                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                            className="w-4 h-4 text-rose-500 focus:ring-rose-500"
+                          />
+                          <span className="font-bold text-sm">آجل / ذمم (Credit / A/R)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-violet-300 transition-colors has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 has-[:checked]:text-violet-800">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="Installment"
+                            checked={orderInfo.paymentMethod === 'Installment'}
+                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                            className="w-4 h-4 text-violet-500 focus:ring-violet-500"
+                          />
+                          <span className="font-bold text-sm">تقسيط (Installment)</span>
                         </label>
                       </div>
                     </div>
