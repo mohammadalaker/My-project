@@ -1659,25 +1659,29 @@ function App() {
     }
   };
 
-  /** جلب المنتجات: نفس منطق الأوفلاين + IndexedDB + دمج المخزون — يُستخدم مع React Query للكاش */
+  /** جلب المنتجات: IndexedDB أولاً، ثم Supabase عند توفر الشبكة — بدون استدعاء الشبكة أبداً عند الأوفلاين */
   const loadItemsFromSources = useCallback(async () => {
     let useBaseSelect = false;
     let allItems = [];
 
+    let localRows = [];
+    try {
+      localRows = await getLocalProducts();
+    } catch (idbErr) {
+      console.warn('IndexedDB read failed:', idbErr);
+    }
+    const localNormalized = (localRows || []).map(normalizeItemFromSupabase).filter(Boolean);
+    const sortedLocal = sortByBarcodeOrder(localNormalized, dynamicBarcodeOrder);
+
+    const fromLocalOnly = () => ({
+      items: sortedLocal,
+      useBaseSelect: false,
+      accumulatedRaw: [],
+      rawCount: sortedLocal.length,
+    });
+
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      try {
-        allItems = await getLocalProducts();
-        const normalized = allItems.map(normalizeItemFromSupabase).filter(Boolean);
-        const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
-        return {
-          items: sorted,
-          useBaseSelect: false,
-          accumulatedRaw: [],
-          rawCount: 0,
-        };
-      } catch (idbErr) {
-        console.warn('Offline: no local cache', idbErr);
-      }
+      return fromLocalOnly();
     }
 
     try {
@@ -1730,18 +1734,39 @@ function App() {
         return { items: sorted, useBaseSelect, accumulatedRaw, rawCount };
       }
     } catch (err) {
-      console.error('Supabase fetch error, trying local IndexedDB:', err);
-      try {
-        const localItems = await getLocalProducts();
-        const normalized = localItems.map(normalizeItemFromSupabase).filter(Boolean);
-        const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
-        return { items: sorted, useBaseSelect: false, accumulatedRaw: [], rawCount: 0 };
-      } catch (idbErr) {
-        console.error('Failed to load from local DB', idbErr);
-        return { items: [], useBaseSelect: false, accumulatedRaw: [], rawCount: 0 };
-      }
+      console.error('Supabase fetch error, using local IndexedDB cache:', err);
+      if (sortedLocal.length > 0) return fromLocalOnly();
+      return { items: [], useBaseSelect: false, accumulatedRaw: [], rawCount: 0 };
     }
   }, [dynamicBarcodeOrder]);
+
+  /** عرض كاش IndexedDB فوراً قبل انتهاء طلب Supabase (شبكة بطيئة) */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await getLocalProducts();
+        if (cancelled || !rows?.length) return;
+        const normalized = rows.map(normalizeItemFromSupabase).filter(Boolean);
+        if (!normalized.length) return;
+        const sorted = sortByBarcodeOrder(normalized, dynamicBarcodeOrder);
+        queryClient.setQueryData(['items', dynamicBarcodeOrder], (prev) => {
+          if (prev?.items?.length) return prev;
+          return {
+            items: sorted,
+            useBaseSelect: false,
+            accumulatedRaw: [],
+            rawCount: sorted.length,
+          };
+        });
+      } catch (_) {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dynamicBarcodeOrder, queryClient]);
 
   const itemsQuery = useQuery({
     queryKey: ['items', dynamicBarcodeOrder],
@@ -1749,7 +1774,11 @@ function App() {
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
-    retry: 1,
+    retry: (failureCount) => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
+      return failureCount < 2;
+    },
+    networkMode: 'offlineFirst',
   });
 
   useEffect(() => {
@@ -4150,7 +4179,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <Cloud size={12} className="fill-emerald-200" />
                       </div>
                     ) : (
-                      <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700`} title="غير متصل - سيتم المزامنة لاحقاً">
+                      <div
+                        className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700`}
+                        title="أوفلاين — المنتجات من IndexedDB إن وُجدت؛ الطلبات تُحفظ محلياً وتُزامن عند عودة الإنترنت"
+                      >
                         <CloudOff size={12} />
                       </div>
                     )}
@@ -7017,7 +7049,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <Cloud size={12} className="fill-emerald-400/50" />
                       </div>
                     ) : (
-                      <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700`} title="غير متصل - سيتم المزامنة لاحقاً">
+                      <div
+                        className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700`}
+                        title="أوفلاين — المنتجات من IndexedDB إن وُجدت؛ الطلبات تُحفظ محلياً وتُزامن عند عودة الإنترنت"
+                      >
                         <CloudOff size={12} />
                       </div>
                     )}
