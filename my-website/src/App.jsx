@@ -4516,7 +4516,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
 
 
-          <div ref={scrollContainerRef} dir="rtl" className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
+          {/* بدون dir=rtl هنا: يمنع انعكاس شبكة المنتجات وصفوف الأقسام؛ النص العربي يبقى عبر text-right و dir محلي حيث يلزم */}
+          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
             {isSortingMode && (
               <AdminSortProducts
                 items={sortingCategory === 'electrical' ? filteredItems.filter((i) => isElectricalGroup(i.group)) : filteredItems.filter((i) => !isElectricalGroup(i.group))}
@@ -6409,7 +6410,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   </div>
                 ) : mode === 'customers' ? (
                   /* Customers View — واجهة حديثة + عرض الأسماء بالكامل */
-                  <div className="max-w-5xl mx-auto py-6 sm:py-10 px-4 animate-fade-in flex flex-col gap-8">
+                  <div className="max-w-5xl mx-auto py-6 sm:py-10 px-4 animate-fade-in flex flex-col gap-8" dir="rtl">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
