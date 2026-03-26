@@ -782,6 +782,9 @@ function App() {
     } catch (e) { console.warn('Could not save order info:', e); }
   }, [orderInfo]);
   const [submittedOrders, setSubmittedOrders] = useState([]);
+  /** طلبات حديثة لكل الحالات — للوحة التحكم (الإيرادات والعمليات الأخيرة)، وليس لقائمة «انتظار الموافقة» */
+  const [dashboardOrders, setDashboardOrders] = useState([]);
+  const [dashboardOrdersLoading, setDashboardOrdersLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -1457,6 +1460,41 @@ function App() {
     setSubmittedOrders(data ?? []);
   }, []);
 
+  const fetchDashboardOrders = useCallback(async () => {
+    setDashboardOrdersLoading(true);
+    /**
+     * طلبان متوازيان:
+     * 1) أحدث الطلبات بأي حالة (قد يكون أغلبها قيد الانتظار فيزاح الطلبات المعتمدة القديمة خارج الحد).
+     * 2) أحدث الطلبات المعتمدة (completed) صراحةً — تضمن ظهورها في التحليل والجدول.
+     */
+    const [recentRes, completedRes] = await Promise.all([
+      supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(1200),
+      supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['completed', 'Completed'])
+        .order('created_at', { ascending: false })
+        .limit(800),
+    ]);
+    setDashboardOrdersLoading(false);
+    if (recentRes.error) {
+      console.error('Dashboard orders fetch error:', recentRes.error);
+      setDashboardOrders([]);
+      return;
+    }
+    if (completedRes.error) {
+      console.warn('Dashboard: completed branch failed, using recent orders only:', completedRes.error);
+    }
+    const byId = new Map();
+    for (const row of [...(recentRes.data ?? []), ...(completedRes.data ?? [])]) {
+      if (row && row.id != null) byId.set(row.id, row);
+    }
+    const merged = Array.from(byId.values()).sort(
+      (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+    );
+    setDashboardOrders(merged);
+  }, []);
+
   useEffect(() => {
     const canViewOrders = userRole === 'supervisor' || userRole === 'admin';
     if ((mode === 'submitted' || mode === 'dashboard') && canViewOrders) {
@@ -1464,7 +1502,10 @@ function App() {
     } else {
       setOrdersError(null);
     }
-  }, [mode, userRole, fetchSubmittedOrders]);
+    if (mode === 'dashboard' && canViewOrders) {
+      fetchDashboardOrders();
+    }
+  }, [mode, userRole, fetchSubmittedOrders, fetchDashboardOrders]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -4530,7 +4571,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             )}
             {mode === 'dashboard' ? (
               <div className="h-full min-h-[100vh] w-full flex flex-col">
-                <ElectroMartDashboard items={items} orders={submittedOrders} username={username} setMode={setMode} />
+                <ElectroMartDashboard items={items} orders={dashboardOrders} ordersLoading={dashboardOrdersLoading} username={username} setMode={setMode} />
               </div>
             ) : (
             <div className="max-w-7xl mx-auto w-full pb-20">
@@ -4742,6 +4783,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
                                 if (error) throw error;
                                 await fetchSubmittedOrders();
+                                void fetchDashboardOrders();
                                 const orderToLoad = selectedOrder;
                                 const newOrderItems = (orderToLoad.items || []).map(orderItem => {
                                   const originalItem = items.find(i => i.barcode === orderItem.barcode) || {};
@@ -5004,7 +5046,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   <ElectroMartDashboard />
                 ) : mode === 'dashboard' ? (
                   /* لوحة التحكم الجديدة مع بيانات المشروع الفعلية */
-                  <ElectroMartDashboard items={items} orders={submittedOrders} username={username} />
+                  <ElectroMartDashboard items={items} orders={dashboardOrders} ordersLoading={dashboardOrdersLoading} username={username} />
                 ) : mode === 'reports' ? (
                   /* التقارير — الشكل الخارجي: أولاً "أي تقرير تريد أن تراه؟" ثم محتوى التقرير */
                   <div className="max-w-6xl mx-auto animate-fade-in">

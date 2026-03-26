@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Settings, 
   TrendingUp, ArrowUpRight, ArrowDownRight, Bell, Search, 
-  MoreVertical, CreditCard, Activity, Zap, Star, Sun, Moon
+  MoreVertical, CreditCard, Activity, Zap, Star, Sun, Moon, Loader2
 } from 'lucide-react';
 
 // Mesh Gradient Component for "WOW" background
@@ -179,13 +179,29 @@ const SalesChart = () => (
   </div>
 );
 
-const RecentSalesTable = ({ orders }) => {
+/** طلب معتمد في التحليل (موافق عليه من شاشة الطلبات) */
+function isOrderCompleted(o) {
+  const s = String(o?.status ?? '').trim().toLowerCase();
+  return s === 'completed' || s === 'complete';
+}
+
+const RecentSalesTable = ({ orders, loading = false }) => {
+  if (loading) {
+    return (
+      <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-500">
+        <Loader2 className="w-9 h-9 text-indigo-500 animate-spin" />
+        <p className="text-sm font-bold">جاري تحميل العمليات…</p>
+      </div>
+    );
+  }
   const sales = (orders || []).slice(0, 10).map((o, i) => {
     const total = o.total_amount ?? (o.items || []).reduce((s, it) => s + (it.total || 0), 0);
     const firstItem = (o.items && o.items[0]) ? (o.items[0].name || o.items[0].barcode || '—') : 'طلب';
     const dateStr = (o.order_date || o.created_at || '').slice(0, 10);
-    const status = o.status === 'completed' ? 'Completed' : 'Pending';
-    return { id: o.id || `#${i + 1}`, item: firstItem, price: `₪${Math.round(total)}`, time: dateStr, status };
+    let statusKey = 'Pending';
+    if (isOrderCompleted(o)) statusKey = 'Completed';
+    else if (String(o.status || '').toLowerCase() === 'to_prepare') statusKey = 'Preparing';
+    return { id: o.id || `#${i + 1}`, item: firstItem, price: `₪${Math.round(total)}`, time: dateStr, status: statusKey };
   });
 
   if (sales.length === 0) {
@@ -228,8 +244,14 @@ const RecentSalesTable = ({ orders }) => {
                 </div>
               </td>
               <td className="py-4">
-                <span className={`text-[10px] font-black px-2 py-1 rounded-md border ${sale.status === 'Completed' ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' : 'text-orange-400 bg-orange-400/10 border-orange-400/20'}`}>
-                  {sale.status === 'Completed' ? 'مكتمل' : 'قيد الانتظار'}
+                <span className={`text-[10px] font-black px-2 py-1 rounded-md border ${
+                  sale.status === 'Completed'
+                    ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'
+                    : sale.status === 'Preparing'
+                      ? 'text-sky-400 bg-sky-400/10 border-sky-400/20'
+                      : 'text-orange-400 bg-orange-400/10 border-orange-400/20'
+                }`}>
+                  {sale.status === 'Completed' ? 'مكتمل' : sale.status === 'Preparing' ? 'تحت التجهيز' : 'قيد الانتظار'}
                 </span>
               </td>
               <td className="py-4 text-left pl-6 font-black transition-colors text-slate-900">{sale.price}</td>
@@ -241,13 +263,25 @@ const RecentSalesTable = ({ orders }) => {
   );
 };
 
-const ElectroMartDashboard = ({ items = [], orders = [], username, setMode }) => {
+const ElectroMartDashboard = ({ items = [], orders = [], ordersLoading = false, username, setMode }) => {
   const stats = useMemo(() => {
-    const totalRevenue = orders.reduce((s, o) => s + (o.total_amount ?? (o.items || []).reduce((sum, it) => sum + (it.total || 0), 0)), 0);
-    const totalOrders = orders.length;
-    const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const lineTotal = (o) =>
+      Number(o.total_amount ?? (o.items || []).reduce((sum, it) => sum + (Number(it.total) || 0), 0)) || 0;
+
+    const approved = (orders || []).filter(isOrderCompleted);
+    const approvedRevenue = approved.reduce((s, o) => s + lineTotal(o), 0);
+    const approvedCount = approved.length;
+    const pendingCount = (orders || []).filter((o) => !isOrderCompleted(o)).length;
+    const avgApproved = approvedCount > 0 ? approvedRevenue / approvedCount : 0;
+
     const lowStock = (items || []).filter((i) => (i.stock_count ?? i.stock ?? 0) <= 5).length;
-    return { totalRevenue, totalOrders, avgOrder, lowStock };
+    return {
+      approvedRevenue,
+      approvedCount,
+      pendingCount,
+      avgApproved,
+      lowStock,
+    };
   }, [orders, items]);
 
   return (
@@ -288,16 +322,31 @@ const ElectroMartDashboard = ({ items = [], orders = [], username, setMode }) =>
             className="order-1 xl:order-2 xl:text-right"
           >
             <h2 className="text-6xl font-black tracking-tighter mb-4 drop-shadow-2xl transition-colors duration-700 text-slate-900">أهلاً بك محمد العكر 👋</h2>
-            <p className="text-xl font-medium max-w-2xl leading-relaxed transition-colors duration-700 xl:ml-auto text-slate-600">نظرة شاملة على أداء مبيعات اليوم. <span className="font-extrabold tracking-tight transition-colors duration-700 text-slate-900">Maslamani<span className="font-light text-slate-600">Sales</span></span></p>
+            <p className="text-xl font-medium max-w-2xl leading-relaxed transition-colors duration-700 xl:ml-auto text-slate-600">
+              نظرة على المبيعات المعتمدة (بعد الموافقة على الطلب).{' '}
+              {!ordersLoading && stats.pendingCount > 0 ? (
+                <span className="text-amber-700 font-bold">طلبات بانتظار الموافقة: {stats.pendingCount}</span>
+              ) : null}{' '}
+              <span className="font-extrabold tracking-tight transition-colors duration-700 text-slate-900">Maslamani<span className="font-light text-slate-600">Sales</span></span>
+            </p>
           </motion.div>
         </header>
 
-        {/* Stats Grid — بيانات من مشروعك */}
+        {/* Stats Grid — بيانات من مشروعك (كل الطلبات المعروضة، بما فيها المعتمدة) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-16">
-          <GlassCard title="Revenue" value={`₪${Math.round(stats.totalRevenue)}`} icon={CreditCard} color="indigo" trend="up" trendValue="—" index={0} />
-          <GlassCard title="New Orders" value={String(stats.totalOrders)} icon={Zap} color="purple" trend="up" trendValue="—" index={1} />
-          <GlassCard title="Low Stock" value={`${stats.lowStock} items`} icon={Package} color="rose" trend="down" trendValue="—" index={2} />
-          <GlassCard title="Avg Order" value={`₪${Math.round(stats.avgOrder)}`} icon={Activity} color="emerald" trend="up" trendValue="—" index={3} />
+          {ordersLoading ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 rounded-[32px] border border-slate-200/80 bg-white/60 backdrop-blur">
+              <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-3" />
+              <p className="text-sm font-bold text-slate-500">جاري تحميل إحصائيات الطلبات…</p>
+            </div>
+          ) : (
+            <>
+              <GlassCard title="Revenue (معتمد)" value={`₪${Math.round(stats.approvedRevenue)}`} icon={CreditCard} color="indigo" trend="up" trendValue="—" index={0} />
+              <GlassCard title="طلبات معتمدة" value={String(stats.approvedCount)} icon={Zap} color="purple" trend="up" trendValue="—" index={1} />
+              <GlassCard title="Low Stock" value={`${stats.lowStock} items`} icon={Package} color="rose" trend="down" trendValue="—" index={2} />
+              <GlassCard title="Avg (معتمد)" value={`₪${Math.round(stats.avgApproved)}`} icon={Activity} color="emerald" trend="up" trendValue="—" index={3} />
+            </>
+          )}
         </div>
 
         {/* Main Content Sections */}
@@ -318,7 +367,7 @@ const ElectroMartDashboard = ({ items = [], orders = [], username, setMode }) =>
                 عرض الكل
               </button>
             </div>
-            <RecentSalesTable orders={orders} />
+            <RecentSalesTable orders={orders} loading={ordersLoading} />
           </motion.div>
 
           {/* Sales Analytics Chart */}
