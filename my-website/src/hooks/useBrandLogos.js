@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import supabase from '../lib/supabaseClient';
-import { STORAGE_IMAGE_TRANSFORMS, STORAGE_UPLOAD_CACHE_CONTROL } from '../lib/storageImageUrl';
+import { getStoragePublicImageUrl, STORAGE_UPLOAD_CACHE_CONTROL } from '../lib/storageImageUrl';
 
 export function useBrandLogos() {
     const [logos, setLogos] = useState([]);
@@ -34,11 +34,8 @@ export function useBrandLogos() {
             });
 
             if (file) {
-                const { data } = supabase.storage.from('Pic_of_items').getPublicUrl(`logos/${file.name}`, {
-                    transform: STORAGE_IMAGE_TRANSFORMS.tiny,
-                });
-                // Use updated_at timestamp to avoid caching issues when overwriting
-                const base = data.publicUrl;
+                const base = getStoragePublicImageUrl(`logos/${file.name}`, { size: 'tiny', bucket: 'Pic_of_items' });
+                if (!base) return null;
                 const sep = base.includes('?') ? '&' : '?';
                 return `${base}${sep}t=${new Date(file.updated_at).getTime()}`;
             }
