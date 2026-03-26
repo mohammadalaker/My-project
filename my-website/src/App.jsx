@@ -68,6 +68,8 @@ import {
   Sun,
   Moon,
   Wallet,
+  Copy,
+  MessageCircle,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -3819,6 +3821,69 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     }
   }, [items]);
+
+  /** رابط صفحة المنتج للعميل (?barcode=) — نفس منطق لصاقة QR و CustomerProductView */
+  const getProductPublicShareUrl = useCallback((item) => {
+    if (!item?.barcode || typeof window === 'undefined') return '';
+    const base = window.location.origin + (window.location.pathname || '/');
+    return `${base}${base.endsWith('/') ? '' : ''}?barcode=${encodeURIComponent(String(item.barcode).trim())}`;
+  }, []);
+
+  const buildWhatsAppShareText = useCallback(
+    (item) => {
+      if (!item) return '';
+      const url = getProductPublicShareUrl(item);
+      const lines = [];
+      const typeLine = (item.productType || '').trim();
+      const nameLine = (item.name || '').trim();
+      if (typeLine) lines.push(`📦 ${typeLine}`);
+      if (nameLine && nameLine !== typeLine) lines.push(nameLine);
+      if (!typeLine && nameLine) lines.push(`📦 ${nameLine}`);
+      const price = Math.round(item.priceAfterDiscount ?? item.price ?? 0);
+      const listPrice = item.price != null ? Math.round(item.price) : null;
+      lines.push('');
+      lines.push(`💰 السعر: ₪${price}`);
+      if (listPrice != null && item.priceAfterDiscount != null && Number(item.priceAfterDiscount) < Number(item.price)) {
+        lines.push(`🏷️ السعر قبل الخصم: ₪${listPrice}`);
+      }
+      if (item.group) lines.push(`📁 الفئة: ${item.group}`);
+      if (item.barcode) lines.push(`🔢 الباركود: ${item.barcode}`);
+      lines.push('');
+      if (url) {
+        lines.push('🔗 رابط المنتج:');
+        lines.push(url);
+      }
+      return lines.join('\n').trim();
+    },
+    [getProductPublicShareUrl]
+  );
+
+  const copyWhatsAppMessage = useCallback(
+    async (product) => {
+      const text = buildWhatsAppShareText(product);
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('تم نسخ تفاصيل المنتج.\nافتح واتساب والصق الرسالة في المحادثة.');
+      } catch {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          alert('تم نسخ تفاصيل المنتج.\nافتح واتساب والصق الرسالة في المحادثة.');
+        } catch {
+          prompt('انسخ النص يدوياً:', text);
+        }
+      }
+    },
+    [buildWhatsAppShareText]
+  );
 
   /** Open printable QR sticker for customer self-scan URL (?barcode=...) — تصميم لصاقة أنيق */
   const handlePrintQR = (item) => {
@@ -8318,6 +8383,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <span>Add to Selection</span>
                         </button>
                       )}
+                      <button
+                        type="button"
+                        disabled={!selectedItem}
+                        onClick={() => copyWhatsAppMessage(selectedItem)}
+                        title={selectedItem?.barcode ? getProductPublicShareUrl(selectedItem) : ''}
+                        className="group w-full flex items-center justify-between bg-white border border-green-100 hover:bg-green-50 p-4 rounded-[2rem] transition-all duration-300 shadow-sm hover:shadow-md disabled:pointer-events-none disabled:opacity-40"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="bg-green-500 p-2 rounded-full text-white shrink-0 group-hover:scale-110 transition-transform">
+                            <MessageCircle size={20} aria-hidden />
+                          </div>
+                          <div className="text-right min-w-0">
+                            <p className="text-sm font-bold text-gray-800">نسخ تفاصيل الواتساب</p>
+                            <p className="text-xs text-gray-500">سيتم نسخ السعر والرابط والوصف</p>
+                          </div>
+                        </div>
+                        <div className="bg-gray-100 p-2 rounded-lg group-hover:bg-green-100 transition-colors shrink-0">
+                          <Copy size={16} className="text-gray-400 group-hover:text-green-600" aria-hidden />
+                        </div>
+                      </button>
                       <div className="grid grid-cols-2 gap-4">
                         {mode === 'catalog' && (
                           <button 
