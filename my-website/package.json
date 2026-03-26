@@ -11,7 +11,8 @@
     "read-excel": "node scripts/readExcel.cjs",
     "update-products": "node scripts/readExcel.cjs",
     "update-electric": "node scripts/syncElectric.cjs",
-    "delete-not-in-excel": "node scripts/deleteNotInExcel.cjs"
+    "delete-not-in-excel": "node scripts/deleteNotInExcel.cjs",
+    "delete-not-in-google-sheet": "node scripts/deleteNotInGoogleSheet.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

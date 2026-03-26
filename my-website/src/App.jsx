@@ -123,6 +123,31 @@ function toEnglishDigits(str) {
     .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
 }
 
+/** توحيد الباركود للبحث: إزالة المسافات، تحويل الأرقام العربية/الفارسية إلى إنجليزية */
+function normalizeBarcodeForLookup(input) {
+  if (input == null || input === '') return '';
+  let s = String(input).trim().replace(/\s/g, '');
+  s = toEnglishDigits(s);
+  return typeof s === 'string' ? s : String(s);
+}
+
+/**
+ * هل قيمتا باركود تطالبان نفس الصنف؟
+ * يحل اختلاف أرقام عربية/إنجليزية، والأصفار البادئة في الأكواد الرقمية فقط.
+ */
+function barcodesMatch(a, b) {
+  const na = normalizeBarcodeForLookup(a);
+  const nb = normalizeBarcodeForLookup(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  if (/^\d+$/.test(na) && /^\d+$/.test(nb)) {
+    const ca = na.replace(/^0+/, '') || '0';
+    const cb = nb.replace(/^0+/, '') || '0';
+    return ca === cb;
+  }
+  return false;
+}
+
 /** Convert amount to English words (Shekels and Agoras) */
 function amountToEnglishWords(amount) {
   const n = Math.max(0, Number(amount));
@@ -1730,7 +1755,7 @@ function App() {
 
 
 
-  const getItemByBarcode = (barcode) => items.find((i) => String(i.barcode) === String(barcode));
+  const getItemByBarcode = (barcode) => items.find((i) => barcodesMatch(i.barcode, barcode));
 
   const createNewOffer = () => {
     const id = 'o_' + Date.now();
@@ -2155,12 +2180,34 @@ function App() {
   const productSections = useMemo(() => {
     const electrical = filteredItems.filter((i) => isElectricalGroup(i.group));
     const kitchenware = filteredItems.filter((i) => !isElectricalGroup(i.group));
-    const sortFn = sortMode === 'barcode'
+    const sortSecondary = sortMode === 'barcode'
       ? (arr) => sortByBarcodeOrder(arr, dynamicBarcodeOrder)
       : (arr) => [...arr].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' }));
+    /** Kitchenware: أولاً حسب ترتيب المجموعات (HOUSEHOLD_GROUPS)، ثم باركود/اسم داخل المجموعة — حتى يبقى الترتيب كالكشف عند البحث */
+    const sortKitchenwareByGroupOrder = (arr) => {
+      const byGroup = new Map();
+      for (const item of arr) {
+        const g = String(item.group || '').trim().toLowerCase();
+        if (!byGroup.has(g)) byGroup.set(g, []);
+        byGroup.get(g).push(item);
+      }
+      const out = [];
+      const seen = new Set();
+      for (const hg of HOUSEHOLD_GROUPS) {
+        if (byGroup.has(hg)) {
+          out.push(...sortSecondary(byGroup.get(hg)));
+          seen.add(hg);
+        }
+      }
+      const rest = [...byGroup.keys()].filter((k) => !seen.has(k)).sort((a, b) => String(a).localeCompare(String(b)));
+      for (const k of rest) {
+        out.push(...sortSecondary(byGroup.get(k)));
+      }
+      return out;
+    };
     return [
-      { title: 'Electrical Appliances', items: sortFn(electrical), color: 'indigo', icon: Zap },
-      { title: 'Kitchenware', items: sortFn(kitchenware), color: 'sky', icon: UtensilsCrossed },
+      { title: 'Electrical Appliances', items: sortSecondary(electrical), color: 'indigo', icon: Zap },
+      { title: 'Kitchenware', items: sortKitchenwareByGroupOrder(kitchenware), color: 'sky', icon: UtensilsCrossed },
     ];
   }, [filteredItems, sortMode, dynamicBarcodeOrder]);
 
@@ -2768,7 +2815,7 @@ function App() {
         const discPercent = isSubmitted ? (o.discount_percent || 0) : getLineDiscountPercent(o);
 
         const barcodeToLookup = o.barcode || item.barcode || '';
-        const liveItem = barcodeToLookup ? items.find(i => String(i.barcode) === String(barcodeToLookup)) : null;
+        const liveItem = barcodeToLookup ? items.find((i) => barcodesMatch(i.barcode, barcodeToLookup)) : null;
 
         const rawName = (item.name || o.customName || o.name || item.group || o.group || '').replace(/</g, '&lt;');
         const prodTypeRaw = o.product_type || item.productType || liveItem?.productType || '';
@@ -3419,7 +3466,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     sortedLines.forEach((o, i) => {
       const discPct = getLineDiscountPercent(o);
       const barcodeToLookup = o.barcode || o.item?.barcode || '';
-      const liveItem = barcodeToLookup ? items.find(i => String(i.barcode) === String(barcodeToLookup)) : null;
+      const liveItem = barcodeToLookup ? items.find((i) => barcodesMatch(i.barcode, barcodeToLookup)) : null;
 
       const prodType = (o.product_type || o.item?.productType || liveItem?.productType || '');
       const rawName = (o.item?.name || o.customName || o.name || o.item?.group || o.group || '').slice(0, 50);
@@ -3646,9 +3693,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const openEditPanelFromBarcode = useCallback((barcodeStr) => {
-    const code = String(barcodeStr || '').trim();
+    const code = normalizeBarcodeForLookup(barcodeStr);
     if (!code) return;
-    const item = items.find((i) => String(i.barcode || '').trim() === code);
+    const item = items.find((i) => barcodesMatch(i.barcode, code));
     if (item) {
       setEditingItem(item);
       const stockVal = item.stock;
@@ -4054,7 +4101,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       const q = toEnglishDigits(raw.replace(/\s/g, ''));
       if (!q) return;
 
-      const item = items.find((i) => String(i.barcode || '').trim() === q);
+      const item = items.find((i) => barcodesMatch(i.barcode, q));
       if (item) {
         e.preventDefault();
         if (userRole !== 'admin' && item.visible === false) {
@@ -4786,7 +4833,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 void fetchDashboardOrders();
                                 const orderToLoad = selectedOrder;
                                 const newOrderItems = (orderToLoad.items || []).map(orderItem => {
-                                  const originalItem = items.find(i => i.barcode === orderItem.barcode) || {};
+                                  const originalItem = items.find((i) => barcodesMatch(i.barcode, orderItem.barcode)) || {};
                                   return {
                                     id: originalItem.id || orderItem.barcode,
                                     qty: orderItem.qty,
