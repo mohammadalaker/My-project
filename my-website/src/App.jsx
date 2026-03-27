@@ -421,6 +421,7 @@ function App() {
   }, []);
 
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [showLoginScreen, setShowLoginScreen] = useState(() => typeof window !== 'undefined' && window.location.search.includes('login=1'));
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
@@ -588,7 +589,12 @@ function App() {
       setIsAuthenticated(true);
       setUserRole(role || 'customer');
       setUsername(storedUser || null);
-      if (role === 'customer') setMode('order');
+      if (role === 'customer' && !activeReportTab) setMode('order');
+    } else {
+      setIsAuthenticated(true);
+      setUserRole('customer');
+      setUsername('public_sale');
+      setMode('order');
     }
     setHasCheckedAuth(true);
   }, []);
@@ -607,6 +613,7 @@ function App() {
       setIsAuthenticated(true);
       setUserRole(role);
       setUsername(loggedInUser);
+      setShowLoginScreen(false);
       if (role === 'customer') setMode('order');
     };
 
@@ -655,6 +662,7 @@ function App() {
       setIsAuthenticated(true);
       setUserRole(storedRole);
       setUsername(storedUsername);
+      setShowLoginScreen(false);
       if (storedRole === 'customer') setMode('order');
     } catch (e) {
       console.warn('handleBiometricLogin failed:', e);
@@ -669,9 +677,10 @@ function App() {
       localStorage.removeItem('sales_username');
       localStorage.removeItem('sales_login_time');
       localStorage.removeItem('sales_remember_me');
-      setIsAuthenticated(false);
-      setUserRole(null);
-      setUsername(null);
+      setIsAuthenticated(true);
+      setUserRole('customer');
+      setUsername('public_sale');
+      setMode('order');
     }
   };
 
@@ -4397,7 +4406,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     );
   }
 
-  if (!isAuthenticated && mode !== 'dashboard_preview') {
+  if ((!isAuthenticated || showLoginScreen) && mode !== 'dashboard_preview') {
     return (
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]">
@@ -4405,6 +4414,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         </div>
       }>
         <Login onLogin={handleLogin} onBiometricLogin={handleBiometricLogin} />
+        {isAuthenticated && (
+          <button onClick={() => setShowLoginScreen(false)} className="fixed top-6 left-6 z-[9999] bg-white/50 backdrop-blur-md px-4 py-2 rounded-2xl text-slate-700 shadow flex items-center gap-2 hover:bg-white transition-colors">
+            العودة <ArrowLeft size={16} className="rotate-180" />
+          </button>
+        )}
       </Suspense>
     );
   }
@@ -4519,11 +4533,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className="flex items-center justify-center p-2 rounded-xl shadow-sm cursor-pointer transition-all bg-white/60 border border-slate-200/70 hover:bg-white/90"
-                    onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  >
-                    <User className="w-6 h-6 text-slate-500" />
+                  <div className="flex flex-row-reverse gap-2">
+                    <div
+                      className="flex items-center justify-center p-2 rounded-xl shadow-sm cursor-pointer transition-all bg-white/60 border border-slate-200/70 hover:bg-white/90"
+                      onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    >
+                      <User className="w-6 h-6 text-slate-500" />
+                    </div>
+                    {/* Admin Login Button */}
+                    <button
+                      onClick={() => setShowLoginScreen(true)}
+                      className="flex items-center justify-center p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/80 transition-all border border-transparent hover:border-indigo-100"
+                      title="Admin Login"
+                    >
+                      <Lock size={18} />
+                    </button>
                   </div>
                 )}
 
