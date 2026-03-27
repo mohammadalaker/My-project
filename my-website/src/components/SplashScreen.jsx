@@ -12,9 +12,10 @@ const SplashScreen = ({ onComplete }) => {
     const playAudio = async () => {
       try {
         await audioRef.current.play();
-        setStarted(true);
       } catch (err) {
         console.warn('Autoplay prevented. Waiting for user interaction.', err);
+      } finally {
+        setStarted(true);
       }
     };
     playAudio();

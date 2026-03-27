@@ -150,7 +150,10 @@ function Sidebar({
                         {/* Footer */}
                         <div className="p-4 border-t backdrop-blur-md rounded-b-3xl border-white/30 bg-white/30">
                             <button
-                                onClick={handleLogout}
+                                onClick={() => {
+                                    handleLogout();
+                                    onClose();
+                                }}
                                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl backdrop-blur-sm font-semibold transition-colors shadow-sm bg-white/60 border border-white/50 text-rose-500 hover:bg-rose-50/80 border-white/50"
                             >
                                 <LogOut size={18} className="text-rose-500" />
