@@ -681,6 +681,8 @@ function App() {
       setUserRole('customer');
       setUsername('public_sale');
       setMode('order');
+      setShowLoginScreen(false);
+      setShowSplash(true);
     }
   };
 

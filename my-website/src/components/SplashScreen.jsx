@@ -8,17 +8,6 @@ const SplashScreen = ({ onComplete }) => {
 
   useEffect(() => {
     audioRef.current = new Audio('/startup.mp3');
-    // Try to play immediately (might work if user already interacted or browser allows)
-    const playAudio = async () => {
-      try {
-        await audioRef.current.play();
-      } catch (err) {
-        console.warn('Autoplay prevented. Waiting for user interaction.', err);
-      } finally {
-        setStarted(true);
-      }
-    };
-    playAudio();
   }, []);
 
   useEffect(() => {
@@ -108,11 +97,8 @@ const SplashScreen = ({ onComplete }) => {
             <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-1 text-center">
               Maslamani Sales
             </h1>
-            <p className="text-white font-medium tracking-tight text-center text-lg sm:text-xl opacity-90 mb-2">Premium Appliances</p>
-            <p className="text-slate-400 font-medium text-sm sm:text-base tracking-widest uppercase mb-8">
-              Point of Sale System
-            </p>
-            
+            <p className="text-white font-medium tracking-tight text-center text-lg sm:text-xl opacity-90 mb-8">Premium Appliances</p>
+
             {started ? (
               <div className="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                 <motion.div 
