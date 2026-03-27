@@ -1552,6 +1552,8 @@ function App() {
   }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [showStockZeroConfirm, setShowStockZeroConfirm] = useState(false);
+  const [stockZeroPending, setStockZeroPending] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
     barcode: '',
@@ -3682,6 +3684,36 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  const persistProduct = async (payload, editCtx) => {
+    if (editCtx) {
+      const { error } = await supabase.from('items').update(payload).eq('barcode', editCtx.barcode);
+      if (error) throw error;
+      const uname = username || localStorage.getItem('sales_username') || 'unknown';
+      const barcodeId = editCtx.barcode;
+      const fields = [
+        { key: 'full_price', old: editCtx.price, new: payload.full_price, label: 'السعر' },
+        { key: 'price_after_disc', old: editCtx.priceAfterDiscount, new: payload.price_after_disc, label: 'سعر بعد الخصم' },
+        { key: 'stock_count', old: editCtx.stock_count ?? editCtx.stock, new: payload.stock_count, label: 'الكمية' },
+        { key: 'eng_name', old: editCtx.name, new: payload.eng_name, label: 'الاسم' },
+        { key: 'brand_group', old: editCtx.group, new: payload.brand_group, label: 'الفئة' },
+      ];
+      for (const f of fields) {
+        const ov = f.old != null ? String(f.old) : '';
+        const nv = f.new != null ? String(f.new) : '';
+        if (ov !== nv) {
+          await logActivityToSupabase({ username: uname, entity_id: barcodeId, field_name: f.key, old_value: ov, new_value: nv, description: `${f.label}: ${ov} → ${nv}` });
+        }
+      }
+      fetchActivityLogs();
+    } else {
+      const { error } = await supabase.from('items').insert(payload);
+      if (error) throw error;
+    }
+    setModalOpen(false);
+    setShowCatalogPanel(false);
+    queryClient.invalidateQueries({ queryKey: ['items'] });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (userRole !== 'admin') return;
@@ -3705,37 +3737,41 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         image_url: formData.image_url.trim() || null,
         visible: formData.visible !== false,
       };
-      if (editingItem) {
-        const { error } = await supabase.from('items').update(payload).eq('barcode', editingItem.barcode);
-        if (error) throw error;
-        const uname = username || localStorage.getItem('sales_username') || 'unknown';
-        const barcodeId = editingItem.barcode;
-        const fields = [
-          { key: 'full_price', old: editingItem.price, new: payload.full_price, label: 'السعر' },
-          { key: 'price_after_disc', old: editingItem.priceAfterDiscount, new: payload.price_after_disc, label: 'سعر بعد الخصم' },
-          { key: 'stock_count', old: editingItem.stock_count ?? editingItem.stock, new: payload.stock_count, label: 'الكمية' },
-          { key: 'eng_name', old: editingItem.name, new: payload.eng_name, label: 'الاسم' },
-          { key: 'brand_group', old: editingItem.group, new: payload.brand_group, label: 'الفئة' },
-        ];
-        for (const f of fields) {
-          const ov = f.old != null ? String(f.old) : '';
-          const nv = f.new != null ? String(f.new) : '';
-          if (ov !== nv) {
-            await logActivityToSupabase({ username: uname, entity_id: barcodeId, field_name: f.key, old_value: ov, new_value: nv, description: `${f.label}: ${ov} → ${nv}` });
-          }
-        }
-        fetchActivityLogs();
-      } else {
-        const { error } = await supabase.from('items').insert(payload);
-        if (error) throw error;
+      const stockMissingOrZero = payload.stock_count === null || payload.stock_count === 0;
+      if (stockMissingOrZero) {
+        setStockZeroPending({ payload, editCtx: editingItem });
+        setShowStockZeroConfirm(true);
+        return;
       }
-      setModalOpen(false);
-      setShowCatalogPanel(false);
-      queryClient.invalidateQueries({ queryKey: ['items'] });
+      await persistProduct(payload, editingItem);
     } catch (err) {
       alert(err.message || 'Save failed');
     }
   };
+
+  const confirmStockZeroSave = async () => {
+    const pending = stockZeroPending;
+    setShowStockZeroConfirm(false);
+    setStockZeroPending(null);
+    if (!pending) return;
+    try {
+      await persistProduct(pending.payload, pending.editCtx);
+    } catch (err) {
+      alert(err.message || 'Save failed');
+    }
+  };
+
+  const cancelStockZeroConfirm = () => {
+    setShowStockZeroConfirm(false);
+    setStockZeroPending(null);
+  };
+
+  useEffect(() => {
+    if (!modalOpen) {
+      setShowStockZeroConfirm(false);
+      setStockZeroPending(null);
+    }
+  }, [modalOpen]);
 
   const openEditPanelFromBarcode = useCallback((barcodeStr) => {
     const code = normalizeBarcodeForLookup(barcodeStr);
@@ -6437,7 +6473,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <div className="flex flex-wrap items-center gap-3">
                             <button
                               type="button"
-                              onClick={() => { setEditingItem(null); setShowCatalogPanel(true); }}
+                              onClick={() => { openAddModal(); }}
                               className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-base shadow-lg shadow-amber-500/30 transition-all flex items-center justify-center gap-2"
                             >
                               <Plus size={20} />
@@ -8580,6 +8616,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <label className="block">
                       <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Stock Level</span>
                       <input type="number" min={0} value={formData.stock_count} onChange={(e) => setFormData((p) => ({ ...p, stock_count: e.target.value }))} className="w-full rounded-2xl border px-4 py-3.5 outline-none transition-all font-bold text-sm bg-slate-50 border-slate-200 text-slate-900 focus:border-indigo-400" />
+                      {(() => {
+                        const v = formData.stock_count;
+                        if (v === '' || v == null) {
+                          return (
+                            <p className="mt-2 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2 leading-relaxed" dir="rtl">
+                              لم تُدخل كمية مخزون — سيُحفظ الصنف بدون مخزون (غير متوفر) حتى تُحدَّث الكمية.
+                            </p>
+                          );
+                        }
+                        const n = parseInt(String(v), 10);
+                        if (!Number.isNaN(n) && n === 0) {
+                          return (
+                            <p className="mt-2 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200/80 rounded-xl px-3 py-2 leading-relaxed" dir="rtl">
+                              المخزون صفر — سيظهر الصنف كغير متوفر حتى إدخال كمية.
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
                     </label>
                     <label className="block">
                       <span className="text-[10px] font-black uppercase tracking-widest mb-1.5 block opacity-50 text-slate-900">Box Count</span>
@@ -8653,6 +8708,52 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         )
       }
+
+      {showStockZeroConfirm && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+          dir="rtl"
+          onClick={cancelStockZeroConfirm}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="stock-zero-confirm-title"
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-amber-200 max-w-md w-full p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 p-2 rounded-xl bg-amber-100 text-amber-700">
+                <AlertTriangle size={28} />
+              </div>
+              <div>
+                <h3 id="stock-zero-confirm-title" className="text-lg font-black text-slate-900">تنبيه مخزون</h3>
+                <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                  المخزون غير محدد أو يساوي صفراً. سيظهر الصنف كغير متوفر في الكتالوج ولن يُباع حتى تحديث الكمية في المخزون. هل تريد المتابعة؟
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={cancelStockZeroConfirm}
+                className="px-5 py-3 rounded-2xl font-bold border-2 border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={() => { void confirmStockZeroSave(); }}
+                className="px-5 py-3 rounded-2xl font-bold bg-amber-600 text-white hover:bg-amber-700 shadow-lg shadow-amber-600/25 transition-colors"
+              >
+                نعم، احفظ
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Modern Edit Name Modal */}
       {
         editingNameItem && (
