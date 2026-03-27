@@ -380,9 +380,6 @@ function App() {
   /* Dropdown Menu State */
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
-  const [uiLang, setUiLang] = useState(() => {
-    try { return localStorage.getItem('sales_ui_lang') || 'ar'; } catch { return 'ar'; }
-  });
 
   // Close profile menu if clicked outside
   useEffect(() => {
@@ -4641,21 +4638,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         {(userRole === 'admin' || userRole === 'supervisor') && (
                           <>
                             <div className="h-px bg-slate-100 my-1 mx-2"></div>
-                            <div className="px-3 py-1 text-xs font-bold text-slate-400 mb-1">إعدادات سريعة</div>
-                            <div className="flex gap-1 p-1">
-                              <button
-                                onClick={() => { setUiLang('ar'); try { localStorage.setItem('sales_ui_lang', 'ar'); } catch (_) {} setShowProfileMenu(false); }}
-                                className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'ar' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                              >
-                                عربي
-                              </button>
-                              <button
-                                onClick={() => { setUiLang('en'); try { localStorage.setItem('sales_ui_lang', 'en'); } catch (_) {} setShowProfileMenu(false); }}
-                                className={`flex-1 py-2 rounded-xl text-sm font-semibold ${uiLang === 'en' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                              >
-                                English
-                              </button>
-                            </div>
                             <button
                               onClick={() => { setShowProfileMenu(false); window.print(); }}
                               className="w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-3"
@@ -7165,7 +7147,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             className="product-grid"
                           >
                             <AnimatePresence mode="popLayout">
-                              {sorted.map((item) => (
+                              {sorted.map((item) => {
+                                const stockStatus = getStockStatus(item);
+                                const isOutOfStock = stockStatus === 'Out of Stock';
+                                return (
                                 <motion.div
                                   layout
                                   initial="hidden"
@@ -7175,13 +7160,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     hidden: { opacity: 0, scale: 0.95, y: 10 },
                                     show: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
                                   }}
-                                  whileHover={{
+                                  whileHover={isOutOfStock ? {
+                                    boxShadow: '0 4px 12px rgba(15,23,42,0.06)',
+                                    transition: { duration: 0.2, ease: 'easeOut' }
+                                  } : {
                                     y: -6,
                                     boxShadow: "0 8px 16px rgba(0,0,0,0.04), 0 24px 48px -12px rgba(0,0,0,0.08)",
                                     transition: { duration: 0.2, ease: "easeOut" }
                                   }}
                                   key={item.id}
-                                  className="group flex flex-col h-full cursor-pointer transition-colors rounded-3xl overflow-hidden border glass-card border-white/80 shadow-lg hover:shadow-xl"
+                                  className={`group flex flex-col h-full cursor-pointer transition-colors rounded-3xl overflow-hidden border glass-card shadow-lg ${
+                                    isOutOfStock
+                                      ? 'opacity-[0.82] saturate-[0.65] border-slate-300/80 bg-slate-100/40 ring-1 ring-slate-200/60 hover:shadow-md'
+                                      : 'border-white/80 hover:shadow-xl'
+                                  }`}
                                   onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
                                 >
                                   {getDisplayGroup(item) && (
@@ -7198,14 +7190,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     </div>
                                   )}
 
-                                  <div className="aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b from-slate-50/80 to-slate-100/80">
+                                  <div className={`aspect-[4/3] p-6 relative flex items-center justify-center bg-gradient-to-b ${isOutOfStock ? 'from-slate-200/60 to-slate-200/90' : 'from-slate-50/80 to-slate-100/80'}`}>
                                     {getImage(item) ? (
                                       <img
                                         src={getImage(item)}
                                         alt={item.name}
                                         loading="lazy"
                                         decoding="async"
-                                        className="w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 group-hover:scale-110"
+                                        className={`w-full h-full object-contain filter drop-shadow-xl transition-transform duration-500 ${isOutOfStock ? 'grayscale-[0.35] opacity-90' : 'group-hover:scale-110'}`}
                                         onError={(e) => {
                                           e.target.style.display = 'none';
                                           e.target.nextSibling.style.display = 'flex';
@@ -7216,13 +7208,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       <Package size={48} className="text-slate-200" />
                                     </div>
 
-                                    {getStockStatus(item) === 'Out of Stock' ? (
+                                    {stockStatus === 'Out of Stock' ? (
                                       <div className="absolute top-2 right-2 z-10">
                                         <div className="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md">
                                           Out of Stock
                                         </div>
                                       </div>
-                                    ) : getStockStatus(item) === 'Low Stock' ? (
+                                    ) : stockStatus === 'Low Stock' ? (
                                       <div className="absolute top-2 right-2 z-10 animate-pulse">
                                         <div className="bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg shadow-amber-500/30 flex items-center gap-1 border border-amber-400/50" dir="ltr">
                                           <Flame size={12} className="text-amber-200" fill="currentColor" />
@@ -7244,7 +7236,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                                     {/* Offer Badge (Visible when not in Offers mode or for non-admins) */}
                                     {item.isOffer && (mode !== 'offers' || userRole !== 'admin') && (
-                                      <div className={`absolute right-2 z-10 ${getStockStatus(item) === 'Out of Stock' ? 'top-10' : getStockStatus(item) === 'Low Stock' ? 'top-10' : 'top-2'}`}>
+                                      <div className={`absolute right-2 z-10 ${stockStatus === 'Out of Stock' ? 'top-10' : stockStatus === 'Low Stock' ? 'top-10' : 'top-2'}`}>
                                         <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
                                           <Star size={10} fill="currentColor" /> Offer
                                         </span>
@@ -7324,9 +7316,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       <div className="flex items-center justify-between pt-3 border-t relative border-slate-100">
                                         <div className="flex flex-col">
                                           <span className="text-[10px] font-bold uppercase text-slate-400">Stock</span>
-                                          {getStockStatus(item) === 'Out of Stock' ? (
+                                          {stockStatus === 'Out of Stock' ? (
                                             <span className="text-xs font-bold text-red-500">Out of Stock</span>
-                                          ) : getStockStatus(item) === 'Low Stock' ? (
+                                          ) : stockStatus === 'Low Stock' ? (
                                             <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
                                               {item.stock_count} <span className="text-[10px]">Last 5 units</span>
                                             </span>
@@ -7426,7 +7418,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     </div>
                                   )}
                                 </motion.div>
-                              ))}
+                              );
+                              })}
                             </AnimatePresence>
                           </motion.div>
                         </section>
