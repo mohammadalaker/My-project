@@ -84,6 +84,7 @@ import { useBrandLogos } from './hooks/useBrandLogos';
 import { getDisplayGroupForBarcode } from './utils/displayGroupKMG';
 import { getStoragePublicImageUrl as getPublicImageUrl, STORAGE_UPLOAD_CACHE_CONTROL } from './lib/storageImageUrl';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QUERY_STALE_DEFAULT_MS, QUERY_STALE_REPORTS_MS } from './lib/queryClient';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
@@ -826,8 +827,6 @@ function App() {
   }, [orderInfo]);
   const [submittedOrders, setSubmittedOrders] = useState([]);
   /** طلبات حديثة لكل الحالات — للوحة التحكم (الإيرادات والعمليات الأخيرة)، وليس لقائمة «انتظار الموافقة» */
-  const [dashboardOrders, setDashboardOrders] = useState([]);
-  const [dashboardOrdersLoading, setDashboardOrdersLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -1503,41 +1502,6 @@ function App() {
     setSubmittedOrders(data ?? []);
   }, []);
 
-  const fetchDashboardOrders = useCallback(async () => {
-    setDashboardOrdersLoading(true);
-    /**
-     * طلبان متوازيان:
-     * 1) أحدث الطلبات بأي حالة (قد يكون أغلبها قيد الانتظار فيزاح الطلبات المعتمدة القديمة خارج الحد).
-     * 2) أحدث الطلبات المعتمدة (completed) صراحةً — تضمن ظهورها في التحليل والجدول.
-     */
-    const [recentRes, completedRes] = await Promise.all([
-      supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(1200),
-      supabase
-        .from('orders')
-        .select('*')
-        .in('status', ['completed', 'Completed'])
-        .order('created_at', { ascending: false })
-        .limit(800),
-    ]);
-    setDashboardOrdersLoading(false);
-    if (recentRes.error) {
-      console.error('Dashboard orders fetch error:', recentRes.error);
-      setDashboardOrders([]);
-      return;
-    }
-    if (completedRes.error) {
-      console.warn('Dashboard: completed branch failed, using recent orders only:', completedRes.error);
-    }
-    const byId = new Map();
-    for (const row of [...(recentRes.data ?? []), ...(completedRes.data ?? [])]) {
-      if (row && row.id != null) byId.set(row.id, row);
-    }
-    const merged = Array.from(byId.values()).sort(
-      (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
-    );
-    setDashboardOrders(merged);
-  }, []);
-
   useEffect(() => {
     const canViewOrders = userRole === 'supervisor' || userRole === 'admin';
     if ((mode === 'submitted' || mode === 'dashboard') && canViewOrders) {
@@ -1545,10 +1509,7 @@ function App() {
     } else {
       setOrdersError(null);
     }
-    if (mode === 'dashboard' && canViewOrders) {
-      fetchDashboardOrders();
-    }
-  }, [mode, userRole, fetchSubmittedOrders, fetchDashboardOrders]);
+  }, [mode, userRole, fetchSubmittedOrders]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -1980,10 +1941,54 @@ function App() {
     };
   }, [dynamicBarcodeOrder, queryClient]);
 
+  const loadDashboardOrders = useCallback(async () => {
+    /**
+     * طلبان متوازيان:
+     * 1) أحدث الطلبات بأي حالة (قد يكون أغلبها قيد الانتظار فيزاح الطلبات المعتمدة القديمة خارج الحد).
+     * 2) أحدث الطلبات المعتمدة (completed) صراحةً — تضمن ظهورها في التحليل والجدول.
+     */
+    const [recentRes, completedRes] = await Promise.all([
+      supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(1200),
+      supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['completed', 'Completed'])
+        .order('created_at', { ascending: false })
+        .limit(800),
+    ]);
+    if (recentRes.error) {
+      console.error('Dashboard orders fetch error:', recentRes.error);
+      throw recentRes.error;
+    }
+    if (completedRes.error) {
+      console.warn('Dashboard: completed branch failed, using recent orders only:', completedRes.error);
+    }
+    const byId = new Map();
+    for (const row of [...(recentRes.data ?? []), ...(completedRes.data ?? [])]) {
+      if (row && row.id != null) byId.set(row.id, row);
+    }
+    return Array.from(byId.values()).sort(
+      (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+    );
+  }, []);
+
+  const canViewDashboardOrders = userRole === 'supervisor' || userRole === 'admin';
+  const dashboardOrdersQuery = useQuery({
+    queryKey: ['dashboardOrders'],
+    queryFn: loadDashboardOrders,
+    enabled: mode === 'dashboard' && canViewDashboardOrders,
+    staleTime: QUERY_STALE_REPORTS_MS,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+  const dashboardOrders = dashboardOrdersQuery.data ?? [];
+  const dashboardOrdersLoading = dashboardOrdersQuery.isPending;
+
   const itemsQuery = useQuery({
     queryKey: ['items', dynamicBarcodeOrder],
     queryFn: loadItemsFromSources,
-    staleTime: 1000 * 60 * 5,
+    staleTime: QUERY_STALE_DEFAULT_MS,
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     retry: (failureCount) => {
@@ -4951,7 +4956,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
                                 if (error) throw error;
                                 await fetchSubmittedOrders();
-                                void fetchDashboardOrders();
+                                void queryClient.invalidateQueries({ queryKey: ['dashboardOrders'] });
                                 const orderToLoad = selectedOrder;
                                 const newOrderItems = (orderToLoad.items || []).map(orderItem => {
                                   const originalItem = items.find((i) => barcodesMatch(i.barcode, orderItem.barcode)) || {};

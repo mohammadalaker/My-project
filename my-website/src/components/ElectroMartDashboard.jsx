@@ -1,9 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, Package, ShoppingCart, Users, Settings, 
-  TrendingUp, ArrowUpRight, ArrowDownRight, Bell, Search, 
-  MoreVertical, CreditCard, Activity, Zap, Star, Sun, Moon, Loader2
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Package,
+  TrendingUp,
+  Bell,
+  Search,
+  Star,
+  Loader2,
+  Receipt,
+  AlertTriangle,
 } from 'lucide-react';
 
 // Mesh Gradient Component for "WOW" background
@@ -33,104 +38,6 @@ const MeshBackground = () => (
     {/* Subtle Grid overlay */}
     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] contrast-150 brightness-100 mix-blend-overlay opacity-10" />
   </div>
-);
-
-// Animated Sparkline SVG
-const Sparkline = ({ color }) => (
-  <svg className="w-16 h-8 opacity-50" viewBox="0 0 100 40">
-    <motion.path
-      d="M0 35 L20 25 L40 30 L60 10 L80 20 L100 5"
-      fill="none"
-      stroke={color}
-      strokeWidth="3"
-      strokeLinecap="round"
-      initial={{ pathLength: 0 }}
-      animate={{ pathLength: 1 }}
-      transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
-    />
-  </svg>
-);
-
-const GlassCard = ({ title, value, icon: Icon, color, trend, trendValue, index }) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ delay: index * 0.12, type: "spring", stiffness: 100 }}
-      whileHover={{ y: -8, scale: 1.03 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-      className="relative group overflow-hidden backdrop-blur-3xl border p-7 rounded-[32px] transition-all duration-500 shadow-2xl bg-white/70 border-slate-200 hover:bg-white/90 hover:border-slate-300 shadow-[0_20px_40px_rgba(0,0,0,0.05)]"
-    >
-      {/* Dynamic Glow logic */}
-      <AnimatePresence>
-        {isHovered && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={`absolute -inset-1 bg-gradient-to-r from-${color}-500/15 via-transparent to-purple-500/15 rounded-[32px] blur-2xl z-0`}
-          />
-        )}
-      </AnimatePresence>
-      
-      <div className="relative z-10 flex justify-between items-start">
-        <div className="space-y-5">
-          <div className="flex items-center gap-3">
-            <div className={`p-3.5 rounded-2xl border transition-colors duration-500 shadow-[inset_0_2px_4px_rgba(255,255,255,0.05)] bg-${color}-50 text-${color}-600 border-${color}-200`}>
-              <Icon size={22} />
-            </div>
-            <p className="text-[10px] font-black tracking-widest uppercase opacity-70 text-slate-500">{title}</p>
-          </div>
-          
-          <div className="space-y-2">
-            <h3 className="text-4xl font-black tracking-tighter leading-none transition-colors duration-500 text-slate-900">{value}</h3>
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center text-[10px] font-black ${trend === 'up' ? 'text-emerald-400 bg-emerald-400/10' : 'text-rose-400 bg-rose-400/10'} px-2.5 py-1 rounded-full border border-current/10`}>
-                {trend === 'up' ? <ArrowUpRight size={12} className="mr-1" /> : <ArrowDownRight size={12} className="mr-1" />}
-                {trendValue}
-              </div>
-              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">vs yesterday</span>
-            </div>
-          </div>
-        </div>
-        <div className="mt-2">
-           <Sparkline color={trend === 'up' ? '#34d399' : '#fb7185'} />
-        </div>
-      </div>
-      
-      {/* Internal highlight line */}
-      <div className="absolute top-0 left-12 right-12 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-    </motion.div>
-  );
-};
-
-const NavItem = ({ icon: Icon, label, active = false, badge, onClick }) => (
-  <motion.button
-    type="button"
-    onClick={onClick}
-    whileHover={{ x: 8, backgroundColor: 'rgba(0,0,0,0.03)' }}
-    whileTap={{ scale: 0.96 }}
-    className={`w-full flex items-center justify-between p-4.5 rounded-2xl transition-all duration-300 group ${
-      active 
-        ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm' 
-        : 'text-slate-500 hover:text-slate-900'
-    }`}
-  >
-    <div className="flex items-center gap-4">
-      <div className={`transition-all duration-300 ${active ? 'text-indigo-600 scale-110' : 'group-hover:text-slate-900'}`}>
-        <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-      </div>
-      <span className={`text-sm tracking-tight ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
-    </div>
-    {badge && (
-      <span className="bg-gradient-to-tr from-rose-500 to-orange-500 text-white text-[9px] font-black w-5 h-5 rounded-lg flex items-center justify-center shadow-lg shadow-rose-500/40 border border-white/20">
-        {badge}
-      </span>
-    )}
-  </motion.button>
 );
 
 // Animated Sales Chart Component
@@ -263,24 +170,64 @@ const RecentSalesTable = ({ orders, loading = false }) => {
   );
 };
 
+function localDateStr(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function orderCalendarDate(o) {
+  return (o.order_date || o.created_at || '').slice(0, 10);
+}
+
 const ElectroMartDashboard = ({ items = [], orders = [], ordersLoading = false, username, setMode }) => {
   const stats = useMemo(() => {
     const lineTotal = (o) =>
       Number(o.total_amount ?? (o.items || []).reduce((sum, it) => sum + (Number(it.total) || 0), 0)) || 0;
 
-    const approved = (orders || []).filter(isOrderCompleted);
-    const approvedRevenue = approved.reduce((s, o) => s + lineTotal(o), 0);
-    const approvedCount = approved.length;
     const pendingCount = (orders || []).filter((o) => !isOrderCompleted(o)).length;
-    const avgApproved = approvedCount > 0 ? approvedRevenue / approvedCount : 0;
 
-    const lowStock = (items || []).filter((i) => (i.stock_count ?? i.stock ?? 0) <= 5).length;
+    const lowStock = (items || []).filter((i) => {
+      const sc = Number(i.stock_count ?? i.stock ?? NaN);
+      if (Number.isNaN(sc)) return false;
+      return sc >= 0 && sc <= 5;
+    }).length;
+
+    const todayStr = localDateStr();
+    const completedToday = (orders || []).filter(
+      (o) => isOrderCompleted(o) && orderCalendarDate(o) === todayStr,
+    );
+    const todayRevenue = completedToday.reduce((s, o) => s + lineTotal(o), 0);
+    const todayInvoiceCount = completedToday.length;
+
+    const itemQty = {};
+    completedToday.forEach((o) => {
+      (o.items || []).forEach((it) => {
+        const label = String(it.name || it.barcode || '—').trim() || '—';
+        itemQty[label] = (itemQty[label] || 0) + (Number(it.qty) || 1);
+      });
+    });
+    let topItemName = '—';
+    let topItemQty = 0;
+    Object.entries(itemQty).forEach(([name, q]) => {
+      if (q > topItemQty) {
+        topItemQty = q;
+        topItemName = name;
+      }
+    });
+    if (todayInvoiceCount === 0) {
+      topItemName = 'لا مبيعات اليوم';
+      topItemQty = 0;
+    }
+
     return {
-      approvedRevenue,
-      approvedCount,
       pendingCount,
-      avgApproved,
       lowStock,
+      todayRevenue,
+      todayInvoiceCount,
+      topItemName,
+      topItemQty,
     };
   }, [orders, items]);
 
@@ -332,20 +279,109 @@ const ElectroMartDashboard = ({ items = [], orders = [], ordersLoading = false, 
           </motion.div>
         </header>
 
-        {/* Stats Grid — بيانات من مشروعك (كل الطلبات المعروضة، بما فيها المعتمدة) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-16">
+        {/* بطاقات الحالة السريعة — نبض المحل اليوم */}
+        <div className="mb-16" dir="rtl">
+          <div className="flex items-center justify-between gap-4 mb-5 px-1">
+            <h3 className="text-lg font-black text-slate-800 tracking-tight">نبض المحل اليوم</h3>
+            <span className="text-xs font-bold text-slate-400 tabular-nums" dir="ltr">
+              {localDateStr()}
+            </span>
+          </div>
           {ordersLoading ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 rounded-[32px] border border-slate-200/80 bg-white/60 backdrop-blur">
+            <div className="flex flex-col items-center justify-center py-16 rounded-[28px] border border-slate-200/80 bg-white/60 backdrop-blur">
               <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-3" />
               <p className="text-sm font-bold text-slate-500">جاري تحميل إحصائيات الطلبات…</p>
             </div>
           ) : (
-            <>
-              <GlassCard title="Revenue (معتمد)" value={`₪${Math.round(stats.approvedRevenue)}`} icon={CreditCard} color="indigo" trend="up" trendValue="—" index={0} />
-              <GlassCard title="طلبات معتمدة" value={String(stats.approvedCount)} icon={Zap} color="purple" trend="up" trendValue="—" index={1} />
-              <GlassCard title="Low Stock" value={`${stats.lowStock} items`} icon={Package} color="rose" trend="down" trendValue="—" index={2} />
-              <GlassCard title="Avg (معتمد)" value={`₪${Math.round(stats.avgApproved)}`} icon={Activity} color="emerald" trend="up" trendValue="—" index={3} />
-            </>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {/* 1 — إجمالي المبيعات اليوم (أخضر) */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+                className="rounded-[24px] p-5 border shadow-sm bg-gradient-to-br from-emerald-50 via-emerald-50/90 to-teal-50/80 border-emerald-200/70"
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-700 border border-emerald-200/50">
+                    <TrendingUp size={22} strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-emerald-800/80 uppercase tracking-wide mb-1">إجمالي المبيعات (اليوم)</p>
+                <p className="text-2xl sm:text-3xl font-black text-emerald-900 tabular-nums tracking-tight" dir="ltr">
+                  ₪{Math.round(stats.todayRevenue).toLocaleString('ar-EG')}
+                </p>
+                <p className="text-[10px] font-bold text-emerald-700/70 mt-2">طلبات معتمدة بتاريخ اليوم</p>
+              </motion.div>
+
+              {/* 2 — عدد الفواتير */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-[24px] p-5 border shadow-sm bg-white/90 border-slate-200/80 backdrop-blur-sm"
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+                    <Receipt size={22} strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1">عدد الفواتير (اليوم)</p>
+                <p className="text-2xl sm:text-3xl font-black text-slate-900 tabular-nums">{stats.todayInvoiceCount}</p>
+                <p className="text-[10px] font-bold text-slate-500 mt-2">فواتير مكتملة — يدل على حركة الزبائن</p>
+              </motion.div>
+
+              {/* 3 — أكثر صنف مبيعاً */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="rounded-[24px] p-5 border shadow-sm bg-white/90 border-slate-200/80 backdrop-blur-sm"
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-100">
+                    <Star size={22} strokeWidth={2.5} className="fill-amber-200/50" />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1">أكثر صنف مبيعاً (اليوم)</p>
+                <p className="text-base sm:text-lg font-black text-slate-900 leading-snug line-clamp-2 min-h-[2.5rem]" title={stats.topItemName}>
+                  {stats.topItemName}
+                </p>
+                {stats.todayInvoiceCount > 0 && stats.topItemQty > 0 && (
+                  <p className="text-[10px] font-bold text-amber-700/90 mt-2">الكمية المباعة: {stats.topItemQty}</p>
+                )}
+              </motion.div>
+
+              {/* 4 — تنبيه النواقص */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className={`rounded-[24px] p-5 border shadow-sm backdrop-blur-sm ${
+                  stats.lowStock > 0
+                    ? 'bg-gradient-to-br from-rose-50 to-orange-50/80 border-rose-200/70'
+                    : 'bg-white/90 border-slate-200/80'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div
+                    className={`p-2.5 rounded-xl border ${
+                      stats.lowStock > 0
+                        ? 'bg-rose-500/10 text-rose-700 border-rose-200/60'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                    }`}
+                  >
+                    <AlertTriangle size={22} strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1">تنبيه النواقص</p>
+                <p className={`text-2xl sm:text-3xl font-black tabular-nums ${stats.lowStock > 0 ? 'text-rose-800' : 'text-emerald-700'}`}>
+                  {stats.lowStock}
+                </p>
+                <p className="text-[10px] font-bold text-slate-600 mt-2">
+                  {stats.lowStock > 0 ? 'منتجات مخزونها منخفض (≤٥ قطع)' : 'لا يوجد نقص حرج حسب العتبة'}
+                </p>
+              </motion.div>
+            </div>
           )}
         </div>
 

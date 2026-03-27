@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend, CartesianGrid
+    PieChart, Pie, Cell, Legend, CartesianGrid,
+    AreaChart, Area,
 } from 'recharts';
 import { DollarSign, ShoppingCart, TrendingUp, Award, Download, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import { getStoragePublicImageUrl } from '../lib/storageImageUrl';
@@ -45,7 +46,7 @@ export default function Dashboard({ items, orders }) {
         const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
 
         return { totalRevenue, totalOrders, avgOrderValue };
-    }, [orders]);
+    }, [filteredOrders]);
 
     // 2. Prepare Top Sellers
     const topSellers = useMemo(() => {
@@ -65,7 +66,7 @@ export default function Dashboard({ items, orders }) {
         return Object.values(counts)
             .sort((a, b) => b.qty - a.qty)
             .slice(0, 3);
-    }, [orders]);
+    }, [filteredOrders]);
 
     // 3. Prepare Bar Chart Data (Last 7 Days Revenue regardless of filter, to always show a trend)
     const barChartData = useMemo(() => {
@@ -89,6 +90,27 @@ export default function Dashboard({ items, orders }) {
         });
 
         return Object.values(dataMap);
+    }, [orders]);
+
+    // 3b. اليوم vs أمس (إجمالي الإيرادات) — لشريط المقارنة فوق الرسم
+    const todayVsYesterday = useMemo(() => {
+        if (!orders?.length) return { today: 0, yesterday: 0, pct: null };
+        const now = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+        const y = new Date(now);
+        y.setDate(y.getDate() - 1);
+        const yesterdayStr = y.toISOString().slice(0, 10);
+        let today = 0;
+        let yesterday = 0;
+        orders.forEach((o) => {
+            const d = (o.order_date || o.created_at || '').slice(0, 10);
+            const amt = Number(o.total_amount) || 0;
+            if (d === todayStr) today += amt;
+            if (d === yesterdayStr) yesterday += amt;
+        });
+        const pct =
+            yesterday > 0 ? ((today - yesterday) / yesterday) * 100 : today > 0 ? 100 : null;
+        return { today, yesterday, pct };
     }, [orders]);
 
     // 4. Prepare Pie Chart Data (Revenue by Category/Group)
@@ -309,30 +331,83 @@ export default function Dashboard({ items, orders }) {
 
             </div>
 
-            {/* Charts Row */}
+            {/* Charts Row — اتجاه الأسبوع + مقارنة اليوم/أمس */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Bar Chart (7 Days) */}
-                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] lg:col-span-2 flex flex-col gap-6 transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-lg font-bold text-slate-800">Revenue (Last 7 Days)</h3>
-                        <p className="text-sm text-slate-500">Daily breakdown of total sales</p>
+                {/* Area Chart (Last 7 Days) + اليوم vs أمس */}
+                <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] lg:col-span-2 flex flex-col gap-5 transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="text-lg font-bold text-slate-800">اتجاه المبيعات (آخر 7 أيام)</h3>
+                            <p className="text-sm text-slate-500">إجمالي الإيرادات يومياً — مع مقارنة سريعة لليوم والأمس</p>
+                        </div>
+                        <div className="flex flex-wrap items-stretch gap-3" dir="rtl">
+                            <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 px-4 py-3 min-w-[120px]">
+                                <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wide">اليوم</p>
+                                <p className="text-xl font-black text-slate-900 tabular-nums" dir="ltr">₪{Math.round(todayVsYesterday.today).toLocaleString()}</p>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3 min-w-[120px]">
+                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">أمس</p>
+                                <p className="text-xl font-black text-slate-700 tabular-nums" dir="ltr">₪{Math.round(todayVsYesterday.yesterday).toLocaleString()}</p>
+                            </div>
+                            {todayVsYesterday.pct !== null && (todayVsYesterday.today > 0 || todayVsYesterday.yesterday > 0) && (
+                                <div className={`rounded-2xl border px-4 py-3 min-w-[100px] flex flex-col justify-center ${todayVsYesterday.pct >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                                    <p className="text-[11px] font-bold text-slate-500">مقارنة بأمس</p>
+                                    <p className={`text-lg font-black tabular-nums ${todayVsYesterday.pct >= 0 ? 'text-emerald-700' : 'text-rose-700'}`} dir="ltr">
+                                        {todayVsYesterday.pct >= 0 ? '+' : ''}{todayVsYesterday.pct.toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="h-72 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={barChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} tickFormatter={(str) => str.slice(5)} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} tickFormatter={(val) => `₪${val}`} />
-                                <Tooltip
-                                    cursor={{ fill: '#f1f5f9' }}
-                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
-                                    formatter={(value) => [`₪${value}`, 'Revenue']}
-                                    labelFormatter={(label) => `Date: ${label}`}
-                                />
-                                <Bar dataKey="revenue" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {barChartData.some((d) => d.revenue > 0) ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={barChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="dashAreaRevenue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.45} />
+                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                    <XAxis
+                                        dataKey="date"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#64748b', fontSize: 12 }}
+                                        dy={10}
+                                        tickFormatter={(str) => str.slice(5)}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#64748b', fontSize: 12 }}
+                                        dx={-10}
+                                        tickFormatter={(val) => `₪${val}`}
+                                    />
+                                    <Tooltip
+                                        cursor={{ stroke: '#c7d2fe', strokeWidth: 1 }}
+                                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
+                                        formatter={(value) => [`₪${Math.round(value)}`, 'الإيرادات']}
+                                        labelFormatter={(label) => `التاريخ: ${label}`}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="revenue"
+                                        stroke="#4f46e5"
+                                        strokeWidth={2.5}
+                                        fill="url(#dashAreaRevenue)"
+                                        dot={{ r: 3, fill: '#4f46e5', strokeWidth: 0 }}
+                                        activeDot={{ r: 5 }}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-slate-400 text-sm font-medium rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+                                لا توجد مبيعات في آخر 7 أيام لعرض المنحنى
+                            </div>
+                        )}
                     </div>
                 </div>
 
