@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useTransition, lazy, Suspense } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { useSystemSounds } from './hooks/useSystemSounds';
 import { LineChart, Line, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from 'recharts';
 // استيراد أيقونات محددة فقط من lucide-react (لا تستورد المكتبة كاملة) لتقليل حجم الـ bundle
@@ -748,7 +748,6 @@ function App() {
   }, []);
 
   const [items, setItems] = useState([]);
-  const [activeTab, setActiveTab] = useState('items'); // 'items' | 'customer'
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -761,6 +760,8 @@ function App() {
   const [showCatalogPanel, setShowCatalogPanel] = useState(false);
   const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
   const [pdfPreviewBlobUrl, setPdfPreviewBlobUrl] = useState(null);
+  /** نافذة «معلومات الطلبية» قبل اتمام الطلبية */
+  const [showOrderSubmitModal, setShowOrderSubmitModal] = useState(false);
   const [flyingItems, setFlyingItems] = useState([]);
   const [catalogItems, setCatalogItems] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -811,6 +812,8 @@ function App() {
       checksCount: '',
       discountType: '', // '' | 'percentage' | 'amount'
       discountValue: '',
+      email: '',
+      notes: '',
     };
   });
 
@@ -1750,23 +1753,6 @@ function App() {
 
   const setOrderInfoField = (key, value) =>
     setOrderInfo((prev) => ({ ...prev, [key]: value }));
-
-  /** مسح كامل معلومات العميل للاستبدال بعميل آخر */
-  const clearCustomerInfo = useCallback(() => {
-    setOrderInfo((prev) => ({
-      ...prev,
-      companyName: '',
-      merchantName: '',
-      phone: '',
-      address: '',
-      customerNumber: '',
-    }));
-    setCustomerSearch('');
-    setCustomerInsights(null);
-    setShowCustomerPredictions(false);
-  }, []);
-
-
 
   const getItemByBarcode = (barcode) => items.find((i) => barcodesMatch(i.barcode, barcode));
 
@@ -2792,7 +2778,7 @@ function App() {
     })
   );
 
-  const getPrintHtml = useCallback((orderData) => {
+  const getPrintHtml = useCallback((orderData, printInfoOverride) => {
     const isSubmitted = !!orderData;
     const lines = isSubmitted ? (orderData.items || []) : orderLines;
     const currentInfo = isSubmitted ? {
@@ -2805,7 +2791,7 @@ function App() {
       paymentMethod: orderData.payment_method || '',
       discountType: orderData.details?.discountType || '',
       discountValue: orderData.details?.discountValue || '',
-    } : orderInfo;
+    } : (printInfoOverride ?? orderInfo);
 
     // Calculate subtotal and discount for the print view
     const printSubtotal = isSubmitted ? (orderData.items || []).reduce((s, o) => s + (o.total || 0), 0) : orderLines.reduce((s, o) => s + getLineTotal(o), 0);
@@ -3146,24 +3132,27 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   const handlePrintOrder = openOrderPdfInNewTab;
   const handleOpenPdfOrder = openOrderPdfInNewTab;
 
-  const validateOrder = () => {
-    if (!orderInfo.companyName?.trim()) return 'يرجى إدخال اسم الشركة (المشتري).';
-    if (!orderInfo.merchantName?.trim()) return 'يرجى إدخال اسم التاجر (المشتري).';
-    if (!orderInfo.phone?.trim()) return 'يرجى إدخال رقم الهاتف.';
-    if (!orderInfo.address?.trim()) return 'يرجى إدخال العنوان.';
-    if (!orderInfo.orderDate) return 'يرجى إدخال التاريخ.';
+  const validateOrderInfo = (info = orderInfo) => {
+    if (!info.companyName?.trim()) return 'يرجى إدخال اسم الشركة (المشتري).';
+    if (!info.merchantName?.trim()) return 'يرجى إدخال اسم التاجر (المشتري).';
+    if (!info.phone?.trim()) return 'يرجى إدخال رقم الهاتف.';
+    if (!info.address?.trim()) return 'يرجى إدخال العنوان.';
+    if (!info.orderDate) return 'يرجى إدخال التاريخ.';
 
     return null;
   };
 
-  const saveOrderToSupabase = async () => {
+  const validateOrder = () => validateOrderInfo(orderInfo);
+
+  const saveOrderToSupabase = async (infoParam = orderInfo) => {
+    const info = infoParam;
     const orderData = {
       prepared_by: userRole === 'customer' ? 'sale' : userRole,
-      customer_name: orderInfo.companyName,
-      customer_phone: orderInfo.phone,
-      customer_address: orderInfo.address,
-      customer_number: orderInfo.customerNumber,
-      order_date: orderInfo.orderDate,
+      customer_name: info.companyName,
+      customer_phone: info.phone,
+      customer_address: info.address,
+      customer_number: info.customerNumber,
+      order_date: info.orderDate,
       total_amount: orderTotal,
       items: orderLines.map(line => ({
         barcode: line.item.barcode,
@@ -3177,7 +3166,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         price: getLineUnitPrice(line),
         total: getLineTotal(line)
       })),
-      details: orderInfo
+      details: info
     };
 
     // أوفلاين: حفظ محلياً فوراً ومزامنة لاحقاً عند عودة الاتصال
@@ -3200,7 +3189,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       const newOrderId = insertedOrder?.id ?? null;
 
       // Update Customer Loyalty Points and Total Spent automatically
-      if (orderInfo.phone) {
+      if (info.phone) {
         try {
           const pointsEarned = Math.floor(orderTotal / 100); // 1 point per 100 ILS
 
@@ -3208,26 +3197,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           const { data: existingCustomer } = await supabase
             .from('customers')
             .select('*')
-            .eq('phone', orderInfo.phone)
+            .eq('phone', info.phone)
             .single();
 
           if (existingCustomer) {
             await supabase.from('customers').update({
-              name: orderInfo.merchantName || orderInfo.companyName || '',
-              company_name: orderInfo.companyName || '',
-              address: orderInfo.address || '',
-              customer_number: orderInfo.customerNumber || '',
+              name: info.merchantName || info.companyName || '',
+              company_name: info.companyName || '',
+              address: info.address || '',
+              customer_number: info.customerNumber || '',
               total_spent: Number(existingCustomer.total_spent || 0) + Number(orderTotal),
               loyalty_points: Number(existingCustomer.loyalty_points || 0) + pointsEarned,
               last_order_date: new Date().toISOString()
-            }).eq('phone', orderInfo.phone);
+            }).eq('phone', info.phone);
           } else {
             await supabase.from('customers').insert([{
-              phone: orderInfo.phone,
-              name: orderInfo.merchantName || orderInfo.companyName || '',
-              company_name: orderInfo.companyName || '',
-              address: orderInfo.address || '',
-              customer_number: orderInfo.customerNumber || '',
+              phone: info.phone,
+              name: info.merchantName || info.companyName || '',
+              company_name: info.companyName || '',
+              address: info.address || '',
+              customer_number: info.customerNumber || '',
               total_spent: orderTotal,
               loyalty_points: pointsEarned,
               last_order_date: new Date().toISOString()
@@ -3275,6 +3264,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       checksCount: '',
       discountType: '',
       discountValue: '',
+      email: '',
+      notes: '',
     });
     setCustomerInsights(null);
     setInsightsPhone(null);
@@ -3317,32 +3308,39 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     setHeldOrders(prev => prev.filter(o => o.id !== id));
   };
 
-  const handleSaveInvoice = async () => {
+  const handleSaveInvoice = async (infoOverride) => {
     // FIX: If supervisor is reviewing a submitted order, "Save" should trigger "Export Excel & Delete"
     if (userRole === 'supervisor' && currentOrderId) {
       handleExportExcel();
       return;
     }
 
-    const error = validateOrder();
+    const info = infoOverride || orderInfo;
+    const error = validateOrderInfo(info);
     if (error) {
       alert(error + '\nPlease fill in all required customer details.');
-      setActiveTab('customer');
+      if (orderLines.length > 0) setShowOrderSubmitModal(true);
       return;
     }
 
-    const saved = await saveOrderToSupabase();
+    if (infoOverride) {
+      flushSync(() => {
+        setOrderInfo((prev) => ({ ...prev, ...info }));
+      });
+    }
+
+    const saved = await saveOrderToSupabase(info);
     if (!saved) return;
 
     playCheckout(); // UI Sound Palette: إتمام البيع — شعور إنجاز للموظف
 
     // Trigger PDF Export download
-    const html = getPrintHtml();
+    const html = getPrintHtml(undefined, info);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Invoice-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.pdf.html`;
+    a.download = `Invoice-${(info.companyName || info.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${info.orderDate || new Date().toISOString().slice(0, 10)}.pdf.html`;
 
     a.style.display = 'none';
     a.setAttribute('aria-hidden', 'true');
@@ -3356,17 +3354,45 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }, 150);
 
     // Also trigger Excel export
-    await handleExportExcel(true); // pass true flag to skip saving again inside
+    await handleExportExcel(true, info); // pass true flag to skip saving again inside
 
     clearOrderAndInfo();
   };
 
-  const handleExportExcel = useCallback(async (skipSave = false) => {
-    const error = validateOrder();
+  const handleOpenSaveExportModal = useCallback(() => {
+    if (userRole === 'supervisor' && currentOrderId) {
+      handleSaveInvoice();
+      return;
+    }
+    if (orderLines.length === 0) {
+      alert('السلة فارغة. أضف منتجات أولاً قبل التصدير.');
+      return;
+    }
+    setShowOrderSubmitModal(true);
+  }, [userRole, currentOrderId, orderLines.length]);
+
+  const handleConfirmOrderSubmitModal = useCallback(() => {
+    const err = validateOrderInfo(orderInfo);
+    if (err) {
+      alert(err);
+      return;
+    }
+    const merged = {
+      ...orderInfo,
+      address: (orderInfo.address || '').trim() || '—',
+      orderDate: orderInfo.orderDate || new Date().toISOString().slice(0, 10),
+    };
+    setShowOrderSubmitModal(false);
+    handleSaveInvoice(merged);
+  }, [orderInfo]);
+
+  const handleExportExcel = useCallback(async (skipSave = false, infoOverride) => {
+    const info = infoOverride || orderInfo;
+    const error = validateOrderInfo(info);
     if (error) {
       if (!skipSave) { // Only alert if NOT part of combined save
         alert(error + '\nPlease fill in all required customer details.');
-        setActiveTab('customer');
+        if (orderLines.length > 0) setShowOrderSubmitModal(true);
       }
       return;
     }
@@ -3379,7 +3405,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         // Supervisor processing: Don't save new, but delete old AFTER excel generation logic
         saved = true; // Treat as success to proceed
       } else {
-        saved = await saveOrderToSupabase();
+        saved = await saveOrderToSupabase(info);
       }
     }
 
@@ -3434,14 +3460,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     border(ws.getCell(r, 1));
     r++;
     const excelInfoRows = [
-      ['اسم العميل', orderInfo.companyName],
-      ['التاجر', orderInfo.merchantName],
-      ['رقم العميل', orderInfo.customerNumber],
-      ['رقم الهاتف', orderInfo.phone],
-      ['العنوان', orderInfo.address],
-      ['التاريخ', orderInfo.orderDate],
-      ['طريقة الدفع', orderInfo.paymentMethod],
-      ...(orderInfo.paymentMethod === 'Checks' && orderInfo.checksCount ? [['عدد الشيكات', orderInfo.checksCount]] : [])
+      ['اسم العميل', info.companyName],
+      ['التاجر', info.merchantName],
+      ['رقم العميل', info.customerNumber],
+      ['رقم الهاتف', info.phone],
+      ['العنوان', info.address],
+      ['التاريخ', info.orderDate],
+      ['طريقة الدفع', info.paymentMethod],
+      ...(info.paymentMethod === 'Checks' && info.checksCount ? [['عدد الشيكات', info.checksCount]] : []),
+      ...(info.email ? [['البريد الإلكتروني', info.email]] : []),
+      ...(info.notes ? [['ملاحظات', info.notes]] : []),
     ];
     // معلومات العميل على جهة اليمين (العمود 9) والقيمة على جهة اليسار (العمود 1 مدمج 1-8)، كلها محاذاة يمين
     excelInfoRows.forEach(([l, v], i) => {
@@ -3509,11 +3537,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
     // Check if there is an advanced discount
     const exportSubtotal = sortedLines.reduce((s, o) => s + getLineTotal(o), 0);
-    const exportDiscVal = Number(orderInfo.discountValue) || 0;
+    const exportDiscVal = Number(info.discountValue) || 0;
     let exportDiscount = 0;
-    if (orderInfo.discountType === 'percentage' && exportDiscVal > 0) {
+    if (info.discountType === 'percentage' && exportDiscVal > 0) {
       exportDiscount = exportSubtotal * (exportDiscVal / 100);
-    } else if (orderInfo.discountType === 'amount' && exportDiscVal > 0) {
+    } else if (info.discountType === 'amount' && exportDiscVal > 0) {
       exportDiscount = exportDiscVal;
     }
 
@@ -3572,7 +3600,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Order-${(orderInfo.companyName || orderInfo.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${orderInfo.orderDate || new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.download = `Order-${(info.companyName || info.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${info.orderDate || new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -7536,7 +7564,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <span className="text-lg font-black text-slate-900" dir="ltr">₪{orderSubtotal.toFixed(2)}</span>
                   </div>
                   <button
-                    onClick={() => { setShowCartOverlay(false); setShowOrderPanel(true); setActiveTab('items'); }}
+                    onClick={() => { setShowCartOverlay(false); setShowOrderPanel(true); }}
                     className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-orange-500/30 transition-all active:scale-[0.98]"
                   >
                     تفاصيل وإتمام الطلب
@@ -7590,32 +7618,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </button>
               </div>
 
-              {/* Tabs - Modern Pills */}
-              <div className="flex px-8 space-x-4 mb-4">
-                <button
-                  onClick={() => setActiveTab('items')}
-                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'items' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'}`}
-                >
+              {/* السلة — تفاصيل العميل تُعرض عند اتمام الطلبية */}
+              <div className="px-8 pb-4">
+                <div className="flex w-full items-center justify-center gap-2 py-3 rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/25 text-sm font-bold">
                   <span>Items</span>
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] ${activeTab === 'items' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                    {orderLines.length}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('customer')}
-                  className={`flex-1 py-3 rounded-2xl text-sm font-bold transition-all relative flex items-center justify-center gap-2 ${activeTab === 'customer' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'}`}
-                >
-                  <span>Customer</span>
-                  {orderInfo.companyName && <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-400 rounded-full" />}
-                </button>
+                  <span className="min-w-[1.75rem] text-center px-2 py-0.5 rounded-lg bg-white/20 text-[11px]">{orderLines.length}</span>
+                </div>
               </div>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
 
-              {/* TAB: ITEMS */}
-              {activeTab === 'items' && (
-                <div className="p-4 space-y-3">
+              <div className="p-4 space-y-3">
                   {orderLines.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full py-32 text-center px-10 rounded-2xl border bg-white border-slate-100">
                       <ShoppingCart className="mb-6 text-slate-400" size={64} strokeWidth={1.5} />
@@ -7744,364 +7758,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     })
                   )}
                 </div>
-              )}
-
-              {/* TAB: CUSTOMER */}
-              {activeTab === 'customer' && (
-                <div className="p-6 animate-fade-in space-y-8">
-                  <div className="border rounded-3xl p-6 flex items-start gap-5 relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-100">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border bg-orange-100 border-orange-200 text-orange-600">
-                      <span className="text-xl">👤</span>
-                    </div>
-                    <div className="relative z-10">
-                      <p className="text-base font-bold text-orange-900">Customer Details</p>
-                      <p className="text-xs mt-1 leading-relaxed text-orange-800/60">Details entered here will appear on the final invoice/receipt.</p>
-                    </div>
-                  </div>
-
-                  {/* بطاقة معلومات العميل الحالية + زر المسح */}
-                  {(orderInfo.phone || orderInfo.companyName || orderInfo.merchantName || orderInfo.address || orderInfo.customerNumber) && (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">معلومات العميل الحالية</p>
-                        <button
-                          type="button"
-                          onClick={clearCustomerInfo}
-                          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200/60 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                          مسح كامل واستبدال بعميل آخر
-                        </button>
-                      </div>
-                      <div className="grid gap-2 text-sm">
-                        {(orderInfo.companyName || orderInfo.merchantName) && (
-                          <>
-                            {orderInfo.companyName && (
-                              <p className="text-slate-800 font-bold">
-                                <span className="text-slate-500 font-normal">اسم الشركة:</span> {orderInfo.companyName}
-                              </p>
-                            )}
-                            {orderInfo.merchantName && (
-                              <p className="text-slate-800 font-bold">
-                                <span className="text-slate-500 font-normal">اسم التاجر:</span> {orderInfo.merchantName}
-                              </p>
-                            )}
-                          </>
-                        )}
-                        {orderInfo.phone && (
-                          <p className="text-slate-800 font-mono" dir="ltr">
-                            <span className="text-slate-500 font-normal">التلفون:</span> {orderInfo.phone}
-                          </p>
-                        )}
-                        {orderInfo.address && (
-                          <p className="text-slate-800">
-                            <span className="text-slate-500 font-normal">العنوان:</span> {orderInfo.address}
-                          </p>
-                        )}
-                        {orderInfo.customerNumber && (
-                          <p className="text-slate-800 font-mono" dir="ltr">
-                            <span className="text-slate-500 font-normal">رقم العميل:</span> {orderInfo.customerNumber}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    {/* 1. التلفون (مع بحث تلقائي للزبائن) */}
-                    <div className="space-y-1.5 relative">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1 flex items-center justify-between">
-                        <span>التلفون <span className="text-rose-500">*</span></span>
-                        {orderInfo.phone && currentCustomerByPhone && (
-                          <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
-                            <Star size={10} fill="currentColor" />
-                            {currentCustomerByPhone.loyalty_points || 0} نقطة
-                          </span>
-                        )}
-                      </label>
-                      {orderInfo.phone && currentCustomerByPhone && (() => {
-                        const debt = Number(currentCustomerByPhone.outstanding_debt ?? 0);
-                        if (debt <= 0) return null;
-                        return (
-                          <div className="mb-1.5 rounded-2xl bg-rose-50 border border-rose-200 px-3 py-2 flex items-center justify-between text-[11px] text-rose-700 font-bold">
-                            <span>تنبيه: هذا العميل لديه رصيد سابق غير مدفوع بقيمة ₪{debt.toFixed(0)}</span>
-                          </div>
-                        );
-                      })()}
-                      <input
-                        value={orderInfo.phone}
-                        onChange={(e) => {
-                          const val = toEnglishDigits(e.target.value);
-                          setOrderInfoField('phone', val);
-                          setCustomerSearch(val);
-                          setShowCustomerPredictions(true);
-
-                          // Smart Auto-fill & Insights fetch
-                          if (val.length >= 7) {
-                            const exactMatch = customers.find(c => c.phone === val);
-                            if (exactMatch) {
-                              setOrderInfo(prev => ({
-                                ...prev,
-                                // اسم التاجر: نملأه إذا كان فارغاً
-                                merchantName: prev.merchantName || exactMatch.name || '',
-                                // اسم الشركة: دائماً من company_name إن وجد، وإلا من name
-                                companyName: exactMatch.company_name || exactMatch.name || prev.companyName || '',
-                                address: prev.address || exactMatch.address || '',
-                                customerNumber: prev.customerNumber || exactMatch.customer_number || '',
-                              }));
-                              fetchCustomerInsights(exactMatch.phone);
-                            } else {
-                              setCustomerInsights(null);
-                            }
-                          }
-                        }}
-                        onFocus={() => setShowCustomerPredictions(true)}
-                        onBlur={() => setTimeout(() => setShowCustomerPredictions(false), 200)}
-                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm font-mono text-left"
-                        placeholder="05..."
-                        dir="ltr"
-                        lang="en"
-                        autoComplete="off"
-                      />
-
-                      {/* Customer Predictions Dropdown */}
-                      {showCustomerPredictions && customerSearch.length >= 2 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                          {filteredCustomersByPhone.length === 0 ? (
-                            <div className="p-3 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-b border-slate-100 text-center">
-                              <p className="text-sm text-slate-500 mb-2">زبون جديد (لم يسبق تسجيله)</p>
-                              <button
-                                type="button"
-                                onPointerDown={(e) => {
-                                  e.preventDefault(); // prevent blur so click can register
-                                }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setQuickAddCustomerData({
-                                    companyName: orderInfo.companyName || '',
-                                    name: orderInfo.merchantName || orderInfo.companyName || '',
-                                    phone: customerSearch,
-                                    address: orderInfo.address || '',
-                                    customerNumber: orderInfo.customerNumber || ''
-                                  });
-                                  setShowQuickAddCustomer(true);
-                                  setShowCustomerPredictions(false);
-                                }}
-                                className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl transition-colors shadow-sm text-sm border border-indigo-200"
-                              >
-                                ➕ إضافة زبون جديد سريعاً
-                              </button>
-                            </div>
-                          ) : (
-                            filteredCustomersByPhone.map(cust => (
-                              <div
-                                key={cust.id}
-                                onClick={() => {
-                                  setOrderInfo(prev => ({
-                                    ...prev,
-                                    phone: cust.phone,
-                                    merchantName: cust.name || prev.merchantName,
-                                    companyName: cust.company_name || cust.name || prev.companyName,
-                                    address: cust.address || prev.address,
-                                    customerNumber: cust.customer_number || prev.customerNumber,
-                                  }));
-                                  setCustomerSearch(cust.phone);
-                                  setShowCustomerPredictions(false);
-                                  fetchCustomerInsights(cust.phone);
-                                }}
-                                className="p-3 hover:bg-orange-50 cursor-pointer border-b border-slate-100 last:border-0 flex items-center justify-between transition-colors"
-                              >
-                                <div className="text-right flex-1">
-                                  <div className="font-bold text-slate-800 text-sm">{cust.name}</div>
-                                  <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                                    <span className="font-mono" dir="ltr">{cust.phone}</span>
-                                    {cust.address && <span>• {cust.address}</span>}
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end">
-                                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{cust.loyalty_points || 0} pts</span>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Customer Insights Memory Card */}
-                    {loadingInsights ? (
-                      <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 animate-pulse flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-indigo-200"></div>
-                        <div className="flex-1 space-y-2">
-                          <div className="h-3 bg-indigo-200 rounded w-1/3"></div>
-                          <div className="h-3 bg-indigo-100 rounded w-1/2"></div>
-                        </div>
-                      </div>
-                    ) : customerInsights ? (
-                      <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 p-4 rounded-xl border border-indigo-200/60 shadow-sm relative overflow-hidden">
-                        <div className="absolute -left-4 -top-4 text-indigo-100 opacity-50">
-                          <Star size={64} fill="currentColor" />
-                        </div>
-                        <div className="relative z-10 space-y-2">
-                          <p className="text-xs font-bold text-indigo-800 flex items-center gap-1.5 mb-2">
-                            <span className="text-indigo-600">💡</span> ملاحظات الزبون السابقة
-                          </p>
-                          {customerInsights.lastPurchaseDate && (
-                            <p className="text-[11px] text-slate-600 flex items-center gap-1">
-                              <span className="font-bold">آخر شراء:</span> <span className="text-indigo-900 font-medium">{customerInsights.lastPurchaseDate}</span>
-                            </p>
-                          )}
-                          {customerInsights.lastItems && customerInsights.lastItems.length > 0 && (
-                            <p className="text-[11px] text-slate-600 flex gap-1">
-                              <span className="font-bold block w-max">اشترى مؤخراً:</span>
-                              <span className="truncate text-indigo-900 font-medium">{customerInsights.lastItems.join('، ')}</span>
-                            </p>
-                          )}
-                          {customerInsights.favoriteBrands && customerInsights.favoriteBrands.length > 0 && (
-                            <p className="text-[11px] text-slate-600 flex gap-1">
-                              <span className="font-bold">يفضل ماركات:</span>
-                              <span className="text-indigo-700 font-bold">{customerInsights.favoriteBrands.join('، ')}</span>
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {/* 2. اسم الشركة ( المشتري ) */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم الشركة ( المشتري ) <span className="text-rose-500">*</span></label>
-                      <input
-                        value={orderInfo.companyName}
-                        onChange={(e) => setOrderInfoField('companyName', e.target.value)}
-                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
-                        placeholder="أدخل اسم الشركة..."
-                        dir="rtl"
-                      />
-                    </div>
-
-                    {/* 3. اسم التاجر ( المشتري ) */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1">اسم التاجر ( المشتري ) <span className="text-rose-500">*</span></label>
-                      <input
-                        value={orderInfo.merchantName}
-                        onChange={(e) => setOrderInfoField('merchantName', e.target.value)}
-                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
-                        placeholder="أدخل اسم التاجر..."
-                        dir="rtl"
-                      />
-                    </div>
-
-                    {/* 4. العنوان */}
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 mr-1">العنوان <span className="text-rose-500">*</span></label>
-                      <input
-                        value={orderInfo.address}
-                        onChange={(e) => setOrderInfoField('address', e.target.value)}
-                        className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
-                        placeholder="المدينة، الشارع..."
-                        dir="rtl"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* 5. التاريخ */}
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">التاريخ <span className="text-rose-500">*</span></label>
-                        <input
-                          type="date"
-                          value={orderInfo.orderDate}
-                          onChange={(e) => setOrderInfoField('orderDate', e.target.value)}
-                          className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
-                        />
-                      </div>
-
-                      {/* 6. رقم الزبون ( في الشركة ) */}
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">رقم الزبون ( في الشركة )</label>
-                        <input
-                          value={orderInfo.customerNumber}
-                          onChange={(e) => setOrderInfoField('customerNumber', toEnglishDigits(e.target.value))}
-                          className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono text-left"
-                          placeholder="#"
-                          dir="ltr"
-                          lang="en"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 7. Payment Method */}
-                    <div className="space-y-3 pt-2 border-t border-slate-100">
-                      <p className="text-[11px] font-bold text-slate-500">طريقة الدفع</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="Cash"
-                            checked={orderInfo.paymentMethod === 'Cash'}
-                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                            className="w-4 h-4 text-orange-500 focus:ring-orange-500"
-                          />
-                          <span className="font-bold text-sm">نقدي (Cash)</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="Checks"
-                            checked={orderInfo.paymentMethod === 'Checks'}
-                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                            className="w-4 h-4 text-orange-500 focus:ring-orange-500"
-                          />
-                          <span className="font-bold text-sm">شيكات (Checks)</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-rose-300 transition-colors has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 has-[:checked]:text-rose-800">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="Credit"
-                            checked={orderInfo.paymentMethod === 'Credit'}
-                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                            className="w-4 h-4 text-rose-500 focus:ring-rose-500"
-                          />
-                          <span className="font-bold text-sm">آجل / ذمم (Credit / A/R)</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-violet-300 transition-colors has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 has-[:checked]:text-violet-800">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="Installment"
-                            checked={orderInfo.paymentMethod === 'Installment'}
-                            onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                            className="w-4 h-4 text-violet-500 focus:ring-violet-500"
-                          />
-                          <span className="font-bold text-sm">تقسيط (Installment)</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* 8. Checks Count (Conditional) */}
-                    {orderInfo.paymentMethod === 'Checks' && (
-                      <div className="space-y-1.5 animate-fade-in">
-                        <label className="text-[11px] font-bold text-slate-500 mr-1">عدد الشيكات</label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={orderInfo.checksCount}
-                          onChange={(e) => setOrderInfoField('checksCount', toEnglishDigits(e.target.value))}
-                          className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
-                          placeholder="أدخل عدد الشيكات (مثلاً ٦ أو 6)..."
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Discount Section */}
-            {orderLines.length > 0 && activeTab === 'items' && (
+            {orderLines.length > 0 && (
               <div className="flex-shrink-0 border-t p-4 z-10 transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-200">
                 <div className="flex items-center gap-3">
                   <div className="flex-1 space-y-1.5">
@@ -8184,15 +7844,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button onClick={handleOpenPdfOrder} disabled={orderLines.length === 0} className="py-4 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-rose-500/20 transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
                   <FileDown size={20} /> <span>PDF Preview</span>
                 </button>
-                <button onClick={handleSaveInvoice} className="py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/20 text-white font-bold rounded-2xl border transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
-                  <span>Save + Export</span>
-                </button>
-                <button onClick={() => setActiveTab(activeTab === 'items' ? 'customer' : 'items')} className="py-4 font-bold rounded-2xl border transition-all bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300">
-                  <span>{activeTab === 'items' ? 'Next >' : '< Back'}</span>
+                <button type="button" onClick={handleOpenSaveExportModal} className="py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/20 text-white font-bold rounded-2xl border transition-all transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
+                  <span>اتمام الطلبية</span>
                 </button>
               </div>
 
@@ -8212,6 +7869,327 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </aside>
         )
       }
+
+      {/* معلومات الطلبية — قبل اتمام الطلبية */}
+      {showOrderSubmitModal && (
+        <div
+          className="fixed inset-0 z-[260] flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="order-submit-modal-title"
+          onClick={() => setShowOrderSubmitModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[min(92vh,880px)] flex flex-col border border-slate-100 overflow-hidden"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100">
+              <h2 id="order-submit-modal-title" className="text-xl font-black text-slate-900">
+                معلومات الطلبية
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowOrderSubmitModal(false)}
+                className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                aria-label="إغلاق"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-4 space-y-4">
+              {/* 1. التلفون */}
+              <div className="space-y-1.5 relative">
+                <label className="text-[11px] font-bold text-slate-500 mr-1 flex items-center justify-between">
+                  <span>التلفون <span className="text-rose-500">*</span></span>
+                  {orderInfo.phone && currentCustomerByPhone && (
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                      <Star size={10} fill="currentColor" />
+                      {currentCustomerByPhone.loyalty_points || 0} نقطة
+                    </span>
+                  )}
+                </label>
+                {orderInfo.phone && currentCustomerByPhone && (() => {
+                  const debt = Number(currentCustomerByPhone.outstanding_debt ?? 0);
+                  if (debt <= 0) return null;
+                  return (
+                    <div className="mb-1.5 rounded-2xl bg-rose-50 border border-rose-200 px-3 py-2 flex items-center justify-between text-[11px] text-rose-700 font-bold">
+                      <span>تنبيه: هذا العميل لديه رصيد سابق غير مدفوع بقيمة ₪{debt.toFixed(0)}</span>
+                    </div>
+                  );
+                })()}
+                <input
+                  value={orderInfo.phone}
+                  onChange={(e) => {
+                    const val = toEnglishDigits(e.target.value);
+                    setOrderInfoField('phone', val);
+                    setCustomerSearch(val);
+                    setShowCustomerPredictions(true);
+                    if (val.length >= 7) {
+                      const exactMatch = customers.find(c => c.phone === val);
+                      if (exactMatch) {
+                        setOrderInfo(prev => ({
+                          ...prev,
+                          merchantName: prev.merchantName || exactMatch.name || '',
+                          companyName: exactMatch.company_name || exactMatch.name || prev.companyName || '',
+                          address: prev.address || exactMatch.address || '',
+                          customerNumber: prev.customerNumber || exactMatch.customer_number || '',
+                        }));
+                        fetchCustomerInsights(exactMatch.phone);
+                      } else {
+                        setCustomerInsights(null);
+                      }
+                    }
+                  }}
+                  onFocus={() => setShowCustomerPredictions(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerPredictions(false), 200)}
+                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm font-mono text-left"
+                  placeholder="05..."
+                  dir="ltr"
+                  lang="en"
+                  autoComplete="off"
+                />
+                {showCustomerPredictions && customerSearch.length >= 2 && (
+                  <div className="absolute z-[270] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                    {filteredCustomersByPhone.length === 0 ? (
+                      <div className="p-3 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-b border-slate-100 text-center">
+                        <p className="text-sm text-slate-500 mb-2">زبون جديد (لم يسبق تسجيله)</p>
+                        <button
+                          type="button"
+                          onPointerDown={(e) => { e.preventDefault(); }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setQuickAddCustomerData({
+                              companyName: orderInfo.companyName || '',
+                              name: orderInfo.merchantName || orderInfo.companyName || '',
+                              phone: customerSearch,
+                              address: orderInfo.address || '',
+                              customerNumber: orderInfo.customerNumber || ''
+                            });
+                            setShowQuickAddCustomer(true);
+                            setShowCustomerPredictions(false);
+                          }}
+                          className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl transition-colors shadow-sm text-sm border border-indigo-200"
+                        >
+                          ➕ إضافة زبون جديد سريعاً
+                        </button>
+                      </div>
+                    ) : (
+                      filteredCustomersByPhone.map(cust => (
+                        <div
+                          key={cust.id}
+                          onClick={() => {
+                            setOrderInfo(prev => ({
+                              ...prev,
+                              phone: cust.phone,
+                              merchantName: cust.name || prev.merchantName,
+                              companyName: cust.company_name || cust.name || prev.companyName,
+                              address: cust.address || prev.address,
+                              customerNumber: cust.customer_number || prev.customerNumber,
+                            }));
+                            setCustomerSearch(cust.phone);
+                            setShowCustomerPredictions(false);
+                            fetchCustomerInsights(cust.phone);
+                          }}
+                          className="p-3 hover:bg-orange-50 cursor-pointer border-b border-slate-100 last:border-0 flex items-center justify-between transition-colors"
+                        >
+                          <div className="text-right flex-1">
+                            <div className="font-bold text-slate-800 text-sm">{cust.name}</div>
+                            <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                              <span className="font-mono" dir="ltr">{cust.phone}</span>
+                              {cust.address && <span>• {cust.address}</span>}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{cust.loyalty_points || 0} pts</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {loadingInsights ? (
+                <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 animate-pulse flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-indigo-200" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-indigo-200 rounded w-1/3" />
+                    <div className="h-3 bg-indigo-100 rounded w-1/2" />
+                  </div>
+                </div>
+              ) : customerInsights ? (
+                <div className="bg-gradient-to-br from-indigo-50 to-blue-50/50 p-4 rounded-xl border border-indigo-200/60 shadow-sm relative overflow-hidden">
+                  <div className="absolute -left-4 -top-4 text-indigo-100 opacity-50">
+                    <Star size={64} fill="currentColor" />
+                  </div>
+                  <div className="relative z-10 space-y-2">
+                    <p className="text-xs font-bold text-indigo-800 flex items-center gap-1.5 mb-2">
+                      <span className="text-indigo-600">💡</span> ملاحظات الزبون السابقة
+                    </p>
+                    {customerInsights.lastPurchaseDate && (
+                      <p className="text-[11px] text-slate-600 flex items-center gap-1">
+                        <span className="font-bold">آخر شراء:</span>{' '}
+                        <span className="text-indigo-900 font-medium">{customerInsights.lastPurchaseDate}</span>
+                      </p>
+                    )}
+                    {customerInsights.lastItems && customerInsights.lastItems.length > 0 && (
+                      <p className="text-[11px] text-slate-600 flex gap-1">
+                        <span className="font-bold block w-max">اشترى مؤخراً:</span>
+                        <span className="truncate text-indigo-900 font-medium">{customerInsights.lastItems.join('، ')}</span>
+                      </p>
+                    )}
+                    {customerInsights.favoriteBrands && customerInsights.favoriteBrands.length > 0 && (
+                      <p className="text-[11px] text-slate-600 flex gap-1">
+                        <span className="font-bold">يفضل ماركات:</span>
+                        <span className="text-indigo-700 font-bold">{customerInsights.favoriteBrands.join('، ')}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 mr-1">اسم الشركة ( المشتري ) <span className="text-rose-500">*</span></label>
+                <input
+                  value={orderInfo.companyName}
+                  onChange={(e) => setOrderInfoField('companyName', e.target.value)}
+                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                  placeholder="أدخل اسم الشركة..."
+                  dir="rtl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 mr-1">اسم التاجر ( المشتري ) <span className="text-rose-500">*</span></label>
+                <input
+                  value={orderInfo.merchantName}
+                  onChange={(e) => setOrderInfoField('merchantName', e.target.value)}
+                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                  placeholder="أدخل اسم التاجر..."
+                  dir="rtl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 mr-1">العنوان <span className="text-rose-500">*</span></label>
+                <input
+                  value={orderInfo.address}
+                  onChange={(e) => setOrderInfoField('address', e.target.value)}
+                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                  placeholder="المدينة، الشارع..."
+                  dir="rtl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 mr-1">التاريخ <span className="text-rose-500">*</span></label>
+                  <input
+                    type="date"
+                    value={orderInfo.orderDate}
+                    onChange={(e) => setOrderInfoField('orderDate', e.target.value)}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 mr-1">رقم الزبون ( في الشركة )</label>
+                  <input
+                    value={orderInfo.customerNumber}
+                    onChange={(e) => setOrderInfoField('customerNumber', toEnglishDigits(e.target.value))}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono text-left"
+                    placeholder="#"
+                    dir="ltr"
+                    lang="en"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <p className="text-[11px] font-bold text-slate-500">طريقة الدفع</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                    <input
+                      type="radio"
+                      name="paymentMethodOrderSubmitModal"
+                      value="Cash"
+                      checked={orderInfo.paymentMethod === 'Cash'}
+                      onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="font-bold text-sm">نقدي (Cash)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                    <input
+                      type="radio"
+                      name="paymentMethodOrderSubmitModal"
+                      value="Checks"
+                      checked={orderInfo.paymentMethod === 'Checks'}
+                      onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="font-bold text-sm">شيكات (Checks)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-rose-300 transition-colors has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 has-[:checked]:text-rose-800">
+                    <input
+                      type="radio"
+                      name="paymentMethodOrderSubmitModal"
+                      value="Credit"
+                      checked={orderInfo.paymentMethod === 'Credit'}
+                      onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                      className="w-4 h-4 text-rose-500 focus:ring-rose-500"
+                    />
+                    <span className="font-bold text-sm">آجل / ذمم (Credit / A/R)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-violet-300 transition-colors has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 has-[:checked]:text-violet-800">
+                    <input
+                      type="radio"
+                      name="paymentMethodOrderSubmitModal"
+                      value="Installment"
+                      checked={orderInfo.paymentMethod === 'Installment'}
+                      onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
+                      className="w-4 h-4 text-violet-500 focus:ring-violet-500"
+                    />
+                    <span className="font-bold text-sm">تقسيط (Installment)</span>
+                  </label>
+                </div>
+              </div>
+
+              {orderInfo.paymentMethod === 'Checks' && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <label className="text-[11px] font-bold text-slate-500 mr-1">عدد الشيكات</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={orderInfo.checksCount}
+                    onChange={(e) => setOrderInfoField('checksCount', toEnglishDigits(e.target.value))}
+                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                    placeholder="أدخل عدد الشيكات (مثلاً ٦ أو 6)..."
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-shrink-0 flex flex-col-reverse sm:flex-row gap-3 px-5 pb-5 pt-3 border-t border-slate-100 bg-white">
+              <button
+                type="button"
+                onClick={() => setShowOrderSubmitModal(false)}
+                className="flex-1 py-3.5 rounded-2xl font-bold border-2 border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmOrderSubmitModal}
+                className="flex-1 py-3.5 rounded-2xl font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-lg transition-colors"
+              >
+                إرسال الطلبية
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PDF Preview — نافذة منبثقة زجاجية (Light Glassmorphism Modal) */}
       <AnimatePresence>
