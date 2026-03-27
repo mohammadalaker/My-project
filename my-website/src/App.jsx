@@ -250,6 +250,9 @@ import Sidebar from './components/Sidebar';
 import SmartScreensaver from './components/SmartScreensaver';
 import ElectroMartDashboard from './components/ElectroMartDashboard';
 
+/** بعد هذه المدة من عدم النشاط: تسجيل خروج صامت والعودة لشاشة الترحيب */
+const AUTO_LOCK_IDLE_MS = 2 * 60 * 1000; // دقيقتان
+
 // Mesh Gradient Component for "WOW" background
 const MeshBackground = () => (
   <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f8fafc]">
@@ -549,7 +552,7 @@ function App() {
     return () => clearInterval(intervalId);
   }, [isAuthenticated]);
 
-  // 3. Safe Logout (Auto-Lock) after 2 minutes of inactivity
+  // 3. Safe Logout (Auto-Lock) بعد دقيقتين من عدم النشاط → شاشة الترحيب
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -557,10 +560,9 @@ function App() {
     
     const resetTimer = () => {
       if (inactivityTimer) clearTimeout(inactivityTimer);
-      // 2 minutes = 120,000 ms
       inactivityTimer = setTimeout(() => {
         handleLogout(true);
-      }, 120 * 1000);
+      }, AUTO_LOCK_IDLE_MS);
     };
 
     // Set initial timer
