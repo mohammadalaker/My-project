@@ -251,9 +251,6 @@ import Sidebar from './components/Sidebar';
 import SmartScreensaver from './components/SmartScreensaver';
 import ElectroMartDashboard from './components/ElectroMartDashboard';
 
-/** بعد هذه المدة من عدم النشاط: تسجيل خروج صامت والعودة لشاشة الترحيب */
-const AUTO_LOCK_IDLE_MS = 2 * 60 * 1000; // دقيقتان
-
 // Mesh Gradient Component for "WOW" background
 const MeshBackground = () => (
   <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f8fafc]">
@@ -497,95 +494,17 @@ function App() {
     };
   }, []);
 
-  // 1. Session Timeout Logic (30 minutes) — لا يُطبق إذا "تذكرني" مفعّل
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (localStorage.getItem('sales_remember_me') === 'true') return;
-
-    const checkSession = () => {
-      const loginTime = localStorage.getItem('sales_login_time');
-      if (loginTime) {
-        const now = Date.now();
-        const elapsed = now - parseInt(loginTime, 10);
-        if (elapsed > 30 * 60 * 1000) {
-          handleLogout(true);
-        }
-      }
-    };
-
-    const interval = setInterval(checkSession, 60 * 1000);
-    checkSession();
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
-
-  // 2. Force Logout Logic (Listen to custom_offers special row)
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    // Check force logout timestamp
-    const checkLogoutSignal = (signalTimestamp) => {
-      const myLoginTime = parseInt(localStorage.getItem('sales_login_time'), 10);
-      // If no login time (legacy session) or login time is before the force signal -> Logout
-      if (!myLoginTime || myLoginTime < signalTimestamp) {
-        handleLogout(true);
-      }
-    };
-
-    // Polling mechanism instead of realtime to save on Supabase Realtime messages
-    // Checks every 2 minutes (120,000 ms)
-    const checkForceLogout = async () => {
-      try {
-        const { data } = await supabase.from('custom_offers').select('title').eq('id', 'SYSTEM_FORCE_LOGOUT').single();
-        if (data && data.title) {
-          checkLogoutSignal(parseInt(data.title, 10));
-        }
-      } catch (_) { }
-    };
-
-    // Initial check on mount
-    checkForceLogout();
-
-    const intervalId = setInterval(checkForceLogout, 120 * 1000);
-
-    return () => clearInterval(intervalId);
-  }, [isAuthenticated]);
-
-  // 3. Safe Logout (Auto-Lock) بعد دقيقتين من عدم النشاط → شاشة الترحيب
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    let inactivityTimer;
-    
-    const resetTimer = () => {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(() => {
-        handleLogout(true);
-      }, AUTO_LOCK_IDLE_MS);
-    };
-
-    // Set initial timer
-    resetTimer();
-
-    // Events to track user activity
-    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
-    
-    events.forEach(event => {
-      window.addEventListener(event, resetTimer, { passive: true });
-    });
-
-    return () => {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-      events.forEach(event => {
-        window.removeEventListener(event, resetTimer);
-      });
-    };
-  }, [isAuthenticated]);
-
   useEffect(() => {
     const auth = localStorage.getItem('sales_auth');
     const role = localStorage.getItem('sales_role');
     const storedUser = localStorage.getItem('sales_username');
     if (auth === 'true') {
+      try {
+        const lt = parseInt(localStorage.getItem('sales_login_time'), 10);
+        if (!Number.isFinite(lt) || lt <= 0) {
+          localStorage.setItem('sales_login_time', String(Date.now()));
+        }
+      } catch (_) { }
       setIsAuthenticated(true);
       setUserRole(role || 'customer');
       setUsername(storedUser || null);
@@ -682,7 +601,8 @@ function App() {
       setUsername('public_sale');
       setMode('order');
       setShowLoginScreen(false);
-      setShowSplash(true);
+      /* لا نُعيد شاشة الترحيب بعد الخروج — يبقى التطبيق يعمل مباشرة كوضع زائر */
+      setShowSplash(false);
     }
   };
 
@@ -778,7 +698,6 @@ function App() {
       localStorage.setItem('sales_order_items', JSON.stringify(orderItems));
     } catch (e) { console.warn('Could not save order items:', e); }
   }, [orderItems]);
-
 
   const [currentOrderId, setCurrentOrderId] = useState(() => {
     try {
