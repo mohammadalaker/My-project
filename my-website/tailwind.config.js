@@ -36,12 +36,18 @@ export default {
       },
       animation: {
         tilt: 'tilt 10s infinite linear',
+        'scan-line': 'scan-line 2s ease-in-out infinite',
       },
       keyframes: {
         tilt: {
           '0%, 50%, 100%': { transform: 'rotate(0deg)' },
           '25%': { transform: 'rotate(1deg)' },
           '75%': { transform: 'rotate(-1deg)' },
+        },
+        'scan-line': {
+          '0%':   { transform: 'translateY(0%)',   opacity: '0.9' },
+          '50%':  { transform: 'translateY(100%)', opacity: '0.9' },
+          '100%': { transform: 'translateY(0%)',   opacity: '0.9' },
         },
       },
     },

@@ -440,21 +440,21 @@ export default function ProductLookup() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={focusScanField}
-                className="px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-sm font-bold transition-colors flex items-center gap-2"
-                title="ركّز الحقل لاستقبال قارئ الباركود"
+                onClick={handleOpenCamera}
+                className="px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold transition-colors flex items-center gap-2 shadow-md shadow-emerald-500/20"
+                title="افتح الكاميرا لمسح الباركود مباشرة"
               >
                 <ScanLine size={18} />
                 جاهز للمسح
               </button>
               <button
                 type="button"
-                onClick={handleOpenCamera}
+                onClick={focusScanField}
                 className="px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-sm font-bold transition-colors flex items-center gap-2"
-                title="يطلب المتصفح إذن الكاميرا لمسح الباركود مباشرة"
+                title="ركّز الحقل لاستقبال قارئ باركود خارجي (HID)"
               >
                 <Camera size={18} />
-                مسح بالكاميرا
+                قارئ خارجي (HID)
               </button>
               <label className={`px-4 py-3 rounded-xl border text-sm font-bold cursor-pointer transition-colors flex items-center gap-2 ${fileBusy ? 'opacity-60 pointer-events-none' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'}`}>
                 <ImageIcon size={18} />
@@ -604,19 +604,44 @@ export default function ProductLookup() {
                   إغلاق
                 </button>
               </div>
-              {nativeBarcodeCamera ? (
-                <video
-                  ref={videoRef}
-                  className="w-full aspect-[4/3] rounded-xl bg-black object-cover"
-                  playsInline
-                  muted
+              <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-black">
+                {nativeBarcodeCamera ? (
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    playsInline
+                    muted
+                  />
+                ) : (
+                  <div
+                    id={HTML5_CAMERA_HOST_ID}
+                    className="w-full h-full min-h-[200px]"
+                  />
+                )}
+
+                {/* إطار التركيز */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="relative w-[70%] h-[45%]">
+                    {/* زوايا الإطار */}
+                    <span className="absolute top-0 left-0 w-6 h-6 border-t-[3px] border-l-[3px] border-emerald-400 rounded-tl-md" />
+                    <span className="absolute top-0 right-0 w-6 h-6 border-t-[3px] border-r-[3px] border-emerald-400 rounded-tr-md" />
+                    <span className="absolute bottom-0 left-0 w-6 h-6 border-b-[3px] border-l-[3px] border-emerald-400 rounded-bl-md" />
+                    <span className="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-emerald-400 rounded-br-md" />
+
+                    {/* الخط المتحرك */}
+                    <div className="absolute inset-x-0 top-0 animate-[scan-line_2s_ease-in-out_infinite] pointer-events-none">
+                      <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_8px_2px_rgba(52,211,153,0.6)]" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* تعتيم جانبي */}
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse 72% 50% at 50% 50%, transparent 60%, rgba(0,0,0,0.55) 100%)'
+                  }}
                 />
-              ) : (
-                <div
-                  id={HTML5_CAMERA_HOST_ID}
-                  className="w-full aspect-[4/3] rounded-xl bg-black min-h-[200px] overflow-hidden"
-                />
-              )}
+              </div>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 سيُطلب منك السماح للمتصفح باستخدام الكاميرا. وجّه الكاميرا نحو الباركود حتى يُقرأ تلقائياً.
               </p>
