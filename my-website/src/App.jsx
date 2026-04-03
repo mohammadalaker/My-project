@@ -4218,7 +4218,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         : item.price ?? 0;
 
       const priceHtml = showFinalPriceOnly
-        ? `<div class="price-row"><span class="lbl">السعر:</span> <span class="val new">₪${finalPrice}</span></div>`
+        ? `<div class="price-row"><span class="lbl">السعر:</span> <span class="val">₪${item.price ?? 0}</span></div>`
         : (item.priceAfterDiscount && item.priceAfterDiscount < item.price
           ? `<div class="price-row"><span class="lbl">Consumer:</span> <span class="val old">₪${item.price}</span></div>
                      <div class="price-row"><span class="lbl">Discount:</span> <span class="val new">₪${item.priceAfterDiscount}</span></div>`
@@ -8255,7 +8255,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <span>السعر بعد الخصم فقط (بدون السعر الأصلي)</span>
+                <span>السعر الأصلي فقط (بدون سعر الخصم)</span>
                 <span className={`w-8 h-4 rounded-full transition-colors flex items-center px-0.5 ${catalogShowFinalPriceOnly ? 'bg-orange-500' : 'bg-slate-300'}`}>
                   <span className={`w-3 h-3 rounded-full bg-white shadow transition-transform ${catalogShowFinalPriceOnly ? 'translate-x-4' : 'translate-x-0'}`} />
                 </span>
@@ -8284,9 +8284,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                       <div className="mt-2 flex items-baseline gap-3">
                         {catalogShowFinalPriceOnly ? (
-                          <span className="text-base font-black text-orange-600">
-                            ₪{item.priceAfterDiscount && item.priceAfterDiscount < item.price ? item.priceAfterDiscount : item.price}
-                          </span>
+                          <span className="text-base font-black text-slate-700">₪{item.price}</span>
                         ) : item.priceAfterDiscount && item.priceAfterDiscount < item.price ? (
                           <>
                             <span className="text-base font-black text-emerald-600">₪{item.priceAfterDiscount}</span>
