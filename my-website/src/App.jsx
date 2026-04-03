@@ -4993,50 +4993,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                         <div className="p-6 border-t border-slate-100 flex flex-wrap gap-3 shrink-0">
 
-                          {/* Approve (Agree) Button -> PDF + Complete */}
+                          {/* Approve Button — marks as completed, moves to completed tab */}
                           <button
                             type="button"
                             onClick={async () => {
                               if (!selectedOrder) return;
                               setOrderActionLoading(true);
                               try {
-                                const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
+                                const { error } = await supabase
+                                  .from('orders')
+                                  .update({ status: 'completed' })
+                                  .eq('id', selectedOrder.id);
                                 if (error) throw error;
+                                setSelectedOrder(null);
                                 await fetchSubmittedOrders();
                                 await fetchCompletedOrders();
                                 setSubmittedOrdersTab('completed');
                                 void queryClient.invalidateQueries({ queryKey: ['dashboardOrders'] });
-                                const orderToLoad = selectedOrder;
-                                const newOrderItems = (orderToLoad.items || []).map(orderItem => {
-                                  const originalItem = items.find((i) => barcodesMatch(i.barcode, orderItem.barcode)) || {};
-                                  return {
-                                    id: originalItem.id || orderItem.barcode,
-                                    qty: orderItem.qty,
-                                    unitPrice: orderItem.unit_price || orderItem.price,
-                                    box: originalItem.box,
-                                    item: { ...originalItem, ...orderItem },
-                                    customName: orderItem.name
-                                  };
-                                });
-                                setOrderItems(newOrderItems);
-                                setOrderInfo({
-                                  companyName: orderToLoad.customer_name || '',
-                                  merchantName: '',
-                                  phone: orderToLoad.customer_phone || '',
-                                  address: orderToLoad.customer_address || '',
-                                  orderDate: orderToLoad.order_date || new Date().toISOString().slice(0, 10),
-                                  customerNumber: orderToLoad.customer_number || '',
-                                  paymentMethod: orderToLoad.payment_method || '',
-                                  checksCount: '',
-                                });
-                                setSelectedOrder(null);
-                                setCurrentOrderId(orderToLoad.id);
-                                setMode('order');
-                                setShowOrderPanel(true);
                               } catch (e) {
                                 console.error(e);
                                 alert('تعذر تحديث حالة الطلب: ' + (e.message || e));
-                                return;
                               } finally {
                                 setOrderActionLoading(false);
                               }
