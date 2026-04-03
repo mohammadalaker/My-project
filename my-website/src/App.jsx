@@ -3234,9 +3234,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const handleSaveInvoice = async (infoOverride) => {
-    // FIX: If supervisor is reviewing a submitted order, "Save" should trigger "Export Excel & Delete"
-    if (userRole === 'supervisor' && currentOrderId) {
-      handleExportExcel();
+    // If this is an existing approved order (any role), skip re-inserting and just export
+    if (currentOrderId) {
+      await handleExportExcel(true, infoOverride || orderInfo);
+      clearOrderAndInfo();
       return;
     }
 
@@ -3285,7 +3286,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const handleOpenSaveExportModal = useCallback(() => {
-    if (userRole === 'supervisor' && currentOrderId) {
+    // If processing an existing approved order, export directly without showing the submit modal
+    if (currentOrderId) {
       handleSaveInvoice();
       return;
     }
@@ -3294,7 +3296,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       return;
     }
     setShowOrderSubmitModal(true);
-  }, [userRole, currentOrderId, orderLines.length]);
+  }, [currentOrderId, orderLines.length]);
 
   const handleConfirmOrderSubmitModal = useCallback(() => {
     const err = validateOrderInfo(orderInfo);
@@ -3323,18 +3325,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
 
     let saved = skipSave ? true : false;
-    const isSupervisorProcessing = userRole === 'supervisor' && currentOrderId;
+    // If an existing order ID is set, we're processing an already-saved order — skip re-insert
+    const isSupervisorProcessing = !!currentOrderId;
 
     if (!skipSave) {
       if (isSupervisorProcessing) {
-        // Supervisor processing: Don't save new, but delete old AFTER excel generation logic
-        saved = true; // Treat as success to proceed
+        saved = true; // Order already exists in DB, no re-insert needed
       } else {
         saved = await saveOrderToSupabase(info);
       }
     }
 
-    if (!saved && !isSupervisorProcessing) return; // Exit if save failed and not supervisor flow
+    if (!saved && !isSupervisorProcessing) return;
 
     const ExcelJS = (await import('exceljs')).default;
     // لا نستخدم مشكل العربية في Excel - النص المنطقي (غير المشكل) يعرض بشكل صحيح مع محاذاة يمين و readingOrder RTL
@@ -3529,18 +3531,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     a.click();
     URL.revokeObjectURL(url);
 
-    // Logic for delete if supervisor
+    // Keep the order in the database as 'completed' (don't delete it)
     if (isSupervisorProcessing) {
       try {
-        const { error } = await supabase.from('orders').delete().eq('id', currentOrderId);
-        if (error) throw error;
-        alert('Order saved to Excel and removed from system successfully.');
+        await supabase.from('orders').update({ status: 'completed' }).eq('id', currentOrderId);
       } catch (err) {
-        console.error('Error deleting order:', err);
-        alert('Order saved to Excel, but failed to remove from system: ' + err.message);
+        console.error('Error marking order completed:', err);
       }
       setCurrentOrderId(null);
-      clearOrderAndInfo();
     } else if (saved) {
       clearOrderAndInfo();
     }
