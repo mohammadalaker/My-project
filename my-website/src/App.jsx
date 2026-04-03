@@ -684,6 +684,7 @@ function App() {
   const [showOrderSubmitModal, setShowOrderSubmitModal] = useState(false);
   const [flyingItems, setFlyingItems] = useState([]);
   const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogShowFinalPriceOnly, setCatalogShowFinalPriceOnly] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [isSwitchingCategory, setIsSwitchingCategory] = useState(false);
   const [orderItems, setOrderItems] = useState(() => {
@@ -4205,12 +4206,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     setQuantityValue(1);
   };
 
-  const getCatalogHtml = useCallback((items) => {
+  const getCatalogHtml = useCallback((items, showFinalPriceOnly = false) => {
     const cards = items.map(item => {
       const imgUrl = getPublicImageUrl(item.image, { thumb: true });
       const img = imgUrl
         ? `<div class="cat-img"><img src="${imgUrl}" alt="${item.name}" loading="lazy" /></div>`
         : `<div class="cat-img"><div class="cat-no-img">📦</div></div>`;
+
+      const finalPrice = item.priceAfterDiscount && item.priceAfterDiscount < item.price
+        ? item.priceAfterDiscount
+        : item.price ?? 0;
+
+      const priceHtml = showFinalPriceOnly
+        ? `<div class="price-row"><span class="lbl">السعر:</span> <span class="val new">₪${finalPrice}</span></div>`
+        : (item.priceAfterDiscount && item.priceAfterDiscount < item.price
+          ? `<div class="price-row"><span class="lbl">Consumer:</span> <span class="val old">₪${item.price}</span></div>
+                     <div class="price-row"><span class="lbl">Discount:</span> <span class="val new">₪${item.priceAfterDiscount}</span></div>`
+          : `<div class="price-row"><span class="lbl">Price:</span> <span class="val">₪${item.price ?? 0}</span></div>`
+        );
 
       return `
         <div class="cat-card">
@@ -4223,11 +4236,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <span class="cat-barcode">${item.barcode}</span>
             </div>
             <div class="cat-prices">
-               ${item.priceAfterDiscount && item.priceAfterDiscount < item.price
-          ? `<div class="price-row"><span class="lbl">Consumer:</span> <span class="val old">₪${item.price}</span></div>
-                     <div class="price-row"><span class="lbl">Discount:</span> <span class="val new">₪${item.priceAfterDiscount}</span></div>`
-          : `<div class="price-row"><span class="lbl">Price:</span> <span class="val">₪${item.price ?? 0}</span></div>`
-        }
+               ${priceHtml}
             </div>
           </div>
         </div>
@@ -4344,13 +4353,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   };
 
+  const addAllToCatalog = (sourceItems) => {
+    setCatalogItems(prev => {
+      const existingIds = new Set(prev.map(i => i.id));
+      const toAdd = sourceItems.filter(i => !existingIds.has(i.id));
+      return [...prev, ...toAdd];
+    });
+    setShowCatalogPanel(true);
+  };
+
   const handlePrintCatalog = useCallback(() => {
     if (catalogItems.length === 0) return;
-    const html = getCatalogHtml(catalogItems);
+    const html = getCatalogHtml(catalogItems, catalogShowFinalPriceOnly);
     const w = window.open('', '_blank');
     w.document.write(html);
     w.document.close();
-  }, [catalogItems, getCatalogHtml]);
+  }, [catalogItems, catalogShowFinalPriceOnly, getCatalogHtml]);
 
   const handleRemoveImage = async () => {
     if (userRole !== 'admin') return;
@@ -8194,15 +8212,63 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       {
         showCatalogPanel && (
           <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60 transition-all duration-300">
+            {/* Header */}
             <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
               <h2 className="text-base font-bold text-slate-800">الكتالوج <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
               <button onClick={() => setShowCatalogPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
             </div>
+
+            {/* Quick Add Buttons */}
+            <div className="flex-shrink-0 px-3 py-2.5 border-b border-slate-100 bg-slate-50/60 space-y-2">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">إضافة سريعة</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => addAllToCatalog(filteredItems.filter(i => i.visible !== false))}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors text-center"
+                >
+                  إضافة الكل ({filteredItems.filter(i => i.visible !== false).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addAllToCatalog(filteredItems.filter(i => i.visible !== false && isElectricalGroup(i.group)))}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors text-center"
+                >
+                  ⚡ كهربائي ({filteredItems.filter(i => i.visible !== false && isElectricalGroup(i.group)).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addAllToCatalog(filteredItems.filter(i => i.visible !== false && !isElectricalGroup(i.group)))}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors text-center"
+                >
+                  🏠 منزلي ({filteredItems.filter(i => i.visible !== false && !isElectricalGroup(i.group)).length})
+                </button>
+              </div>
+
+              {/* Price display toggle */}
+              <button
+                type="button"
+                onClick={() => setCatalogShowFinalPriceOnly(v => !v)}
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-between ${
+                  catalogShowFinalPriceOnly
+                    ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <span>السعر بعد الخصم فقط (بدون السعر الأصلي)</span>
+                <span className={`w-8 h-4 rounded-full transition-colors flex items-center px-0.5 ${catalogShowFinalPriceOnly ? 'bg-orange-500' : 'bg-slate-300'}`}>
+                  <span className={`w-3 h-3 rounded-full bg-white shadow transition-transform ${catalogShowFinalPriceOnly ? 'translate-x-4' : 'translate-x-0'}`} />
+                </span>
+              </button>
+            </div>
+
+            {/* Products List */}
             <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5">
               {catalogItems.length === 0 ? (
                 <div className="text-center py-14 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100/80 border-2 border-dashed border-slate-200/80 text-slate-500 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                   <FileText className="mx-auto text-slate-400 mb-2" size={40} />
                   <p className="text-sm font-medium">ستظهر المنتجات المختارة هنا</p>
+                  <p className="text-xs text-slate-400 mt-1">استخدم أزرار الإضافة السريعة أعلاه</p>
                 </div>
               ) : (
                 catalogItems.map(item => (
@@ -8217,7 +8283,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         {getDisplayGroup(item) && <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 rounded">{getDisplayGroup(item)}</span>}
                       </div>
                       <div className="mt-2 flex items-baseline gap-3">
-                        {item.priceAfterDiscount && item.priceAfterDiscount < item.price ? (
+                        {catalogShowFinalPriceOnly ? (
+                          <span className="text-base font-black text-orange-600">
+                            ₪{item.priceAfterDiscount && item.priceAfterDiscount < item.price ? item.priceAfterDiscount : item.price}
+                          </span>
+                        ) : item.priceAfterDiscount && item.priceAfterDiscount < item.price ? (
                           <>
                             <span className="text-base font-black text-emerald-600">₪{item.priceAfterDiscount}</span>
                             <span className="text-xs text-slate-400 line-through font-medium">₪{item.price}</span>
