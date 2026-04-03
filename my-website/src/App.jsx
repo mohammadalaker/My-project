@@ -743,6 +743,9 @@ function App() {
     } catch (e) { console.warn('Could not save order info:', e); }
   }, [orderInfo]);
   const [submittedOrders, setSubmittedOrders] = useState([]);
+  const [completedOrders, setCompletedOrders] = useState([]);
+  const [completedOrdersLoading, setCompletedOrdersLoading] = useState(false);
+  const [submittedOrdersTab, setSubmittedOrdersTab] = useState('pending'); // 'pending' | 'completed'
   /** طلبات حديثة لكل الحالات — للوحة التحكم (الإيرادات والعمليات الأخيرة)، وليس لقائمة «انتظار الموافقة» */
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
@@ -1419,14 +1422,26 @@ function App() {
     setSubmittedOrders(data ?? []);
   }, []);
 
+  const fetchCompletedOrders = useCallback(async () => {
+    setCompletedOrdersLoading(true);
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .in('status', ['completed', 'Completed'])
+      .order('created_at', { ascending: false });
+    setCompletedOrdersLoading(false);
+    if (!error) setCompletedOrders(data ?? []);
+  }, []);
+
   useEffect(() => {
     const canViewOrders = userRole === 'supervisor' || userRole === 'admin';
     if ((mode === 'submitted' || mode === 'dashboard') && canViewOrders) {
       fetchSubmittedOrders();
+      fetchCompletedOrders();
     } else {
       setOrdersError(null);
     }
-  }, [mode, userRole, fetchSubmittedOrders]);
+  }, [mode, userRole, fetchSubmittedOrders, fetchCompletedOrders]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -4782,68 +4797,147 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               {/* Submitted Orders View */}
               {!loading && mode === 'submitted' && (
                 <div className="p-6 max-w-5xl mx-auto animate-fade-in">
-                  <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                    <h2 className="text-3xl font-bold text-slate-800">Submitted Orders</h2>
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <h2 className="text-3xl font-bold text-slate-800">Sale Orders</h2>
                     <button
                       type="button"
-                      onClick={fetchSubmittedOrders}
-                      disabled={ordersLoading}
+                      onClick={() => { fetchSubmittedOrders(); fetchCompletedOrders(); }}
+                      disabled={ordersLoading || completedOrdersLoading}
                       className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
                     >
-                      {ordersLoading ? <Loader2 size={18} className="animate-spin" /> : null}
-                      {ordersLoading ? 'Loading…' : 'Refresh'}
+                      {(ordersLoading || completedOrdersLoading) ? <Loader2 size={18} className="animate-spin" /> : null}
+                      {(ordersLoading || completedOrdersLoading) ? 'Loading…' : 'تحديث'}
                     </button>
                   </div>
-                  {ordersError && (
+
+                  {/* Tabs */}
+                  <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-2xl w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setSubmittedOrdersTab('pending')}
+                      className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${submittedOrdersTab === 'pending' ? 'bg-white shadow text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      قيد الانتظار
+                      {submittedOrders.length > 0 && (
+                        <span className="mr-2 bg-indigo-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{submittedOrders.length}</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSubmittedOrdersTab('completed')}
+                      className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${submittedOrdersTab === 'completed' ? 'bg-white shadow text-emerald-700' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      مكتمل ✓
+                      {completedOrders.length > 0 && (
+                        <span className="mr-2 bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">{completedOrders.length}</span>
+                      )}
+                    </button>
+                  </div>
+
+                  {ordersError && submittedOrdersTab === 'pending' && (
                     <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
                       <p className="font-medium">{ordersError}</p>
                       <p className="mt-2 text-amber-700 text-xs">إذا ظهر &quot;table not found&quot;: أنشئ جدول orders من Supabase → SQL Editor ثم شغّل الـ SQL في ملف ORDERS_SUPABASE.md. إذا الجدول موجود ولا تظهر الطلبات: Table Editor → orders → RLS وأضف سياسة SELECT لـ anon.</p>
                       <button type="button" onClick={fetchSubmittedOrders} className="mt-3 px-4 py-2 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-900 font-medium text-sm">Retry</button>
                     </div>
                   )}
-                  {ordersLoading && submittedOrders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                      <Loader2 size={48} className="animate-spin text-indigo-500 mb-4" />
-                      <p className="text-slate-500 font-medium">Loading orders…</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4">
-                      {submittedOrders.map((order, i) => (
-                        <div
-                          key={order.id || i}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setSelectedOrder(order)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
-                          className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-md hover:border-slate-200 transition-all gap-4 cursor-pointer"
-                        >
-                          <div>
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">#{order.id || i + 1}</span>
-                              <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">
-                                {new Date(order.created_at || order.order_date || Date.now()).toLocaleDateString()}
-                              </span>
+
+                  {/* Pending Tab */}
+                  {submittedOrdersTab === 'pending' && (
+                    ordersLoading && submittedOrders.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-20">
+                        <Loader2 size={48} className="animate-spin text-indigo-500 mb-4" />
+                        <p className="text-slate-500 font-medium">جاري التحميل…</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {submittedOrders.map((order, i) => (
+                          <div
+                            key={order.id || i}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedOrder(order)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
+                            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-md hover:border-indigo-200 transition-all gap-4 cursor-pointer"
+                          >
+                            <div>
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-xs font-bold">#{order.id || i + 1}</span>
+                                <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                                  {new Date(order.created_at || order.order_date || Date.now()).toLocaleDateString()}
+                                </span>
+                                <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">انتظار موافقة</span>
+                              </div>
+                              <h3 className="font-bold text-lg text-slate-800">{order.customer_name || 'Unknown Client'}</h3>
+                              <p className="text-sm text-slate-500 mt-1">
+                                Prepared by: <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{order.prepared_by}</span>
+                              </p>
+                              {order.customer_phone && <p className="text-xs text-slate-400 mt-1">{order.customer_phone}</p>}
+                              {order.customer_address && <p className="text-xs text-slate-400">{order.customer_address}</p>}
                             </div>
-                            <h3 className="font-bold text-lg text-slate-800">{order.customer_name || 'Unknown Client'}</h3>
-                            <p className="text-sm text-slate-500 mt-1">
-                              Prepared by: <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{order.prepared_by}</span>
-                            </p>
-                            {order.customer_phone && <p className="text-xs text-slate-400 mt-1">{order.customer_phone}</p>}
-                            {order.customer_address && <p className="text-xs text-slate-400">{order.customer_address}</p>}
+                            <div className="text-left sm:text-right w-full sm:w-auto">
+                              <p className="text-2xl font-black text-slate-800">₪{Number(order.total_amount).toLocaleString()}</p>
+                              <p className="text-xs text-slate-400 font-medium">{order.items?.length || 0} items</p>
+                            </div>
                           </div>
-                          <div className="text-left sm:text-right w-full sm:w-auto">
-                            <p className="text-2xl font-black text-slate-800">₪{Number(order.total_amount).toLocaleString()}</p>
-                            <p className="text-xs text-slate-400 font-medium">{order.items?.length || 0} items</p>
+                        ))}
+                        {!ordersLoading && submittedOrders.length === 0 && !ordersError && (
+                          <div className="text-center py-20 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50 rounded-3xl border border-dashed border-slate-200">
+                            <Package size={48} className="mx-auto text-slate-300 mb-4" />
+                            <p className="text-slate-400 font-medium">لا توجد طلبيات بانتظار الموافقة.</p>
                           </div>
-                        </div>
-                      ))}
-                      {!ordersLoading && submittedOrders.length === 0 && !ordersError && (
-                        <div className="text-center py-20 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50 rounded-3xl border border-dashed border-slate-200">
-                          <Package size={48} className="mx-auto text-slate-300 mb-4" />
-                          <p className="text-slate-400 font-medium">No submitted orders found.</p>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )
+                  )}
+
+                  {/* Completed Tab */}
+                  {submittedOrdersTab === 'completed' && (
+                    completedOrdersLoading && completedOrders.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-20">
+                        <Loader2 size={48} className="animate-spin text-emerald-500 mb-4" />
+                        <p className="text-slate-500 font-medium">جاري التحميل…</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {completedOrders.map((order, i) => (
+                          <div
+                            key={order.id || i}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedOrder(order)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedOrder(order); } }}
+                            className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:shadow-md hover:border-emerald-200 transition-all gap-4 cursor-pointer"
+                          >
+                            <div>
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs font-bold">#{order.id || i + 1}</span>
+                                <span className="text-xs uppercase font-bold text-slate-400 tracking-wider">
+                                  {new Date(order.created_at || order.order_date || Date.now()).toLocaleDateString()}
+                                </span>
+                                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">✓ مكتمل</span>
+                              </div>
+                              <h3 className="font-bold text-lg text-slate-800">{order.customer_name || 'Unknown Client'}</h3>
+                              <p className="text-sm text-slate-500 mt-1">
+                                Prepared by: <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{order.prepared_by}</span>
+                              </p>
+                              {order.customer_phone && <p className="text-xs text-slate-400 mt-1">{order.customer_phone}</p>}
+                              {order.customer_address && <p className="text-xs text-slate-400">{order.customer_address}</p>}
+                            </div>
+                            <div className="text-left sm:text-right w-full sm:w-auto">
+                              <p className="text-2xl font-black text-emerald-700">₪{Number(order.total_amount).toLocaleString()}</p>
+                              <p className="text-xs text-slate-400 font-medium">{order.items?.length || 0} items</p>
+                            </div>
+                          </div>
+                        ))}
+                        {!completedOrdersLoading && completedOrders.length === 0 && (
+                          <div className="text-center py-20 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50 rounded-3xl border border-dashed border-slate-200">
+                            <Package size={48} className="mx-auto text-slate-300 mb-4" />
+                            <p className="text-slate-400 font-medium">لا توجد طلبيات مكتملة بعد.</p>
+                          </div>
+                        )}
+                      </div>
+                    )
                   )}
 
                   {/* Order detail modal — rendered in document.body so it always covers full viewport */}
@@ -4909,6 +5003,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 const { error } = await supabase.from('orders').update({ status: 'completed' }).eq('id', selectedOrder.id);
                                 if (error) throw error;
                                 await fetchSubmittedOrders();
+                                await fetchCompletedOrders();
+                                setSubmittedOrdersTab('completed');
                                 void queryClient.invalidateQueries({ queryKey: ['dashboardOrders'] });
                                 const orderToLoad = selectedOrder;
                                 const newOrderItems = (orderToLoad.items || []).map(orderItem => {
