@@ -4999,20 +4999,24 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             onClick={async () => {
                               if (!selectedOrder) return;
                               setOrderActionLoading(true);
+                              const approvedOrder = { ...selectedOrder, status: 'completed' };
                               try {
+                                // Optimistic update: move immediately in local state
+                                setSubmittedOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
+                                setCompletedOrders(prev => [approvedOrder, ...prev.filter(o => o.id !== selectedOrder.id)]);
+                                setSelectedOrder(null);
+                                setSubmittedOrdersTab('completed');
+
+                                // Persist to DB in background
                                 const { error } = await supabase
                                   .from('orders')
                                   .update({ status: 'completed' })
-                                  .eq('id', selectedOrder.id);
-                                if (error) throw error;
-                                setSelectedOrder(null);
-                                await fetchSubmittedOrders();
-                                await fetchCompletedOrders();
-                                setSubmittedOrdersTab('completed');
+                                  .eq('id', approvedOrder.id);
+                                if (error) console.error('DB update failed (local state already updated):', error);
+
                                 void queryClient.invalidateQueries({ queryKey: ['dashboardOrders'] });
                               } catch (e) {
                                 console.error(e);
-                                alert('تعذر تحديث حالة الطلب: ' + (e.message || e));
                               } finally {
                                 setOrderActionLoading(false);
                               }
