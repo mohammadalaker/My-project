@@ -64,6 +64,18 @@ CREATE POLICY "Allow delete orders" ON public.orders FOR DELETE TO anon USING (t
 
 تأكد من سياسات RLS كما في القسم السابق: يجب وجود سياسة **SELECT** للدور `anon` على جدول `orders`.
 
+## 3ب. الطلب يعود إلى «قيد الموافقة» بعد دقيقة أو بعد التحديث
+
+يعني أن **UPDATE** لم يُحفظ في قاعدة البيانات (غالباً لا توجد سياسة **UPDATE** لجدول `orders` للدور `anon`). التطبيق يخزّن الموافقة محلياً كاحتياط، لكن **الحل الدائم** هو تشغيل:
+
+```sql
+CREATE POLICY "Allow update orders" ON public.orders FOR UPDATE TO anon USING (true) WITH CHECK (true);
+```
+
+(إن وُجدت سياسة بنفس الاسم مسبقاً، احذفها أو عدّلها حسب سياساتك.)
+
+---
+
 ## 3. إذا حذف المشرف الطلب ثم تحديث الصفحة يعود الطلب
 
 هذا يعني أن الحذف لم يُنفَّذ في قاعدة البيانات بسبب عدم وجود سياسة **DELETE**. شغّل في SQL Editor:

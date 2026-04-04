@@ -251,6 +251,39 @@ import Sidebar from './components/Sidebar';
 import SmartScreensaver from './components/SmartScreensaver';
 import ElectroMartDashboard from './components/ElectroMartDashboard';
 
+/** طلبات وُسِمت «مكتمل» محلياً — تبقى خارج «قيد الانتظار» حتى لو فشل UPDATE في Supabase (RLS). */
+const ORDERS_APPROVED_LOCAL_KEY = 'maslamani_orders_approved_local_v1';
+
+function getOrdersApprovedLocalMap() {
+  try {
+    const raw = localStorage.getItem(ORDERS_APPROVED_LOCAL_KEY);
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    return typeof obj === 'object' && obj !== null ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveApprovedOrderLocal(order) {
+  const map = getOrdersApprovedLocalMap();
+  map[String(order.id)] = { ...order, status: 'completed', _localApprovedAt: Date.now() };
+  localStorage.setItem(ORDERS_APPROVED_LOCAL_KEY, JSON.stringify(map));
+}
+
+function pruneLocalApprovedFromDb(dbCompleted) {
+  const map = getOrdersApprovedLocalMap();
+  let changed = false;
+  const ids = new Set((dbCompleted || []).map((o) => String(o.id)));
+  for (const id of Object.keys(map)) {
+    if (ids.has(id)) {
+      delete map[id];
+      changed = true;
+    }
+  }
+  if (changed) localStorage.setItem(ORDERS_APPROVED_LOCAL_KEY, JSON.stringify(map));
+}
+
 // Mesh Gradient Component for "WOW" background
 const MeshBackground = () => (
   <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f8fafc]">
@@ -1406,7 +1439,14 @@ function App() {
           .order('created_at', { ascending: false });
 
         if (!retryError) {
-          setSubmittedOrders(retryData ?? []);
+          const local = getOrdersApprovedLocalMap();
+          const list = (retryData ?? []).filter((o) => {
+            const st = String(o.status || '').toLowerCase();
+            if (st === 'completed') return false;
+            if (local[String(o.id)]) return false;
+            return true;
+          });
+          setSubmittedOrders(list);
           setOrdersLoading(false);
           return;
         }
@@ -1419,7 +1459,9 @@ function App() {
         : (msg || 'Could not load orders. Check Supabase: table "orders" must exist and allow SELECT (see ORDERS_SUPABASE.md).'));
       return;
     }
-    setSubmittedOrders(data ?? []);
+    const localApproved = getOrdersApprovedLocalMap();
+    const pendingList = (data ?? []).filter((o) => !localApproved[String(o.id)]);
+    setSubmittedOrders(pendingList);
   }, []);
 
   const fetchCompletedOrders = useCallback(async () => {
@@ -1430,7 +1472,21 @@ function App() {
       .in('status', ['completed', 'Completed'])
       .order('created_at', { ascending: false });
     setCompletedOrdersLoading(false);
-    if (!error) setCompletedOrders(data ?? []);
+    if (error) return;
+    const dbCompleted = data ?? [];
+    pruneLocalApprovedFromDb(dbCompleted);
+    const local = getOrdersApprovedLocalMap();
+    const merged = [...dbCompleted];
+    for (const id of Object.keys(local)) {
+      const o = local[id];
+      if (!merged.some((x) => String(x.id) === id)) merged.unshift(o);
+    }
+    merged.sort((a, b) => {
+      const ta = new Date(a.created_at || a.order_date || 0).getTime();
+      const tb = new Date(b.created_at || b.order_date || 0).getTime();
+      return tb - ta;
+    });
+    setCompletedOrders(merged);
   }, []);
 
   useEffect(() => {
@@ -5001,18 +5057,25 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               setOrderActionLoading(true);
                               const approvedOrder = { ...selectedOrder, status: 'completed' };
                               try {
-                                // Optimistic update: move immediately in local state
+                                // Optimistic update + localStorage (survives refetch if Supabase UPDATE is blocked by RLS)
+                                saveApprovedOrderLocal(approvedOrder);
                                 setSubmittedOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
                                 setCompletedOrders(prev => [approvedOrder, ...prev.filter(o => o.id !== selectedOrder.id)]);
                                 setSelectedOrder(null);
                                 setSubmittedOrdersTab('completed');
 
-                                // Persist to DB in background
-                                const { error } = await supabase
+                                const { data: updatedRows, error: updErr } = await supabase
                                   .from('orders')
                                   .update({ status: 'completed' })
-                                  .eq('id', approvedOrder.id);
-                                if (error) console.error('DB update failed (local state already updated):', error);
+                                  .eq('id', approvedOrder.id)
+                                  .select('id');
+                                if (updErr) {
+                                  console.error('orders UPDATE:', updErr);
+                                } else if (!updatedRows?.length) {
+                                  console.warn(
+                                    'orders UPDATE: لم يُحدَّث أي صف — غالباً سياسة RLS تمنع UPDATE. شغّل SQL في ORDERS_SUPABASE.md (Allow update orders).'
+                                  );
+                                }
 
                                 void queryClient.invalidateQueries({ queryKey: ['dashboardOrders'] });
                               } catch (e) {
