@@ -284,6 +284,12 @@ function pruneLocalApprovedFromDb(dbCompleted) {
   if (changed) localStorage.setItem(ORDERS_APPROVED_LOCAL_KEY, JSON.stringify(map));
 }
 
+/** طلب مكتمل في DB — يُستثنى من «قيد المراجعة» (neq.completed وحده يفشل مع Completed بأحرف كبيرة). */
+function isOrderDbStatusCompleted(status) {
+  if (status == null || status === '') return false;
+  return String(status).trim().toLowerCase() === 'completed';
+}
+
 // Mesh Gradient Component for "WOW" background
 const MeshBackground = () => (
   <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f8fafc]">
@@ -1419,11 +1425,12 @@ function App() {
   const fetchSubmittedOrders = useCallback(async () => {
     setOrdersLoading(true);
     setOrdersError(null);
-    // عرض كل الطلبات ما عدا المعتمدة: status = 'completed' فقط تُخفى. الطلبات القديمة (status = null) تظهر.
+    // استثناء المكتمل: لا تستخدم status.neq.completed وحده — في PostgreSQL Completed ≠ completed فتبقى الطلبية في النتيجة.
+    // not.in يغطي أشهر الصيغ؛ ثم فلتر JS بـ isOrderDbStatusCompleted كضمان نهائي.
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .or('status.is.null,status.neq.completed')
+      .or('status.is.null,status.not.in.(completed,Completed,COMPLETED)')
       .order('created_at', { ascending: false });
     setOrdersLoading(false);
     if (error) {
@@ -1441,8 +1448,7 @@ function App() {
         if (!retryError) {
           const local = getOrdersApprovedLocalMap();
           const list = (retryData ?? []).filter((o) => {
-            const st = String(o.status || '').toLowerCase();
-            if (st === 'completed') return false;
+            if (isOrderDbStatusCompleted(o.status)) return false;
             if (local[String(o.id)]) return false;
             return true;
           });
@@ -1460,7 +1466,9 @@ function App() {
       return;
     }
     const localApproved = getOrdersApprovedLocalMap();
-    const pendingList = (data ?? []).filter((o) => !localApproved[String(o.id)]);
+    const pendingList = (data ?? []).filter(
+      (o) => !isOrderDbStatusCompleted(o.status) && !localApproved[String(o.id)],
+    );
     setSubmittedOrders(pendingList);
   }, []);
 
@@ -1469,7 +1477,7 @@ function App() {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .in('status', ['completed', 'Completed'])
+      .ilike('status', 'completed')
       .order('created_at', { ascending: false });
     setCompletedOrdersLoading(false);
     if (error) return;
@@ -1541,6 +1549,41 @@ function App() {
       setOrderActionLoading(false);
     }
   }, []);
+
+  /** موافقة على طلب — يُحدَّث Supabase أولاً؛ لا تُحدَّث الواجهة إلا بعد نجاح التحديث أو إرجاع صف. */
+  const handleApproveSubmittedOrder = useCallback(async () => {
+    const order = selectedOrder;
+    if (!order?.id) return;
+    setOrderActionLoading(true);
+    try {
+      const { data: updatedRows, error: updErr } = await supabase
+        .from('orders')
+        .update({ status: 'completed' })
+        .eq('id', order.id)
+        .select('id,status');
+
+      if (updErr) throw updErr;
+      if (!updatedRows?.length) {
+        alert(
+          'لم يُحدَّث أي صف في قاعدة البيانات. غالباً سياسة RLS تمنع UPDATE.\n' +
+            'Supabase → SQL Editor: أنشئ سياسة UPDATE على جدول orders للدور anon (انظر ORDERS_SUPABASE.md).',
+        );
+        return;
+      }
+
+      const approvedOrder = { ...order, status: 'completed' };
+      saveApprovedOrderLocal(approvedOrder);
+      setSelectedOrder(null);
+      setSubmittedOrdersTab('completed');
+      await Promise.all([fetchSubmittedOrders(), fetchCompletedOrders()]);
+      void queryClient.invalidateQueries({ queryKey: ['dashboardOrders'] });
+    } catch (e) {
+      console.error(e);
+      alert('تعذر تحديث حالة الطلب في قاعدة البيانات: ' + (e?.message || e));
+    } finally {
+      setOrderActionLoading(false);
+    }
+  }, [selectedOrder, fetchSubmittedOrders, fetchCompletedOrders, queryClient]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [showStockZeroConfirm, setShowStockZeroConfirm] = useState(false);
@@ -1942,7 +1985,7 @@ function App() {
       supabase
         .from('orders')
         .select('*')
-        .in('status', ['completed', 'Completed'])
+        .ilike('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(800),
     ]);
@@ -3606,9 +3649,22 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     // Keep the order in the database as 'completed' (don't delete it)
     if (isSupervisorProcessing) {
       try {
-        await supabase.from('orders').update({ status: 'completed' }).eq('id', currentOrderId);
+        const { data: markRows, error: markErr } = await supabase
+          .from('orders')
+          .update({ status: 'completed' })
+          .eq('id', currentOrderId)
+          .select('id');
+        if (markErr) {
+          console.error('mark order completed:', markErr);
+          alert('تعذر حفظ حالة الطلب في قاعدة البيانات: ' + (markErr.message || markErr));
+        } else if (!markRows?.length) {
+          alert(
+            'لم يُحدَّث الطلب في قاعدة البيانات. تحقق من سياسة UPDATE على جدول orders (ORDERS_SUPABASE.md).',
+          );
+        }
       } catch (err) {
         console.error('Error marking order completed:', err);
+        alert('خطأ أثناء تحديث الطلب: ' + (err?.message || err));
       }
       setCurrentOrderId(null);
     } else if (saved) {
@@ -5049,41 +5105,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         </div>
                         <div className="p-6 border-t border-slate-100 flex flex-wrap gap-3 shrink-0">
 
-                          {/* Approve Button — marks as completed, moves to completed tab */}
+                          {/* Approve — DB update first, then refetch lists */}
                           <button
                             type="button"
-                            onClick={async () => {
-                              if (!selectedOrder) return;
-                              setOrderActionLoading(true);
-                              const approvedOrder = { ...selectedOrder, status: 'completed' };
-                              try {
-                                // Optimistic update + localStorage (survives refetch if Supabase UPDATE is blocked by RLS)
-                                saveApprovedOrderLocal(approvedOrder);
-                                setSubmittedOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
-                                setCompletedOrders(prev => [approvedOrder, ...prev.filter(o => o.id !== selectedOrder.id)]);
-                                setSelectedOrder(null);
-                                setSubmittedOrdersTab('completed');
-
-                                const { data: updatedRows, error: updErr } = await supabase
-                                  .from('orders')
-                                  .update({ status: 'completed' })
-                                  .eq('id', approvedOrder.id)
-                                  .select('id');
-                                if (updErr) {
-                                  console.error('orders UPDATE:', updErr);
-                                } else if (!updatedRows?.length) {
-                                  console.warn(
-                                    'orders UPDATE: لم يُحدَّث أي صف — غالباً سياسة RLS تمنع UPDATE. شغّل SQL في ORDERS_SUPABASE.md (Allow update orders).'
-                                  );
-                                }
-
-                                void queryClient.invalidateQueries({ queryKey: ['dashboardOrders'] });
-                              } catch (e) {
-                                console.error(e);
-                              } finally {
-                                setOrderActionLoading(false);
-                              }
-                            }}
+                            onClick={handleApproveSubmittedOrder}
                             disabled={orderActionLoading}
                             className="flex-1 min-w-[140px] px-4 py-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold flex items-center justify-center gap-2 disabled:opacity-50"
                           >
