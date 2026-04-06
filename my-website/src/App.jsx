@@ -3881,6 +3881,131 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
   }, [filteredInventoryItems]);
 
+  /** مزامنة المخزون من Google Sheet → Supabase مباشرة من الواجهة */
+  const [syncingStock, setSyncingStock] = useState(false);
+  const handleSyncStockFromSheet = useCallback(async () => {
+    const SHEET_URL = import.meta.env.VITE_GOOGLE_SHEET_EXPORT_URL;
+    if (!SHEET_URL) {
+      alert('لم يُضبط رابط Google Sheet في .env (VITE_GOOGLE_SHEET_EXPORT_URL)');
+      return;
+    }
+    if (!confirm('سيتم تحديث المخزون في Supabase من Google Sheet. هل أنت متأكد؟')) return;
+    setSyncingStock(true);
+    try {
+      // تحميل الجدول
+      const res = await fetch(SHEET_URL, { redirect: 'follow' });
+      if (!res.ok) throw new Error(`فشل تحميل الجدول: HTTP ${res.status}`);
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      const buf = await res.arrayBuffer();
+      // تحقق أنه ليس HTML
+      const sample = new TextDecoder().decode(buf.slice(0, 200)).trimStart();
+      if (sample.startsWith('<!') || sample.toLowerCase().startsWith('<html')) {
+        throw new Error('الجدول يعيد HTML. تأكد من مشاركة الجدول للعموم (أي شخص لديه الرابط).');
+      }
+      const XLSX = (await import('xlsx')).default || (await import('xlsx'));
+      const wb = XLSX.read(buf, { type: 'array' });
+
+      // قراءة الباركودات والمخزون
+      const BARCODE_KEYS = ['barcode', 'الباركود', 'باركود', 'code', 'كود'];
+      const STOCK_KEYS   = ['stock', 'المخزون', 'الكمية المخزنة', 'inventory', 'qty stock', 'الكمية', 'qty', 'quantity', 'count'];
+      function findColIdx(header, keys) {
+        for (let i = 0; i < header.length; i++) {
+          const h = String(header[i] ?? '').toLowerCase().trim();
+          if (keys.some(k => h === k || h.includes(k.split(' ')[0]))) return i;
+        }
+        return -1;
+      }
+      function toNum(v) {
+        if (v == null || v === '') return 0;
+        const n = Number(String(v).replace(/[^0-9.-]/g, ''));
+        return isNaN(n) ? 0 : Math.max(0, Math.round(n));
+      }
+      function canon(s) {
+        if (!s) return '';
+        let x = String(s).trim().replace(/\s/g, '');
+        if (/^\d+$/.test(x)) x = x.replace(/^0+/, '') || '0';
+        return x;
+      }
+
+      const stockMap = {};
+      let sheetFound = false;
+      for (const sheetName of (wb.SheetNames || [])) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' });
+        if (!rows || rows.length < 2) continue;
+        const header = rows[0];
+        const bIdx = findColIdx(header, BARCODE_KEYS);
+        const sIdx = findColIdx(header, STOCK_KEYS);
+        if (bIdx < 0 || sIdx < 0) continue;
+        sheetFound = true;
+        for (let r = 1; r < rows.length; r++) {
+          const row = rows[r];
+          const rawBc = String(row[bIdx] ?? '').trim();
+          if (!rawBc) continue;
+          const bc = canon(rawBc);
+          const stock = toNum(row[sIdx]);
+          if (bc) stockMap[bc] = stock;
+          if (rawBc !== bc) stockMap[rawBc.replace(/\s/g, '')] = stock;
+        }
+      }
+      if (!sheetFound) throw new Error('لم يُعثر على أعمدة البـاركود والمخزون في الجدول. تأكد من أسماء الأعمدة.');
+
+      // جلب الأصناف من Supabase
+      let allItems = [];
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase.from('items').select('barcode, stock_count').range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allItems = allItems.concat(data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+
+      // حساب التغييرات
+      const toUpdate = [];
+      for (const item of allItems) {
+        const rawBc = String(item.barcode || '').trim();
+        const bc = canon(rawBc);
+        const newStock = stockMap[rawBc] ?? stockMap[bc] ?? stockMap[rawBc.replace(/\s/g, '')] ?? 0;
+        const oldStock = item.stock_count ?? 0;
+        if (newStock !== oldStock) toUpdate.push({ barcode: rawBc, newStock });
+      }
+
+      if (toUpdate.length === 0) {
+        alert('✅ المخزون محدّث بالفعل — لا توجد تغييرات.');
+        setSyncingStock(false);
+        return;
+      }
+
+      // تحديث Supabase على دفعات
+      const BATCH = 50;
+      let updated = 0;
+      for (let i = 0; i < toUpdate.length; i += BATCH) {
+        const batch = toUpdate.slice(i, i + BATCH);
+        // جمّع حسب القيمة
+        const byStock = {};
+        for (const { barcode, newStock } of batch) {
+          const k = String(newStock);
+          if (!byStock[k]) byStock[k] = { stock: newStock, barcodes: [] };
+          byStock[k].barcodes.push(barcode);
+        }
+        for (const { stock, barcodes } of Object.values(byStock)) {
+          const { error } = await supabase.from('items').update({ stock_count: stock }).in('barcode', barcodes);
+          if (error) throw error;
+          updated += barcodes.length;
+        }
+      }
+
+      alert(`✅ تم تحديث مخزون ${updated} صنف بنجاح من Google Sheet!`);
+      itemsQuery.refetch(); // تحديث واجهة React Query
+    } catch (err) {
+      alert('❌ خطأ: ' + (err?.message || err));
+    } finally {
+      setSyncingStock(false);
+    }
+  }, [supabase, itemsQuery]);
+
   /** تصدير تقرير المخزون من صفحة التقارير (قائمة كاملة للتجرد) — Excel مرتب حسب الفئة ثم الباركود */
   const handleExportReportInventory = useCallback(async () => {
     try {
@@ -6587,6 +6712,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <FileDown size={20} />
                               تصدير Excel
                             </button>
+                            {userRole === 'admin' && (
+                            <button
+                              type="button"
+                              onClick={handleSyncStockFromSheet}
+                              disabled={syncingStock}
+                              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-emerald-200 bg-white text-emerald-700 font-bold hover:bg-emerald-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {syncingStock ? <Loader2 size={20} className="animate-spin" /> : <RefreshCw size={20} />}
+                              {syncingStock ? 'جاري المزامنة...' : 'مزامنة المخزون من Sheet'}
+                            </button>
+                            )}
                           </div>
                         </div>
 

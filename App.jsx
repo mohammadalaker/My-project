@@ -279,6 +279,7 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [syncingStock, setSyncingStock] = useState(false);
 
   const setOrderInfoField = (key, value) =>
     setOrderInfo((prev) => ({ ...prev, [key]: value }));
@@ -766,6 +767,80 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     setModalOpen(true);
   };
 
+  // مزامنة المخزون من Google Sheet → Supabase مباشرة
+  const handleSyncStockFromSheet = async () => {
+    const SHEET_URL = import.meta.env.VITE_GOOGLE_SHEET_EXPORT_URL;
+    if (!SHEET_URL) { alert('لم يُضبط VITE_GOOGLE_SHEET_EXPORT_URL في .env'); return; }
+    if (!confirm('سيتم تحديث المخزون من Google Sheet. هل أنت متأكد؟')) return;
+    setSyncingStock(true);
+    try {
+      const res = await fetch(SHEET_URL, { redirect: 'follow' });
+      if (!res.ok) throw new Error(`فشل تحميل الجدول: HTTP ${res.status}`);
+      const buf = await res.arrayBuffer();
+      const sample = new TextDecoder().decode(buf.slice(0, 200)).trimStart();
+      if (sample.startsWith('<!') || sample.toLowerCase().startsWith('<html'))
+        throw new Error('الجدول يعيد HTML. تأكد من مشاركة الجدول للعموم.');
+      const XLSX = (await import('xlsx')).default || (await import('xlsx'));
+      const wb = XLSX.read(buf, { type: 'array' });
+      const BKEYS = ['barcode', 'الباركود', 'باركود', 'code'];
+      const SKEYS = ['stock', 'المخزون', 'inventory', 'qty stock', 'الكمية', 'qty', 'quantity'];
+      const findIdx = (hdr, keys) => { for (let i = 0; i < hdr.length; i++) { const h = String(hdr[i] ?? '').toLowerCase().trim(); if (keys.some(k => h === k || h.includes(k.split(' ')[0]))) return i; } return -1; };
+      const toN = v => { if (v == null || v === '') return 0; const n = Number(String(v).replace(/[^0-9.-]/g, '')); return isNaN(n) ? 0 : Math.max(0, Math.round(n)); };
+      const canon = s => { if (!s) return ''; let x = String(s).trim().replace(/\s/g, ''); if (/^\d+$/.test(x)) x = x.replace(/^0+/, '') || '0'; return x; };
+      const stockMap = {};
+      let found = false;
+      for (const sn of (wb.SheetNames || [])) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+        if (!rows || rows.length < 2) continue;
+        const bi = findIdx(rows[0], BKEYS), si = findIdx(rows[0], SKEYS);
+        if (bi < 0 || si < 0) continue;
+        found = true;
+        for (let r = 1; r < rows.length; r++) {
+          const rawBc = String(rows[r][bi] ?? '').trim();
+          if (!rawBc) continue;
+          const stock = toN(rows[r][si]);
+          stockMap[canon(rawBc)] = stock;
+          stockMap[rawBc.replace(/\s/g, '')] = stock;
+        }
+      }
+      if (!found) throw new Error('لم يُعثر على أعمدة الباركود/المخزون في الجدول.');
+      let allItems = [], from = 0;
+      while (true) {
+        const { data, error } = await supabase.from('items').select('barcode, stock_count').range(from, from + 999);
+        if (error) throw error;
+        if (!data || !data.length) break;
+        allItems = allItems.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      const toUpdate = allItems.filter(item => {
+        const rawBc = String(item.barcode || '').trim();
+        const newStock = stockMap[rawBc] ?? stockMap[canon(rawBc)] ?? 0;
+        return newStock !== (item.stock_count ?? 0);
+      });
+      if (!toUpdate.length) { alert('✅ المخزون محدّث بالفعل.'); setSyncingStock(false); return; }
+      let updated = 0;
+      for (let i = 0; i < toUpdate.length; i += 50) {
+        const batch = toUpdate.slice(i, i + 50);
+        const byStock = {};
+        for (const item of batch) {
+          const rawBc = String(item.barcode || '').trim();
+          const s = String(stockMap[rawBc] ?? stockMap[canon(rawBc)] ?? 0);
+          if (!byStock[s]) byStock[s] = { stock: Number(s), barcodes: [] };
+          byStock[s].barcodes.push(rawBc);
+        }
+        for (const { stock, barcodes } of Object.values(byStock)) {
+          const { error } = await supabase.from('items').update({ stock_count: stock }).in('barcode', barcodes);
+          if (error) throw error;
+          updated += barcodes.length;
+        }
+      }
+      alert(`✅ تم تحديث مخزون ${updated} صنف من Google Sheet!`);
+      fetchItems(true);
+    } catch (err) { alert('❌ ' + (err?.message || err)); }
+    finally { setSyncingStock(false); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -778,13 +853,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         price_after_disc: formData.price_after_disc
           ? parseFloat(formData.price_after_disc)
           : null,
-        stock_count: formData.stock_count ? parseInt(formData.stock_count, 10) : 0,
+        stock_count: (formData.stock_count !== '' && formData.stock_count !== null && formData.stock_count !== undefined) ? parseInt(formData.stock_count, 10) : 0,
         image_url: formData.image_url.trim() || null,
       };
       if (editingItem) {
-        await supabase.from('items').update(payload).eq('barcode', editingItem.barcode);
+        const { error: updateError } = await supabase.from('items').update(payload).eq('barcode', editingItem.barcode);
+        if (updateError) throw updateError;
       } else {
-        await supabase.from('items').insert(payload);
+        const { error: insertError } = await supabase.from('items').insert(payload);
+        if (insertError) throw insertError;
       }
       setModalOpen(false);
       fetchItems(true);
@@ -935,6 +1012,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             >
               <Plus size={14} />
               Add Item
+            </button>
+            <button
+              onClick={handleSyncStockFromSheet}
+              disabled={syncingStock}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[16px] bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition-colors shadow-[0_2px_8px_rgba(16,185,129,0.25)] disabled:opacity-60"
+            >
+              <Loader2 size={14} className={syncingStock ? 'animate-spin' : 'hidden'} />
+              {syncingStock ? 'جاري...' : '🔄 مزامنة المخزون'}
             </button>
           </div>
         </header>
