@@ -290,6 +290,12 @@ function isOrderDbStatusCompleted(status) {
   return String(status).trim().toLowerCase() === 'completed';
 }
 
+/** مخزون > 0 — يُعرض في شبكة البيع لغير الأدمن؛ الأدمن يرى كل الأصناف بما فيها غير المتوفرة */
+function itemIsInStockForSale(item) {
+  const q = Number(item?.stock_count ?? item?.stock);
+  return Number.isFinite(q) && q > 0;
+}
+
 // Mesh Gradient Component for "WOW" background
 const MeshBackground = () => (
   <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f8fafc]">
@@ -2179,9 +2185,10 @@ function App() {
   const filteredItems = useMemo(
     () => {
       let list = filteredByGroup;
-      // Non-admins see only visible products
+      // Non-admins: visible products only + in stock (admin keeps out-of-stock on screen)
       if (userRole !== 'admin') {
         list = list.filter((i) => i.visible !== false);
+        list = list.filter((i) => itemIsInStockForSale(i));
       }
       // In offers mode, non-admins see only offers. Admins see all (to manage them).
       if (mode === 'offers' && userRole !== 'admin') {
@@ -4420,6 +4427,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         e.preventDefault();
         if (userRole !== 'admin' && item.visible === false) {
           playError();
+          return;
+        }
+        if (userRole !== 'admin' && !itemIsInStockForSale(item)) {
+          playError();
+          alert('المنتج غير متوفر في المخزون.');
           return;
         }
         handleOpenQuantityModal(item, null);
