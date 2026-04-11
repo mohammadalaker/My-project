@@ -1616,6 +1616,21 @@ function App() {
     });
   };
 
+  const updateSelectedItemField = (idx, field, val) => {
+    setSelectedOrder(prev => {
+      if (!prev) return null;
+      const newItems = [...(prev.items || [])];
+      const item = { ...newItems[idx] };
+      item[field] = val;
+      // Recalculate row total
+      item.total = (Number(item.qty) || 0) * (Number(item.price) || 0);
+      newItems[idx] = item;
+      // Recalculate order total
+      const newTotal = newItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+      return { ...prev, items: newItems, total_amount: newTotal };
+    });
+  };
+
   const [orderEditSearch, setOrderEditSearch] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -5276,9 +5291,26 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   {(selectedOrder.items || []).map((row, idx) => (
                                     <tr key={idx} className="border-t border-slate-100 group">
                                       <td className="py-2 px-3 text-slate-800">{row.name || row.barcode || '—'}</td>
-                                      <td className="py-2 px-2 text-center text-slate-600">{row.qty ?? '—'}</td>
-                                      <td className="py-2 px-3 text-slate-600">₪{Number(row.price ?? 0).toLocaleString()}</td>
-                                      <td className="py-2 px-3 font-medium text-slate-800">₪{Number(row.total ?? 0).toLocaleString()}</td>
+                                      <td className="py-2 px-1 text-center">
+                                        <input 
+                                          type="number"
+                                          value={row.qty ?? ''}
+                                          onChange={(e) => updateSelectedItemField(idx, 'qty', e.target.value)}
+                                          className="w-12 bg-slate-50 border border-transparent hover:border-slate-200 focus:border-indigo-400 rounded p-1 text-center text-slate-600 outline-none transition-all"
+                                        />
+                                      </td>
+                                      <td className="py-2 px-1 text-left">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-slate-400">₪</span>
+                                          <input 
+                                            type="number"
+                                            value={row.price ?? ''}
+                                            onChange={(e) => updateSelectedItemField(idx, 'price', e.target.value)}
+                                            className="w-20 bg-slate-50 border border-transparent hover:border-slate-200 focus:border-indigo-400 rounded p-1 text-left text-slate-600 outline-none transition-all"
+                                          />
+                                        </div>
+                                      </td>
+                                      <td className="py-2 px-3 font-medium text-slate-800 text-left">₪{Number(row.total ?? 0).toLocaleString()}</td>
                                       <td className="py-2 px-2 text-center">
                                         <button 
                                           onClick={() => removeItemFromSelectedOrder(idx)}
