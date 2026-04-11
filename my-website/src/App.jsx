@@ -1594,7 +1594,6 @@ function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [showStockZeroConfirm, setShowStockZeroConfirm] = useState(false);
   const [stockZeroPending, setStockZeroPending] = useState(null);
-  const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
     barcode: '',
     brand_group: '',
@@ -1606,6 +1605,7 @@ function App() {
     stock_count: '',
     image_url: '',
     visible: true,
+    is_offer: false,
   });
   const [uploading, setUploading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -1797,13 +1797,27 @@ function App() {
     });
     setEditingOffer(null);
     try {
-      await supabase.from('custom_offers').upsert(offerData, { onConflict: 'id' });
+      const { error } = await supabase.from('custom_offers').upsert(offerData, { onConflict: 'id' });
+      if (error) throw error;
+      alert('تم حفظ العرض بنجاح');
     } catch (e) {
+      console.warn('Supabase save offer:', e);
+      // Rollback local state if database save failed
+      setCustomOffers((prev) => prev.filter((o) => o.id !== editingOffer.id));
+      
       if (e?.message && String(e.message).includes('show_on_sales_screen')) {
-        const { id, title, items, updated_at } = offerData;
-        await supabase.from('custom_offers').upsert({ id, title, items, updated_at }, { onConflict: 'id' });
+        try {
+          const { id, title, items, updated_at } = offerData;
+          const { error: retryErr } = await supabase.from('custom_offers').upsert({ id, title, items, updated_at }, { onConflict: 'id' });
+          if (retryErr) throw retryErr;
+          alert('تم حفظ العرض بنجاح (بدون خيار الشاشة)');
+          // Re-add to local state if retry worked
+          setCustomOffers((prev) => [...prev, { id, title, items, showOnSalesScreen: true }]);
+        } catch (inner) {
+          alert('فشل حفظ العرض: ' + (inner.message || inner));
+        }
       } else {
-        console.warn('Supabase save offer:', e);
+        alert('حدث خطأ أثناء حفظ العرض في قاعدة البيانات: ' + (e.message || e));
       }
     }
   };
@@ -3701,6 +3715,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       stock_count: '',
       image_url: '',
       visible: true,
+      is_offer: false,
     });
     setModalOpen(true);
   };
@@ -3721,6 +3736,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       stock_count: stockDisplay,
       image_url: item.image || '',
       visible: item.visible !== false,
+      is_offer: !!item.isOffer,
     });
     setModalOpen(true);
   };
@@ -3748,6 +3764,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         { key: 'stock_count', old: editCtx.stock_count ?? editCtx.stock, new: payload.stock_count, label: 'الكمية' },
         { key: 'eng_name', old: editCtx.name, new: payload.eng_name, label: 'الاسم' },
         { key: 'brand_group', old: editCtx.group, new: payload.brand_group, label: 'الفئة' },
+        { key: 'is_offer', old: editCtx.isOffer, new: payload.is_offer, label: 'العرض الخاص' },
       ];
       for (const f of fields) {
         const ov = f.old != null ? String(f.old) : '';
@@ -3788,6 +3805,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         })(),
         image_url: formData.image_url.trim() || null,
         visible: formData.visible !== false,
+        is_offer: !!formData.is_offer,
       };
       const stockMissingOrZero = payload.stock_count === null || payload.stock_count === 0;
       if (stockMissingOrZero) {
@@ -3844,6 +3862,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         stock_count: stockDisplay,
         image_url: item.image || '',
         visible: item.visible !== false,
+        is_offer: !!item.isOffer,
       });
       setShowCatalogPanel(true);
       if (inventoryBarcodeScanRef.current) inventoryBarcodeScanRef.current.value = '';
@@ -8961,6 +8980,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     >
                       {formData.visible !== false ? <Eye size={14} /> : <EyeOff size={14} />}
                       <span>{formData.visible !== false ? 'Live' : 'Hidden'}</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Special Offer</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((p) => ({ ...p, is_offer: !p.is_offer }))}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.is_offer ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}
+                    >
+                      <Tag size={14} />
+                      <span>{formData.is_offer ? 'Offer Active' : 'No Offer'}</span>
                     </button>
                   </div>
 
