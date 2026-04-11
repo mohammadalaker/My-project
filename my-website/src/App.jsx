@@ -1562,22 +1562,20 @@ function App() {
     if (!order?.id) return;
     setOrderActionLoading(true);
     try {
-      const { data: updatedRows, error: updErr } = await supabase
-        .from('orders')
-        .update({ status: 'completed' })
-        .eq('id', order.id)
-        .select('id,status');
-
-      if (updErr) throw updErr;
-      if (!updatedRows?.length) {
-        alert(
-          'لم يُحدَّث أي صف في قاعدة البيانات. غالباً سياسة RLS تمنع UPDATE.\n' +
-            'Supabase → SQL Editor: أنشئ سياسة UPDATE على جدول orders للدور anon (انظر ORDERS_SUPABASE.md).',
-        );
-        return;
-      }
-
       const approvedOrder = { ...order, status: 'completed' };
+      
+      // Update with latest items and total in case they were edited
+      const { error: finalUpdErr } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'completed',
+          items: order.items,
+          total_amount: order.total_amount
+        })
+        .eq('id', order.id);
+      
+      if (finalUpdErr) throw finalUpdErr;
+
       saveApprovedOrderLocal(approvedOrder);
       setSelectedOrder(null);
       setSubmittedOrdersTab('completed');
@@ -1590,6 +1588,35 @@ function App() {
       setOrderActionLoading(false);
     }
   }, [selectedOrder, fetchSubmittedOrders, fetchCompletedOrders, queryClient]);
+
+  const removeItemFromSelectedOrder = (idx) => {
+    setSelectedOrder(prev => {
+      if (!prev) return null;
+      const newItems = [...(prev.items || [])];
+      newItems.splice(idx, 1);
+      const newTotal = newItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+      return { ...prev, items: newItems, total_amount: newTotal };
+    });
+  };
+
+  const addItemToSelectedOrder = (product) => {
+    setSelectedOrder(prev => {
+      if (!prev) return null;
+      const price = product.priceAfterDiscount || product.price || 0;
+      const newItem = {
+        barcode: product.barcode,
+        name: product.name,
+        qty: 1,
+        price: price,
+        total: price
+      };
+      const newItems = [...(prev.items || []), newItem];
+      const newTotal = newItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+      return { ...prev, items: newItems, total_amount: newTotal };
+    });
+  };
+
+  const [orderEditSearch, setOrderEditSearch] = useState('');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [showStockZeroConfirm, setShowStockZeroConfirm] = useState(false);
@@ -5242,19 +5269,76 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     <th className="text-center py-2 px-2 font-medium text-slate-600">الكمية</th>
                                     <th className="text-left py-2 px-3 font-medium text-slate-600">السعر</th>
                                     <th className="text-left py-2 px-3 font-medium text-slate-600">الإجمالي</th>
+                                    <th className="w-10"></th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {(selectedOrder.items || []).map((row, idx) => (
-                                    <tr key={idx} className="border-t border-slate-100">
+                                    <tr key={idx} className="border-t border-slate-100 group">
                                       <td className="py-2 px-3 text-slate-800">{row.name || row.barcode || '—'}</td>
                                       <td className="py-2 px-2 text-center text-slate-600">{row.qty ?? '—'}</td>
                                       <td className="py-2 px-3 text-slate-600">₪{Number(row.price ?? 0).toLocaleString()}</td>
                                       <td className="py-2 px-3 font-medium text-slate-800">₪{Number(row.total ?? 0).toLocaleString()}</td>
+                                      <td className="py-2 px-2 text-center">
+                                        <button 
+                                          onClick={() => removeItemFromSelectedOrder(idx)}
+                                          className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                                          title="حذف الصنف"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
+                            </div>
+                          </div>
+
+                          {/* Add Item Search in Modal */}
+                          <div className="relative">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">إضافة منتج للطلبية</span>
+                            <div className="relative group">
+                              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                                <Search size={16} />
+                              </div>
+                              <input 
+                                type="text"
+                                value={orderEditSearch}
+                                onChange={(e) => setOrderEditSearch(e.target.value)}
+                                placeholder="ابحث باسم المنتج أو الباركود..."
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pr-10 pl-4 text-sm outline-none focus:border-indigo-400 transition-all"
+                              />
+                              {orderEditSearch.trim().length > 0 && (
+                                <div className="absolute bottom-full mb-2 left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-48 overflow-y-auto z-[9999] p-2 space-y-1 animate-in fade-in slide-in-from-bottom-2">
+                                  {items
+                                    .filter(it => 
+                                      (it.name || '').toLowerCase().includes(orderEditSearch.toLowerCase()) || 
+                                      (it.barcode || '').includes(orderEditSearch)
+                                    )
+                                    .slice(0, 10)
+                                    .map(it => (
+                                      <button
+                                        key={it.barcode}
+                                        onClick={() => {
+                                          addItemToSelectedOrder(it);
+                                          setOrderEditSearch('');
+                                        }}
+                                        className="w-full text-right p-2.5 rounded-xl hover:bg-slate-50 flex items-center justify-between border border-transparent hover:border-slate-100 transition-all font-medium text-sm text-slate-700"
+                                      >
+                                        <div className="flex flex-col gap-0.5">
+                                          <span className="font-bold">{it.name}</span>
+                                          <span className="text-[10px] opacity-50 font-mono">{it.barcode}</span>
+                                        </div>
+                                        <span className="text-emerald-600 font-black">₪{Number(it.priceAfterDiscount || it.price).toLocaleString()}</span>
+                                      </button>
+                                    ))
+                                  }
+                                  {items.filter(it => (it.name || '').toLowerCase().includes(orderEditSearch.toLowerCase()) || (it.barcode || '').includes(orderEditSearch)).length === 0 && (
+                                    <div className="p-4 text-center text-slate-400 text-xs">لا توجد نتائج</div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <p className="text-lg font-black text-slate-800 pt-2">المجموع: ₪{Number(selectedOrder.total_amount ?? 0).toLocaleString()}</p>
