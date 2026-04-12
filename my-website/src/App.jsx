@@ -1650,6 +1650,7 @@ function App() {
     is_offer: false,
   });
   const [uploading, setUploading] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [productDetailQty, setProductDetailQty] = useState(1);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -3764,11 +3765,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   const openEditModal = (item) => {
     if (!item) return;
-    const role = String(userRole || '').toLowerCase();
-    if (role !== 'admin') {
-      console.warn('Access denied: userRole is', userRole);
-      return;
-    }
+    if (userRole !== 'admin') return;
     setEditingItem(item);
     const stockVal = item.stock;
     const stockDisplay = (stockVal != null && stockVal !== '') ? stockVal : 0;
@@ -3785,6 +3782,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       visible: item.visible !== false,
       is_offer: !!item.isOffer,
     });
+    setSelectedItem(null);
     setModalOpen(true);
   };
 
@@ -7857,8 +7855,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
             )}
           </div>
-        </div >
-      </div >
+        </div>
+      </div>
+      </div>
 
       {
         !showOrderPanel && !showCartOverlay && mode === 'order' && (
@@ -8886,9 +8885,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             {catalogItems.some((i) => i.id === selectedItem.id) ? 'Remove Catalog' : 'Add to Catalog'}
                           </button>
                         )}
-                        {userRole === 'admin' && (
-                          <button onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); setSelectedItem(null); }} className="py-4 rounded-2xl font-black transition-all border bg-white border-slate-200 text-slate-700 hover:bg-slate-50">Edit Details</button>
-                        )}
+                         {userRole === 'admin' && (
+                           <button type="button" onClick={(e) => { e.stopPropagation(); openEditModal(selectedItem); }} className="py-4 rounded-2xl font-black transition-all border bg-white border-slate-200 text-slate-700 hover:bg-slate-50">تعديل التفاصيل</button>
+                         )}
                       </div>
                     </div>
                   </div>
@@ -9010,10 +9009,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         })()
       }
 
-      {/* Modern Admin Edit Modal */}
       {
         modalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl px-4" onClick={() => setModalOpen(false)}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-2xl px-4" onClick={() => setModalOpen(false)}>
             <div className="rounded-[2.5rem] max-w-xl w-full max-h-[90svh] overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.6)] border flex flex-col transition-all duration-500 bg-white border-slate-100" onClick={(e) => e.stopPropagation()}>
               <div className={`flex items-center justify-between px-8 py-6 border-b shrink-0 border-slate-100`}>
                 <div className="flex flex-col">
@@ -9520,7 +9518,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         );
       })}
-    </div>
   </>
 );
 }
