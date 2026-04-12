@@ -26,149 +26,19 @@ import {
   Cookie,
 } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
-import { BARCODE_ORDER, sortByBarcodeOrder } from './BARCODE_ORDER_NEW';image.png
+import { BARCODE_ORDER, sortByBarcodeOrder } from './BARCODE_ORDER_NEW';
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 80;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-
-## 1. الدالة المساعدة واسم الـ Bucket
-
-**موضع:** أعلى الملف بعد `const SUPABASE_URL = ...`
-
-**استبدل:**
-```js
-const BUCKET = 'Pic_of_items';
-const PAGE_SIZE = 80;
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
-/** إرجاع رابط عام للصورة من bucket Pic_of_items - إذا كانت مساراً. الروابط الخارجية (http) تُرجع كما هي. */
-function getPublicImageUrl(imageValue) {
-```
-
-**بـ:**
-```js
-/** اسم الـ bucket في Supabase Storage (غيّره إلى 'products' إن لزم). روابط getPublicUrl ثابتة وتقلل Bandwidth. */
-const BUCKET = 'Pic_of_items';
-const PAGE_SIZE = 80;
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /** إرجاع رابط عام ثابت للصورة عبر getPublicUrl (لا يستخدم Signed URLs). يُرجع null عند عدم وجود صورة. */
 function getPublicImageUrl(imageValue) {
-```
-
----
-
-## 2. طباعة الطلبية — إضافة loading="lazy" للصورة في HTML
-
-**ابحث عن:**
-```js
-? `<img src="${String(imgSrc).replace(/"/g, '&quot;')}" alt="" style="width:40px;height:40px;object-fit:contain;" />`
-```
-
-**استبدل بـ:**
-```js
-? `<img src="${String(imgSrc).replace(/"/g, '&quot;')}" alt="" loading="lazy" style="width:40px;height:40px;object-fit:contain;" />`
-```
-
----
-
-## 3. صفحة المنتجات المختارة (Inventory HTML) — إضافة loading="lazy"
-
-**ابحث عن:**
-```js
-? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" /></div>`
-```
-
-**استبدل بـ:**
-```js
-? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" loading="lazy" /></div>`
-```
-
----
-
-## 4. بطاقة المنتج في الشبكة — إضافة loading="lazy"
-
-**ابحث عن:**
-```jsx
-<img
-                          src={getImage(item)}
-                          alt=""
-                          className="w-full h-full object-contain p-2"
-                          onError={(e) => (e.target.style.display = 'none')}
-                        />
-```
-
-**استبدل بـ:**
-```jsx
-<img
-                          src={getImage(item)}
-                          alt=""
-                          loading="lazy"
-                          className="w-full h-full object-contain p-2"
-                          onError={(e) => (e.target.style.display = 'none')}
-                        />
-```
-
----
-
-## 5. سلة الطلبية — صورة الصنف + معالجة عدم وجود صورة + lazy
-
-**ابحث عن:**
-```jsx
-{getImage(o.item) && <img src={getImage(o.item)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />}
-```
-
-**استبدل بـ:**
-```jsx
-{getImage(o.item) ? (
-                            <img src={getImage(o.item)} alt="" loading="lazy" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
-                          ) : (
-                            <Package size={24} className="text-slate-300" />
-                          )}
-```
-
----
-
-## 6. نافذة تفاصيل المنتج — إضافة loading="lazy"
-
-**ابحث عن:**
-```jsx
-{getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={64} className="text-slate-300" />}
-```
-
-**استبدل بـ:**
-```jsx
-{getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" loading="lazy" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={64} className="text-slate-300" />}
-```
-
----
-
-## 7. نموذج التعديل (الصورة في الفورم) — إضافة loading="lazy"
-
-**ابحث عن:**
-```jsx
-<img src={getPublicImageUrl(formData.image_url)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
-```
-
-**استبدل بـ:**
-```jsx
-<img src={getPublicImageUrl(formData.image_url)} alt="" loading="lazy" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
-```
-
----
-
-## ملخص
-
-- **الدالة `getPublicImageUrl`** موجودة مسبقاً وتستخدم `supabase.storage.from(BUCKET).getPublicUrl(path)` — لا حاجة لتغيير المنطق، فقط التعليق.
-- **جميع الصور** في JSX و HTML المُولَّد أصبحت تستخدم نفس الدالة؛ مع إضافة **loading="lazy"** لكل `<img>`.
-- **عدم وجود صورة:** تمت معالجته في السلة بعرض أيقونة `<Package />` عند عدم وجود `getImage(o.item)`.
-- إذا كان اسم الـ bucket عندك **products** بدلاً من **Pic_of_items**، غيّر السطر:  
-  `const BUCKET = 'products';`
-
-بعد التعديل احفظ الملف وشغّل التطبيق للتأكد من أن الصور تُحمّل بشكل كسول والروابط عامة ثابتة.
-
+  if (!imageValue) return null;
+  if (String(imageValue).startsWith('http')) return imageValue;
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(imageValue);
+  return data?.publicUrl || null;
 }
 
 const ELECTRICAL_GROUPS = [
@@ -493,7 +363,7 @@ function App() {
         const discPercent = getLineDiscountPercent(o);
         const imgSrc = getImage(o.item);
         const imgHtml = imgSrc
-          ? `<img src="${String(imgSrc).replace(/"/g, '&quot;')}" alt="" style="width:40px;height:40px;object-fit:contain;" />`
+          ? `<img src="${String(imgSrc).replace(/"/g, '&quot;')}" alt="" loading="lazy" style="width:40px;height:40px;object-fit:contain;" />`
           : '';
         return `<tr><td>${imgHtml}</td><td dir="ltr" lang="en">${(o.item?.barcode || '').replace(/</g, '&lt;')}</td><td dir="ltr" lang="en">${o.qty}</td><td dir="ltr" lang="en">₪${price}</td><td dir="ltr" lang="en">₪${unitPrice}</td><td dir="ltr" lang="en">${discPercent}%</td><td dir="ltr" lang="en">₪${total.toFixed(2)}</td></tr>`;
       })
@@ -540,7 +410,7 @@ function App() {
         const discPercent = getLineDiscountPercent(o);
         const imgSrc = getImage(o.item);
         const imgHtml = imgSrc
-          ? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" /></div>`
+          ? `<div class="inv-img"><img src="${safeSrc(imgSrc)}" alt="" loading="lazy" /></div>`
           : '<div class="inv-img"><span class="inv-no-img">📦</span></div>';
         const name = (o.item?.name || '').replace(/</g, '&lt;').slice(0, 40);
         return `<article class="inv-card">
@@ -1084,6 +954,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         <img
                           src={getImage(item)}
                           alt=""
+                          loading="lazy"
                           className="w-full h-full object-contain p-2"
                           onError={(e) => (e.target.style.display = 'none')}
                         />
@@ -1227,7 +1098,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-orange-300 to-amber-300 opacity-60 group-hover:opacity-100 transition-opacity" />
                       <div className="flex gap-3 items-start pr-1">
                         <div className="w-12 h-12 shrink-0 rounded-2xl overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center justify-center">
-                          {getImage(o.item) && <img src={getImage(o.item)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />}
+                          {getImage(o.item) ? (
+                            <img src={getImage(o.item)} alt="" loading="lazy" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
+                          ) : (
+                            <Package size={24} className="text-slate-300" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] font-medium text-slate-400 tracking-wide mb-0.5">المنتج والموديل</p>
@@ -1305,7 +1180,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <button onClick={() => setSelectedItem(null)} className="p-2 rounded-lg bg-slate-100">✕</button>
             </div>
             <div className="aspect-square max-h-48 rounded-xl bg-slate-50 flex items-center justify-center mb-4">
-              {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={64} className="text-slate-300" />}
+              {getImage(selectedItem) ? <img src={getImage(selectedItem)} alt="" loading="lazy" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} /> : <Package size={64} className="text-slate-300" />}
             </div>
             <p className="text-slate-700 mb-2">{selectedItem.name}</p>
             {selectedItem.group && <span className="text-xs bg-orange-50 text-orange-700 px-2 py-1 rounded">{selectedItem.group}</span>}
@@ -1340,7 +1215,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                 <div className="flex gap-3 items-start">
                   <div className="w-20 h-20 rounded-xl bg-slate-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-violet-100">
                     {(formData.image_url && getPublicImageUrl(formData.image_url)) ? (
-                      <img src={getPublicImageUrl(formData.image_url)} alt="" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
+                      <img src={getPublicImageUrl(formData.image_url)} alt="" loading="lazy" className="w-full h-full object-contain" onError={(e) => (e.target.style.display = 'none')} />
                     ) : (
                       <Package size={28} className="text-slate-300" />
                     )}

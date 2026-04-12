@@ -12,7 +12,8 @@
     "update-products": "node scripts/readExcel.cjs",
     "update-electric": "node scripts/syncElectric.cjs",
     "delete-not-in-excel": "node scripts/deleteNotInExcel.cjs",
-    "delete-not-in-google-sheet": "node scripts/deleteNotInGoogleSheet.cjs"
+    "delete-not-in-google-sheet": "node scripts/deleteNotInGoogleSheet.cjs",
+    "sync-stock": "node scripts/syncStockFromGoogleSheet.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

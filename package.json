@@ -12,6 +12,7 @@
     "sync-electric": "npm run sync-electric --prefix my-website",
     "update-electric": "npm run update-electric --prefix my-website",
     "delete-not-in-excel": "npm run delete-not-in-excel --prefix my-website",
-    "delete-not-in-google-sheet": "npm run delete-not-in-google-sheet --prefix my-website"
+    "delete-not-in-google-sheet": "npm run delete-not-in-google-sheet --prefix my-website",
+    "sync-stock": "npm run sync-stock --prefix my-website"
   }
 }
