@@ -3763,7 +3763,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const openEditModal = (item) => {
-    if (userRole !== 'admin') return;
+    if (!item) return;
+    const role = String(userRole || '').toLowerCase();
+    if (role !== 'admin') {
+      console.warn('Access denied: userRole is', userRole);
+      return;
+    }
     setEditingItem(item);
     const stockVal = item.stock;
     const stockDisplay = (stockVal != null && stockVal !== '') ? stockVal : 0;
@@ -4851,6 +4856,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     <div className="hidden sm:flex flex-col items-start">
                        <span className="text-[13px] font-bold leading-tight text-slate-800">
                         {username === 'mohammadalaker' ? 'Mohammed Alaker' : username === 'admin' ? 'Administrator' : 'Supervisor'}
+                        <span className="text-[9px] text-slate-400 font-normal ml-2">v1.1</span>
                       </span>
                       <div className="flex items-center gap-1.5 mt-0.5">
                          <span className="text-[10px] uppercase font-bold tracking-wider leading-none text-slate-500">{userRole}</span>
