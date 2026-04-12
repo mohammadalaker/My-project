@@ -3952,11 +3952,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   /** مزامنة المخزون من Google Sheet → Supabase مباشرة من الواجهة */
   const [syncingStock, setSyncingStock] = useState(false);
   const handleSyncStockFromSheet = useCallback(async () => {
-    const SHEET_URL = import.meta.env.VITE_GOOGLE_SHEET_EXPORT_URL;
-    if (!SHEET_URL) {
-      alert('لم يُضبط رابط Google Sheet في .env (VITE_GOOGLE_SHEET_EXPORT_URL)');
-      return;
-    }
+    const SHEET_URL = import.meta.env.VITE_GOOGLE_SHEET_EXPORT_URL || 'https://docs.google.com/spreadsheets/d/1RNk812KPn54ZuUYQToSN2Vfm4JTtd1Rz1-Lig7j3JVw/export?format=xlsx&gid=1316215926';
     if (!confirm('سيتم تحديث المخزون في Supabase من Google Sheet. هل أنت متأكد؟')) return;
     setSyncingStock(true);
     try {
