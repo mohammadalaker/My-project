@@ -9008,7 +9008,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       {
         modalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-obsidian-950/60 backdrop-blur-2xl px-4" onClick={() => setModalOpen(false)}>
-            <div className="rounded-[2.5rem] max-lg w-full max-h-[90svh] overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.6)] border flex flex-col transition-all duration-500 bg-white border-slate-100" onClick={(e) => e.stopPropagation()}>
+            <div className="rounded-[2.5rem] max-w-xl w-full max-h-[90svh] overflow-hidden shadow-[0_30px_100px_rgba(0,0,0,0.6)] border flex flex-col transition-all duration-500 bg-white border-slate-100" onClick={(e) => e.stopPropagation()}>
               <div className={`flex items-center justify-between px-8 py-6 border-b shrink-0 border-slate-100`}>
                 <div className="flex flex-col">
                   <p className="text-[10px] uppercase font-black tracking-[0.2em] text-indigo-600">Management</p>
