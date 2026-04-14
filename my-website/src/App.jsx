@@ -3492,39 +3492,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     handleSaveInvoice(merged);
   }, [orderInfo]);
 
-  const handleExportExcel = useCallback(async (skipSave = false, infoOverride) => {
-    const info = infoOverride || orderInfo;
-    const error = validateOrderInfo(info);
-    if (error) {
-      if (!skipSave) { // Only alert if NOT part of combined save
-        alert(error + '\nPlease fill in all required customer details.');
-        if (orderLines.length > 0) setShowOrderSubmitModal(true);
-      }
-      return;
-    }
-
-    let saved = skipSave ? true : false;
-    // If an existing order ID is set, we're processing an already-saved order — skip re-insert
-    const isSupervisorProcessing = !!currentOrderId;
-
-    if (!skipSave) {
-      if (isSupervisorProcessing) {
-        saved = true; // Order already exists in DB, no re-insert needed
-      } else {
-        saved = await saveOrderToSupabase(info);
-      }
-    }
-
-    if (!saved && !isSupervisorProcessing) return;
-
+  /** نفس تنسيق Excel عند إتمام الطلب من شاشة المبيعات (تفاصيل الطلبية + معلومات العميل + جدول الأصناف الكامل) */
+  const downloadFormattedSalesOrderExcel = useCallback(async (info, lines, total, fileNameOverride) => {
     const ExcelJS = (await import('exceljs')).default;
-    // لا نستخدم مشكل العربية في Excel - النص المنطقي (غير المشكل) يعرض بشكل صحيح مع محاذاة يمين و readingOrder RTL
     const excelText = (text) => (text != null && typeof text !== 'string' ? String(text) : (text || ''));
 
     const wb = new ExcelJS.Workbook();
-    // الصفحة منسقة من الشمال: المحتوى يبدأ من العمود A (يسار)، اتجاه الورقة LTR
     const ws = wb.addWorksheet('Sales Order', {
-      views: [{ rightToLeft: false, showGridLines: false }]
+      views: [{ rightToLeft: false, showGridLines: false }],
     });
     const colors = {
       primary: 'FFea580c',
@@ -3546,7 +3521,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const styleCell = (cell, opts = {}) => {
       if (opts.fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.fill } };
       if (opts.font) cell.font = opts.font;
-      // تخطيط الصفحة LTR (قراءة من اليسار)؛ النص العربي يبقى بمحاذاة يمين داخل الخلية
       const baseAlignment = { readingOrder: 1, wrapText: true };
       cell.alignment = opts.alignment ? { ...baseAlignment, ...opts.alignment } : baseAlignment;
       border(cell);
@@ -3577,7 +3551,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       ...(info.email ? [['البريد الإلكتروني', info.email]] : []),
       ...(info.notes ? [['ملاحظات', info.notes]] : []),
     ];
-    // معلومات العميل على جهة اليمين (العمود 9) والقيمة على جهة اليسار (العمود 1 مدمج 1-8)، كلها محاذاة يمين
     excelInfoRows.forEach(([l, v], i) => {
       ws.getCell(r, 9).value = excelText(l || '');
       ws.getCell(r, 1).value = excelText(v || '');
@@ -3597,14 +3570,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const headers = ['الباركود', 'الصنف', 'المجموعة', 'الكمية', 'السعر', 'السعر بعد الخصم', 'الخصم', 'المجموع'];
     headers.forEach((h, c) => {
       ws.getCell(r, c + 1).value = excelText(h);
-      const isArabicCol = c <= 2; // الباركود، الصنف، المجموعة
+      const isArabicCol = c <= 2;
       styleCell(ws.getCell(r, c + 1), { fill: colors.primary, font: { bold: true, color: { argb: colors.white }, size: 11 }, alignment: { horizontal: isArabicCol ? 'right' : 'center', vertical: 'middle', readingOrder: 1 } });
     });
     ws.getRow(r).height = 24;
     r++;
-    const sortedLines = sortByBarcodeOrder(orderLines, BARCODE_ORDER);
-    // ألوان عمود الخصم حسب نسبة الخصم — كل نسبة لها لون مميز
-    const discountPalette = ['FFE8F5E9', 'FFE3F2FD', 'FFFFF8E1', 'FFF3E5F5', 'FFFFEBEE', 'FFE0F2F1', 'FFFCE4EC', 'FFEFEBE9']; // أخضر فاتح، أزرق، أصفر، بنفسجي، وردي، ...
+    const sortedLines = sortByBarcodeOrder(lines, BARCODE_ORDER);
+    const discountPalette = ['FFE8F5E9', 'FFE3F2FD', 'FFFFF8E1', 'FFF3E5F5', 'FFFFEBEE', 'FFE0F2F1', 'FFFCE4EC', 'FFEFEBE9'];
     const uniqueDiscPcts = [...new Set(sortedLines.map((o) => getLineDiscountPercent(o)))].sort((a, b) => a - b);
     const discPctToColor = {};
     uniqueDiscPcts.forEach((pct, i) => {
@@ -3613,7 +3585,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     sortedLines.forEach((o, i) => {
       const discPct = getLineDiscountPercent(o);
       const barcodeToLookup = o.barcode || o.item?.barcode || '';
-      const liveItem = barcodeToLookup ? items.find((i) => barcodesMatch(i.barcode, barcodeToLookup)) : null;
+      const liveItem = barcodeToLookup ? items.find((it) => barcodesMatch(it.barcode, barcodeToLookup)) : null;
 
       const prodType = (o.product_type || o.item?.productType || liveItem?.productType || '');
       const rawName = (o.item?.name || o.customName || o.name || o.item?.group || o.group || '').slice(0, 50);
@@ -3641,7 +3613,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     });
     ws.getCell(r, 1).value = '';
 
-    // Check if there is an advanced discount
     const exportSubtotal = sortedLines.reduce((s, o) => s + getLineTotal(o), 0);
     const exportDiscVal = Number(info.discountValue) || 0;
     let exportDiscount = 0;
@@ -3652,7 +3623,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     }
 
     if (exportDiscount > 0) {
-      // Subtotal Line
       ws.getCell(r, 6).value = excelText('المجموع قبل الخصم');
       ws.getCell(r, 8).value = parseFloat(exportSubtotal.toFixed(2));
       for (let c = 1; c <= 8; c++) {
@@ -3665,7 +3635,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       }
       r++;
 
-      // Discount Line
       ws.getCell(r, 6).value = excelText('الخصم الإضافي');
       ws.getCell(r, 8).value = parseFloat((-exportDiscount).toFixed(2));
       for (let c = 1; c <= 8; c++) {
@@ -3679,9 +3648,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       r++;
     }
 
-    // Final Total Line
     ws.getCell(r, 6).value = excelText(exportDiscount > 0 ? 'المجموع النهائي' : 'المجموع الكلي');
-    ws.getCell(r, 8).value = parseFloat(orderTotal.toFixed(2));
+    ws.getCell(r, 8).value = parseFloat(Number(total).toFixed(2));
     for (let c = 1; c <= 8; c++) {
       const cell = ws.getCell(r, c);
       styleCell(cell, {
@@ -3706,9 +3674,37 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Order-${(info.companyName || info.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${info.orderDate || new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.download = fileNameOverride || `Order-${(info.companyName || info.merchantName || 'Order').replace(/[/\\:*?"<>|]/g, '')}-${info.orderDate || new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
+  }, [items]);
+
+  const handleExportExcel = useCallback(async (skipSave = false, infoOverride) => {
+    const info = infoOverride || orderInfo;
+    const error = validateOrderInfo(info);
+    if (error) {
+      if (!skipSave) { // Only alert if NOT part of combined save
+        alert(error + '\nPlease fill in all required customer details.');
+        if (orderLines.length > 0) setShowOrderSubmitModal(true);
+      }
+      return;
+    }
+
+    let saved = skipSave ? true : false;
+    // If an existing order ID is set, we're processing an already-saved order — skip re-insert
+    const isSupervisorProcessing = !!currentOrderId;
+
+    if (!skipSave) {
+      if (isSupervisorProcessing) {
+        saved = true; // Order already exists in DB, no re-insert needed
+      } else {
+        saved = await saveOrderToSupabase(info);
+      }
+    }
+
+    if (!saved && !isSupervisorProcessing) return;
+
+    await downloadFormattedSalesOrderExcel(info, orderLines, orderTotal);
 
     // Keep the order in the database as 'completed' (don't delete it)
     if (isSupervisorProcessing) {
@@ -3734,7 +3730,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     } else if (saved) {
       clearOrderAndInfo();
     }
-  }, [orderLines, orderTotal, orderInfo, currentOrderId, userRole, items]);
+  }, [orderLines, orderTotal, orderInfo, currentOrderId, userRole, items, downloadFormattedSalesOrderExcel]);
 
   const handleOpenInventory = () => {
     const html = getInventoryHtml();
@@ -5387,57 +5383,71 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             {orderActionLoading ? <Loader2 size={18} className="animate-spin" /> : <div className="flex items-center gap-2"><span className="text-lg">✓</span> موافق</div>}
                           </button>
 
-                          {/* Excel Export Button */}
+                          {/* Excel — نفس تنسيق تصدير الطلبية من شاشة المبيعات */}
                           <button
                             type="button"
                             onClick={async () => {
                               if (!selectedOrder) return;
                               setOrderActionLoading(true);
                               try {
-                                const ExcelJS = (await import('exceljs')).default;
-                                const excelText = (t) => (t != null && typeof t !== 'string' ? String(t) : (t || ''));
-
-                                const wb = new ExcelJS.Workbook();
-                                const ws = wb.addWorksheet('Order Details', {
-                                  views: [{ rightToLeft: false, showGridLines: false }]
+                                const raw = selectedOrder.details;
+                                const d = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+                                const orderDateStr =
+                                  d.orderDate ||
+                                  selectedOrder.order_date ||
+                                  (selectedOrder.created_at
+                                    ? new Date(selectedOrder.created_at).toISOString().slice(0, 10)
+                                    : new Date().toISOString().slice(0, 10));
+                                const info = {
+                                  companyName: (d.companyName || selectedOrder.customer_name || '').trim() || '—',
+                                  merchantName: (d.merchantName || d.merchant_name || selectedOrder.customer_name || '').trim() || '—',
+                                  customerNumber: String(d.customerNumber ?? selectedOrder.customer_number ?? ''),
+                                  phone: String(d.phone ?? selectedOrder.customer_phone ?? ''),
+                                  address: (String(d.address ?? selectedOrder.customer_address ?? '').trim()) || '—',
+                                  orderDate: orderDateStr,
+                                  paymentMethod: String(d.paymentMethod ?? selectedOrder.payment_method ?? ''),
+                                  checksCount: d.checksCount != null && d.checksCount !== '' ? String(d.checksCount) : '',
+                                  discountType: d.discountType || '',
+                                  discountValue: d.discountValue != null && d.discountValue !== '' ? String(d.discountValue) : '',
+                                  email: d.email || '',
+                                  notes: d.notes || '',
+                                };
+                                const lines = (selectedOrder.items || []).map((row) => {
+                                  const barcode = row.barcode || '';
+                                  const liveItem = barcode ? items.find((it) => barcodesMatch(it.barcode, barcode)) : null;
+                                  const consumer = Number(
+                                    row.consumer_price != null && row.consumer_price !== ''
+                                      ? row.consumer_price
+                                      : (liveItem?.price ?? row.price ?? 0),
+                                  );
+                                  const unit = Number(
+                                    row.unit_price != null && row.unit_price !== ''
+                                      ? row.unit_price
+                                      : (row.price ?? consumer),
+                                  );
+                                  return {
+                                    barcode,
+                                    qty: Number(row.qty) || 0,
+                                    customName: row.name,
+                                    product_type: row.product_type,
+                                    name: row.name,
+                                    item:
+                                      liveItem || {
+                                        barcode,
+                                        name: row.name,
+                                        group: row.group,
+                                        productType: row.product_type,
+                                        price: consumer,
+                                        priceAfterDiscount: unit,
+                                      },
+                                    unitPrice: unit,
+                                  };
                                 });
-
-                                ws.columns = [
-                                  { header: excelText('الباركود'), key: 'barcode', width: 15 },
-                                  { header: excelText('الصنف'), key: 'name', width: 30 },
-                                  { header: excelText('الكمية'), key: 'qty', width: 10 },
-                                  { header: excelText('السعر'), key: 'price', width: 12 },
-                                  { header: excelText('المجموع'), key: 'total', width: 12 },
-                                ];
-
-                                (selectedOrder.items || []).forEach(item => {
-                                  const row = ws.addRow({
-                                    barcode: excelText(item.barcode),
-                                    name: excelText(item.name || item.customName),
-                                    qty: item.qty,
-                                    price: item.unit_price || item.price,
-                                    total: item.total
-                                  });
-                                  row.eachCell({ includeEmpty: true }, (cell) => {
-                                    cell.alignment = { readingOrder: 2, wrapText: true, horizontal: 'right' };
-                                  });
-                                });
-
-                                ws.addRow({});
-                                const totalRow = ws.addRow({ name: excelText('المجموع الكلي'), total: selectedOrder.total_amount });
-                                totalRow.eachCell({ includeEmpty: true }, (cell) => {
-                                  cell.alignment = { readingOrder: 2, wrapText: true, horizontal: 'right' };
-                                });
-
-                                const buf = await wb.xlsx.writeBuffer();
-                                const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `Order_${selectedOrder.id}_${selectedOrder.customer_name || ''}.xlsx`;
-                                a.click();
-                                URL.revokeObjectURL(url);
-
+                                const sub = lines.reduce((s, o) => s + getLineTotal(o), 0);
+                                const exportTotal = Math.max(0, sub - getOrderDiscount(sub, info));
+                                const safe = (s) => String(s || 'Order').replace(/[/\\:*?"<>|]/g, '');
+                                const fileName = `Order-ID${selectedOrder.id}_${safe(info.companyName)}.xlsx`;
+                                await downloadFormattedSalesOrderExcel(info, lines, exportTotal, fileName);
                               } catch (e) {
                                 console.error(e);
                                 alert('Error exporting Excel: ' + e.message);
