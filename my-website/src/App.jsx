@@ -3465,17 +3465,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const handleOpenSaveExportModal = useCallback(() => {
-    // If processing an existing approved order, export directly without showing the submit modal
-    if (currentOrderId) {
-      handleSaveInvoice();
-      return;
-    }
     if (orderLines.length === 0) {
       alert('السلة فارغة. أضف منتجات أولاً قبل التصدير.');
       return;
     }
     setShowOrderSubmitModal(true);
-  }, [currentOrderId, orderLines.length]);
+  }, [orderLines.length]);
 
   const handleConfirmOrderSubmitModal = useCallback(() => {
     const err = validateOrderInfo(orderInfo);
@@ -3488,6 +3483,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       address: (orderInfo.address || '').trim() || '—',
       orderDate: orderInfo.orderDate || new Date().toISOString().slice(0, 10),
     };
+    setCurrentOrderId(null);
     setShowOrderSubmitModal(false);
     handleSaveInvoice(merged);
   }, [orderInfo]);
@@ -7867,156 +7863,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </div>
         </div>
       </div>
-      </div>
-
-      {
-        !showOrderPanel && !showCartOverlay && mode === 'order' && (
-          <motion.button
-            ref={cartIconRef}
-            onClick={() => setShowCartOverlay(true)}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 py-4 px-4 rounded-2xl bg-gradient-to-b from-orange-500 to-amber-600 text-white shadow-xl shadow-orange-500/30 border border-white/20 hover:shadow-orange-500/40 transition-shadow"
-          >
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-              <ShoppingCart size={20} strokeWidth={2.25} className="text-white" />
-            </div>
-            <motion.span
-              className="text-xs font-bold text-white/90 leading-none inline-block"
-              animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-            >
-              {orderLines.length} {orderLines.length === 1 ? 'قطعة' : 'قطع'}
-            </motion.span>
-            <span className="text-sm font-black tracking-tight leading-none" dir="ltr">
-              ₪{orderSubtotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </span>
-          </motion.button>
-        )
-      }
-
-      {/* Glassmorphism Slide-over Cart — سلة جانبية مع صور مصغرة وعداد كمية */}
-      <AnimatePresence>
-        {showCartOverlay && mode === 'order' && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[48] bg-black/25 backdrop-blur-sm"
-              onClick={() => setShowCartOverlay(false)}
-              aria-hidden="true"
-            />
-            <motion.aside
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 w-[min(360px,100vw)] z-[49] flex flex-col overflow-hidden border-l border-white/40 shadow-2xl bg-white/70 backdrop-blur-2xl"
-            >
-              <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-200/60 bg-white/50">
-                <h3 className="text-lg font-black text-slate-800">سلة المشتريات</h3>
-                <button
-                  onClick={() => setShowCartOverlay(false)}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-                  aria-label="إغلاق"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-                {orderLines.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                      <ShoppingCart className="text-slate-400" size={28} strokeWidth={1.5} />
-                    </div>
-                    <p className="text-sm font-bold text-slate-600">السلة فارغة</p>
-                    <p className="text-xs text-slate-500 mt-1">أضف منتجات من القائمة</p>
-                  </div>
-                ) : (
-                  orderLines.map((o) => (
-                    <motion.div
-                      key={o.id}
-                      layout
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 border border-slate-200/60 flex items-center justify-center">
-                        {getImage(o.item) ? (
-                          <img src={getImage(o.item)} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
-                        ) : (
-                          <Package size={20} className="text-slate-400" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-800 truncate">
-                          {o.customName || o.name || o.item?.name || '—'}
-                        </p>
-                        <p className="text-xs text-slate-500 font-mono">{o.item?.barcode}</p>
-                      </div>
-                      <div className="flex items-center gap-1 rounded-xl bg-slate-100 border border-slate-200/80 p-1 shrink-0" dir="ltr">
-                        <motion.button
-                          whileTap={{ scale: 0.85 }}
-                          onClick={() => changeOrderQtyBy(o.id, -1)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-white hover:text-orange-500 transition-colors"
-                          aria-label="تقليل"
-                        >
-                          <Minus size={16} strokeWidth={2.5} />
-                        </motion.button>
-                        <span className="w-8 text-center text-sm font-black text-slate-800 tabular-nums">
-                          {o.qty ?? 0}
-                        </span>
-                        <motion.button
-                          whileTap={{ scale: 0.85 }}
-                          onClick={() => changeOrderQtyBy(o.id, 1)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-white hover:text-orange-500 transition-colors"
-                          aria-label="زيادة"
-                        >
-                          <Plus size={16} strokeWidth={2.5} />
-                        </motion.button>
-                      </div>
-                      <button
-                        onClick={() => removeFromOrder(o.id)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0"
-                        aria-label="حذف"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-              {orderLines.length > 0 && (
-                <div className="flex-shrink-0 p-4 border-t border-slate-200/60 bg-white/60 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-slate-600">المجموع</span>
-                    <span className="text-lg font-black text-slate-900" dir="ltr">₪{orderSubtotal.toFixed(2)}</span>
-                  </div>
-                  <button
-                    onClick={() => { setShowCartOverlay(false); setShowOrderPanel(true); }}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-orange-500/30 transition-all active:scale-[0.98]"
-                  >
-                    تفاصيل وإتمام الطلب
-                  </button>
-                </div>
-              )}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-      {
-        !showCatalogPanel && mode === 'catalog' && (
-          <button
-            onClick={() => setShowCatalogPanel(true)}
-            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
-            style={{ writingMode: 'vertical-rl' }}
-          >
-            عرض الكتالوج
-          </button>
-        )
-      }
-
       {
         showOrderPanel && mode === 'order' && (
           <aside className="pos-panel flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden border-l shadow-2xl z-50 transition-all duration-500 backdrop-blur-xl bg-white/95 border-slate-200 text-slate-800">
@@ -8298,36 +8144,186 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           </aside>
         )
       }
+      </div>
 
-      {/* معلومات الطلبية — قبل اتمام الطلبية */}
+      {
+        !showOrderPanel && !showCartOverlay && mode === 'order' && (
+          <motion.button
+            ref={cartIconRef}
+            onClick={() => setShowCartOverlay(true)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 py-4 px-4 rounded-2xl bg-gradient-to-b from-orange-500 to-amber-600 text-white shadow-xl shadow-orange-500/30 border border-white/20 hover:shadow-orange-500/40 transition-shadow"
+          >
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <ShoppingCart size={20} strokeWidth={2.25} className="text-white" />
+            </div>
+            <motion.span
+              className="text-xs font-bold text-white/90 leading-none inline-block"
+              animate={cartPing ? { scale: [1, 1.5, 1] } : {}}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
+              {orderLines.length} {orderLines.length === 1 ? 'قطعة' : 'قطع'}
+            </motion.span>
+            <span className="text-sm font-black tracking-tight leading-none" dir="ltr">
+              ₪{orderSubtotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+          </motion.button>
+        )
+      }
+
+      {/* Glassmorphism Slide-over Cart — سلة جانبية مع صور مصغرة وعداد كمية */}
+      <AnimatePresence>
+        {showCartOverlay && mode === 'order' && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[48] bg-black/25 backdrop-blur-sm"
+              onClick={() => setShowCartOverlay(false)}
+              aria-hidden="true"
+            />
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 w-[min(360px,100vw)] z-[49] flex flex-col overflow-hidden border-l border-white/40 shadow-2xl bg-white/70 backdrop-blur-2xl"
+            >
+              <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-200/60 bg-white/50">
+                <h3 className="text-lg font-black text-slate-800">سلة المشتريات</h3>
+                <button
+                  onClick={() => setShowCartOverlay(false)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                  aria-label="إغلاق"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+                {orderLines.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                      <ShoppingCart className="text-slate-400" size={28} strokeWidth={1.5} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-600">السلة فارغة</p>
+                    <p className="text-xs text-slate-500 mt-1">أضف منتجات من القائمة</p>
+                  </div>
+                ) : (
+                  orderLines.map((o) => (
+                    <motion.div
+                      key={o.id}
+                      layout
+                      className="flex items-center gap-3 p-3 rounded-2xl bg-white/80 border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 border border-slate-200/60 flex items-center justify-center">
+                        {getImage(o.item) ? (
+                          <img src={getImage(o.item)} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
+                        ) : (
+                          <Package size={20} className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 truncate">
+                          {o.customName || o.name || o.item?.name || '—'}
+                        </p>
+                        <p className="text-xs text-slate-500 font-mono">{o.item?.barcode}</p>
+                      </div>
+                      <div className="flex items-center gap-1 rounded-xl bg-slate-100 border border-slate-200/80 p-1 shrink-0" dir="ltr">
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => changeOrderQtyBy(o.id, -1)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-white hover:text-orange-500 transition-colors"
+                          aria-label="تقليل"
+                        >
+                          <Minus size={16} strokeWidth={2.5} />
+                        </motion.button>
+                        <span className="w-8 text-center text-sm font-black text-slate-800 tabular-nums">
+                          {o.qty ?? 0}
+                        </span>
+                        <motion.button
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => changeOrderQtyBy(o.id, 1)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 hover:bg-white hover:text-orange-500 transition-colors"
+                          aria-label="زيادة"
+                        >
+                          <Plus size={16} strokeWidth={2.5} />
+                        </motion.button>
+                      </div>
+                      <button
+                        onClick={() => removeFromOrder(o.id)}
+                        className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0"
+                        aria-label="حذف"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+              {orderLines.length > 0 && (
+                <div className="flex-shrink-0 p-4 border-t border-slate-200/60 bg-white/60 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold text-slate-600">المجموع</span>
+                    <span className="text-lg font-black text-slate-900" dir="ltr">₪{orderSubtotal.toFixed(2)}</span>
+                  </div>
+                  <button
+                    onClick={() => { setShowCartOverlay(false); setShowOrderPanel(true); }}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-orange-500/30 transition-all active:scale-[0.98]"
+                  >
+                    تفاصيل وإتمام الطلب
+                  </button>
+                </div>
+              )}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {
+        !showCatalogPanel && mode === 'catalog' && (
+          <button
+            onClick={() => setShowCatalogPanel(true)}
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
+            style={{ writingMode: 'vertical-rl' }}
+          >
+            عرض الكتالوج
+          </button>
+        )
+      }
+
+
+      {/* معلومات الطلبية — نافذة مركزية بسيطة (سلوك موحّد مع RTL ولا تغطي لوحة POS بالكامل) */}
       {showOrderSubmitModal && (
         <div
-          className="fixed inset-0 z-[260] flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-sm"
+          className="fixed inset-0 z-[260] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="order-submit-modal-title"
           onClick={() => setShowOrderSubmitModal(false)}
         >
           <div
-            className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[min(92vh,880px)] flex flex-col border border-slate-100 overflow-hidden"
+            className="flex max-h-[min(92vh,880px)] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl"
             dir="rtl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100">
+            <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 pb-3 pt-5">
               <h2 id="order-submit-modal-title" className="text-xl font-black text-slate-900">
                 معلومات الطلبية
               </h2>
               <button
                 type="button"
                 onClick={() => setShowOrderSubmitModal(false)}
-                className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-800"
                 aria-label="إغلاق"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-4 space-y-4">
+            <div className="custom-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-4 pt-4">
               {/* 1. التلفون */}
               <div className="space-y-1.5 relative">
                 <label className="text-[11px] font-bold text-slate-500 mr-1 flex items-center justify-between">
@@ -8600,18 +8596,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               )}
             </div>
 
-            <div className="flex-shrink-0 flex flex-col-reverse sm:flex-row gap-3 px-5 pb-5 pt-3 border-t border-slate-100 bg-white">
+            <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-slate-100 bg-white px-5 pb-5 pt-3 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setShowOrderSubmitModal(false)}
-                className="flex-1 py-3.5 rounded-2xl font-bold border-2 border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                className="flex-1 rounded-2xl border-2 border-slate-200 py-3.5 font-bold text-slate-600 transition-colors hover:bg-slate-50"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleConfirmOrderSubmitModal}
-                className="flex-1 py-3.5 rounded-2xl font-bold bg-slate-900 text-white hover:bg-slate-800 shadow-lg transition-colors"
+                className="flex-1 rounded-2xl bg-slate-900 py-3.5 font-bold text-white shadow-lg transition-colors hover:bg-slate-800"
               >
                 إرسال الطلبية
               </button>
