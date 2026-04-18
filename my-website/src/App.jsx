@@ -70,6 +70,9 @@ import {
   Wallet,
   Copy,
   MessageCircle,
+  Download,
+  HardDrive,
+  RotateCcw,
 } from 'lucide-react';
 import { motion, useAnimation, AnimatePresence }
   from 'framer-motion';
@@ -88,6 +91,13 @@ import { QUERY_STALE_DEFAULT_MS, QUERY_STALE_REPORTS_MS } from './lib/queryClien
 
 const BUCKET = 'Pic_of_items';
 const PAGE_SIZE = 12;
+
+/** عند التفعيل (VITE_ADMIN_ONLY_ACCESS=true): لا يُسمح إلا بحساب المدير — إغلاق وضع الزائر/المبيعات مؤقتاً. */
+const ADMIN_ONLY_ACCESS =
+  import.meta.env.VITE_ADMIN_ONLY_ACCESS === 'true' ||
+  import.meta.env.VITE_ADMIN_ONLY_ACCESS === '1';
+
+const isSalesAdminRole = (r) => String(r || '').trim().toLowerCase() === 'admin';
 
 /** Safe date format so changing browser language never crashes the app. */
 function safeLocaleDate(options = {}) {
@@ -480,6 +490,11 @@ function App() {
   // إدارة الجلسات والحسابات: إخفاء التفاصيل حتى يدخل المستخدم إلى القسم
   const [showSessionManagementDetails, setShowSessionManagementDetails] = useState(false);
 
+  // النسخ الاحتياطية
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const restoreInputRef = useRef(null);
+
   // Return Customer Display Early
   if (isCustomerDisplayMode) {
     return (
@@ -543,6 +558,36 @@ function App() {
     const auth = localStorage.getItem('sales_auth');
     const role = localStorage.getItem('sales_role');
     const storedUser = localStorage.getItem('sales_username');
+
+    if (ADMIN_ONLY_ACCESS) {
+      const ok = auth === 'true' && isSalesAdminRole(role);
+      if (!ok) {
+        localStorage.removeItem('sales_auth');
+        localStorage.removeItem('sales_role');
+        localStorage.removeItem('sales_username');
+        localStorage.removeItem('sales_login_time');
+        localStorage.removeItem('sales_remember_me');
+        setIsAuthenticated(false);
+        setUserRole(null);
+        setUsername(null);
+        setShowLoginScreen(true);
+        setHasCheckedAuth(true);
+        return;
+      }
+      try {
+        const lt = parseInt(localStorage.getItem('sales_login_time'), 10);
+        if (!Number.isFinite(lt) || lt <= 0) {
+          localStorage.setItem('sales_login_time', String(Date.now()));
+        }
+      } catch (_) { }
+      setIsAuthenticated(true);
+      setUserRole('admin');
+      setUsername(storedUser || null);
+      setShowLoginScreen(false);
+      setHasCheckedAuth(true);
+      return;
+    }
+
     if (auth === 'true') {
       try {
         const lt = parseInt(localStorage.getItem('sales_login_time'), 10);
@@ -584,7 +629,12 @@ function App() {
     try {
       const { data, error } = await supabase.from('sales_users').select('username, password, role').eq('username', username.trim()).maybeSingle();
       if (!error && data && String(data.password) === String(password)) {
-        loginSuccess(data.role || 'customer', data.username);
+        const resolvedRole = isSalesAdminRole(data.role) ? 'admin' : (data.role || 'customer');
+        if (ADMIN_ONLY_ACCESS && resolvedRole !== 'admin') {
+          setError('الدخول مقفل مؤقتاً: استخدم حساب المدير فقط.');
+          return;
+        }
+        loginSuccess(resolvedRole, data.username);
         return;
       }
     } catch (_) { /* جدول غير موجود أو خطأ — نكمل للقائمة الثابتة */ }
@@ -594,8 +644,16 @@ function App() {
     } else if (username === 'admin' && password === '123456') {
       loginSuccess('admin');
     } else if (username === 'sale' && password === '123') {
+      if (ADMIN_ONLY_ACCESS) {
+        setError('الدخول مقفل مؤقتاً: استخدم حساب المدير فقط.');
+        return;
+      }
       loginSuccess('customer');
     } else if (username === 'supervisor' && password === '123') {
+      if (ADMIN_ONLY_ACCESS) {
+        setError('الدخول مقفل مؤقتاً: استخدم حساب المدير فقط.');
+        return;
+      }
       loginSuccess('supervisor');
     } else {
       setError('اسم المستخدم أو كلمة المرور غير صحيحة');
@@ -605,7 +663,13 @@ function App() {
   const handleBiometricLogin = async (setError, rememberMe = true) => {
     try {
       const storedUsername = localStorage.getItem('sales_bio_username');
-      const storedRole = localStorage.getItem('sales_bio_role') || 'customer';
+      const rawBioRole = localStorage.getItem('sales_bio_role') || 'customer';
+      const storedRole = isSalesAdminRole(rawBioRole) ? 'admin' : rawBioRole;
+
+      if (ADMIN_ONLY_ACCESS && storedRole !== 'admin') {
+        setError?.('الدخول مقفل مؤقتاً: البصمة مفعّلة لمستخدم غير المدير.');
+        return;
+      }
 
       if (!storedUsername) {
         setError?.('البصمة غير مفعلة على هذا الجهاز. استخدم رقم السري.');
@@ -641,11 +705,18 @@ function App() {
       localStorage.removeItem('sales_username');
       localStorage.removeItem('sales_login_time');
       localStorage.removeItem('sales_remember_me');
-      setIsAuthenticated(true);
-      setUserRole('customer');
-      setUsername('public_sale');
-      setMode('order');
-      setShowLoginScreen(false);
+      if (ADMIN_ONLY_ACCESS) {
+        setIsAuthenticated(false);
+        setUserRole(null);
+        setUsername(null);
+        setShowLoginScreen(true);
+      } else {
+        setIsAuthenticated(true);
+        setUserRole('customer');
+        setUsername('public_sale');
+        setMode('order');
+        setShowLoginScreen(false);
+      }
       /* لا نُعيد شاشة الترحيب بعد الخروج — يبقى التطبيق يعمل مباشرة كوضع زائر */
       setShowSplash(false);
     }
@@ -711,6 +782,208 @@ function App() {
       setPasswordUpdateLoading(false);
     }
   }, []);
+
+  const handleCreateBackup = async () => {
+    setBackupLoading(true);
+    try {
+      // 1. جلب جميع بيانات قواعد البيانات (كل الجداول)
+      const [itemsRes, offersRes, customersRes, ledgerRes, settingsRes, ordersRes, usersRes, logsRes] = await Promise.all([
+        supabase.from('items').select('*'),
+        supabase.from('custom_offers').select('*'),
+        supabase.from('customers').select('*'),
+        supabase.from('customer_ar_ledger').select('*'),
+        supabase.from('app_settings').select('*'),
+        supabase.from('orders').select('*'),
+        supabase.from('sales_users').select('*'),
+        supabase.from('activity_logs').select('*'),
+      ]);
+
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const dateLabel = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+
+      const dbData = {
+        version: 3,
+        created_at: now.toISOString(),
+        tables: {
+          items: itemsRes.data || [],
+          custom_offers: offersRes.data || [],
+          customers: customersRes.data || [],
+          customer_ar_ledger: ledgerRes.data || [],
+          app_settings: settingsRes.data || [],
+          orders: ordersRes.data || [],
+          sales_users: usersRes.data || [],
+          activity_logs: logsRes.data || [],
+        },
+      };
+
+      // 2. إنشاء ملف ZIP
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      zip.file('data.json', JSON.stringify(dbData, null, 2));
+
+      const storageFolder = zip.folder('storage');
+      const productsFolder = storageFolder.folder('products');
+      const logosFolder = storageFolder.folder('logos');
+
+      // 3. استخراج مسارات صور المنتجات (تدعم الاسم المباشر والـ URL الكامل)
+      const SUPABASE_URL_VAL = import.meta.env.VITE_SUPABASE_URL || '';
+      const extractStoragePath = (imageValue) => {
+        if (!imageValue || typeof imageValue !== 'string') return null;
+        const v = imageValue.trim();
+        if (!v) return null;
+        if (v.startsWith('http')) {
+          // استخراج المسار من URL كامل مثل: https://xxx.supabase.co/storage/v1/object/public/Pic_of_items/filename.jpg
+          const marker = '/Pic_of_items/';
+          const idx = v.indexOf(marker);
+          if (idx === -1) return null;
+          return v.slice(idx + marker.length).split('?')[0];
+        }
+        return v; // اسم ملف مباشر
+      };
+
+      const allItems = itemsRes.data || [];
+      const imagePaths = [...new Set(
+        allItems.map(i => extractStoragePath(i.image_url)).filter(Boolean)
+      )];
+
+      await Promise.allSettled(
+        imagePaths.map(async (storagePath) => {
+          try {
+            const { data: blob, error } = await supabase.storage.from('Pic_of_items').download(storagePath);
+            if (!error && blob) {
+              // حفظ الملف مع الحفاظ على المسار الأصلي داخل ZIP
+              productsFolder.file(storagePath, blob);
+            }
+          } catch (e) {
+            console.warn('Could not download image:', storagePath, e);
+          }
+        })
+      );
+
+      // 4. تحميل شعارات الماركات
+      const { data: logoFiles } = await supabase.storage.from('Pic_of_items').list('logos', { limit: 500 });
+      let logoCount = 0;
+      if (logoFiles) {
+        await Promise.allSettled(
+          logoFiles
+            .filter(f => f.name && f.name !== '.emptyFolderPlaceholder')
+            .map(async (file) => {
+              try {
+                const { data: blob, error } = await supabase.storage.from('Pic_of_items').download(`logos/${file.name}`);
+                if (!error && blob) {
+                  logosFolder.file(file.name, blob);
+                  logoCount++;
+                }
+              } catch (e) {
+                console.warn('Could not download logo:', file.name, e);
+              }
+            })
+        );
+      }
+
+      // 5. توليد ZIP وتحميله
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_${dateLabel}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      const sizeMB = (zipBlob.size / 1024 / 1024).toFixed(1);
+      alert(
+        `✅ النسخة الاحتياطية الكاملة جاهزة!\n` +
+        `📅 التاريخ: ${dateLabel.replace('_', ' ')}\n` +
+        `📦 الحجم: ${sizeMB} MB\n\n` +
+        `تشمل:\n` +
+        `• ${(itemsRes.data || []).length} منتج (أسماء، أسعار، تصنيفات)\n` +
+        `• ${imagePaths.length} صورة منتج\n` +
+        `• ${logoCount} شعار ماركة\n` +
+        `• ${(customersRes.data || []).length} عميل\n` +
+        `• ${(ordersRes.data || []).length} طلب\n` +
+        `• ${(offersRes.data || []).length} عرض خاص\n` +
+        `• سجلات الحسابات والإعدادات والمستخدمين`
+      );
+    } catch (e) {
+      console.error('Backup error:', e);
+      alert('فشل إنشاء النسخة الاحتياطية: ' + (e?.message || e));
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestoreBackup = async (file) => {
+    if (!file) return;
+    if (!window.confirm('تحذير: سيتم دمج جميع البيانات والصور من النسخة الاحتياطية مع البيانات الحالية.\n\nهل أنت متأكد من الاسترجاع؟')) return;
+    setRestoreLoading(true);
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = await JSZip.loadAsync(file);
+
+      // 1. استرجاع قاعدة البيانات
+      const dataFile = zip.file('data.json');
+      if (!dataFile) throw new Error('ملف data.json غير موجود — تأكد أن الملف نسخة احتياطية صحيحة (.zip).');
+
+      const dataJson = await dataFile.async('string');
+      const backup = JSON.parse(dataJson);
+      if (!backup?.tables) throw new Error('محتوى data.json غير صالح.');
+
+      const { items: iData, custom_offers: oData, customers: cData, customer_ar_ledger: lData, app_settings: aData, orders: ordData, sales_users: usData, activity_logs: alData } = backup.tables;
+      const dbOps = [];
+      if (iData?.length) dbOps.push(supabase.from('items').upsert(iData));
+      if (oData?.length) dbOps.push(supabase.from('custom_offers').upsert(oData));
+      if (cData?.length) dbOps.push(supabase.from('customers').upsert(cData));
+      if (lData?.length) dbOps.push(supabase.from('customer_ar_ledger').upsert(lData));
+      if (aData?.length) dbOps.push(supabase.from('app_settings').upsert(aData));
+      if (ordData?.length) dbOps.push(supabase.from('orders').upsert(ordData));
+      if (usData?.length) dbOps.push(supabase.from('sales_users').upsert(usData));
+      if (alData?.length) dbOps.push(supabase.from('activity_logs').upsert(alData));
+      await Promise.all(dbOps);
+
+      // 2. استرجاع ملفات الصور إلى Supabase Storage
+      const storageFiles = Object.entries(zip.files).filter(([path, f]) => path.startsWith('storage/') && !f.dir);
+      const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', bmp: 'image/bmp' };
+
+      await Promise.allSettled(
+        storageFiles.map(async ([zipPath, zipFile]) => {
+          let storagePath = '';
+          if (zipPath.startsWith('storage/products/')) {
+            // يحافظ على المسار الأصلي بما فيه المجلدات الفرعية
+            storagePath = zipPath.replace('storage/products/', '');
+          } else if (zipPath.startsWith('storage/logos/')) {
+            storagePath = zipPath.replace('storage/logos/', 'logos/');
+          }
+          if (!storagePath) return;
+
+          const blob = await zipFile.async('blob');
+          const ext = storagePath.split('.').pop().toLowerCase();
+          const contentType = mimeMap[ext] || 'application/octet-stream';
+
+          await supabase.storage.from('Pic_of_items').upload(storagePath, blob, {
+            upsert: true,
+            contentType,
+            cacheControl: '31536000',
+          });
+        })
+      );
+
+      alert('✅ تم استرجاع النسخة الاحتياطية الكاملة بنجاح!\n(قواعد البيانات + الصور + الشعارات)\n\nسيتم تحديث الصفحة...');
+      window.location.reload();
+    } catch (e) {
+      console.error('Restore error:', e);
+      alert('فشل استرجاع النسخة الاحتياطية: ' + (e?.message || e));
+    } finally {
+      setRestoreLoading(false);
+      if (restoreInputRef.current) restoreInputRef.current.value = '';
+    }
+  };
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -6791,6 +7064,53 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                         )}
                       </div>
                     </div>
+
+                    {/* النسخ الاحتياطي والاسترجاع */}
+                    {userRole === 'admin' && (
+                      <div className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mb-2">
+                          <HardDrive size={32} />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">النسخ الاحتياطي والاسترجاع</h2>
+                        <p className="text-slate-500 max-w-sm mx-auto text-sm">
+                          احفظ نسخة كاملة من النظام على جهازك (بيانات + صور المنتجات + شعارات الماركات + المستخدمين)، أو استرجع من نسخة سابقة.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full justify-center">
+                          {/* زر إنشاء نسخة احتياطية */}
+                          <button
+                            type="button"
+                            onClick={handleCreateBackup}
+                            disabled={backupLoading || restoreLoading}
+                            className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {backupLoading ? <Loader2 size={20} className="animate-spin" /> : <Download size={20} />}
+                            <span>{backupLoading ? 'جارٍ الحفظ...' : 'إنشاء نسخة احتياطية'}</span>
+                          </button>
+
+                          {/* زر استرجاع نسخة احتياطية */}
+                          <label className={`flex items-center gap-3 px-6 py-4 rounded-2xl font-bold shadow-lg transition-all cursor-pointer ${restoreLoading || backupLoading ? 'opacity-50 cursor-not-allowed bg-slate-200 text-slate-500' : 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] active:scale-[0.98]'}`}>
+                            {restoreLoading ? <Loader2 size={20} className="animate-spin" /> : <RotateCcw size={20} />}
+                            <span>{restoreLoading ? 'جارٍ الاسترجاع...' : 'استرجاع نسخة احتياطية'}</span>
+                            <input
+                              ref={restoreInputRef}
+                              type="file"
+                              accept=".zip,application/zip"
+                              className="hidden"
+                              disabled={restoreLoading || backupLoading}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleRestoreBackup(file);
+                              }}
+                            />
+                          </label>
+                        </div>
+
+                        <p className="text-xs text-slate-400 mt-2">
+                          ملف النسخة الاحتياطية: ZIP يشمل قاعدة البيانات الكاملة + صور المنتجات + شعارات الماركات + حسابات المستخدمين.
+                        </p>
+                      </div>
+                    )}
 
                     {/* مودال تغيير كلمة المرور */}
                     {editingPasswordUser && userRole === 'admin' && createPortal(
