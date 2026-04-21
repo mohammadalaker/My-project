@@ -4929,7 +4929,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       if (prev.some(i => i.id === item.id)) return prev;
       return [...prev, item];
     });
-    setShowCatalogPanel(true); // Auto-open panel
   };
 
   const removeFromCatalog = (id) => {
@@ -4948,7 +4947,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       const toAdd = sourceItems.filter(i => !existingIds.has(i.id));
       return [...prev, ...toAdd];
     });
-    setShowCatalogPanel(true);
   };
 
   const handlePrintCatalog = useCallback(() => {
@@ -8110,12 +8108,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                             else addToCatalog(item);
                                           }}
                                           className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all btn-modern ${catalogItems.some((i) => i.id === item.id)
-                                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                                            ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-400/50'
                                             : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] text-slate-600 hover:bg-rose-50 hover:text-rose-600 border border-slate-200'
                                             }`}
                                         >
-                                            {catalogItems.some((i) => i.id === item.id) ? (
-                                            <><Trash2 size={16} /> إزالة</>
+                                          {catalogItems.some((i) => i.id === item.id) ? (
+                                            <><FileText size={16} /> تمت الإضافة ✓</>
                                           ) : (
                                             <><FileText size={16} /> الكتالوج</>
                                           )}
@@ -8606,10 +8604,18 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         !showCatalogPanel && mode === 'catalog' && (
           <button
             onClick={() => setShowCatalogPanel(true)}
-            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20"
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-3 rounded-l-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white text-lg font-bold shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 border-l-2 border-white/20 flex flex-col items-center gap-2"
             style={{ writingMode: 'vertical-rl' }}
           >
             عرض الكتالوج
+            {catalogItems.length > 0 && (
+              <span
+                style={{ writingMode: 'horizontal-tb' }}
+                className="bg-white text-rose-600 text-xs font-black rounded-full w-6 h-6 flex items-center justify-center shadow"
+              >
+                {catalogItems.length}
+              </span>
+            )}
           </button>
         )
       }
