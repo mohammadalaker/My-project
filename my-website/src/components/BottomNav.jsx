@@ -48,7 +48,7 @@ export default function BottomNav({ mode, setMode, cartCount, cartTotal = 0, car
                 className={`flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 ${mode === 'catalog' ? 'text-rose-600 bg-rose-50 -translate-y-1' : 'text-slate-400 hover:text-slate-600'}`}
             >
                 <Grid size={22} strokeWidth={mode === 'catalog' ? 2.5 : 2} className={mode === 'catalog' ? 'drop-shadow-sm' : ''} />
-                <span className="text-[10px] font-bold">الكتالوج</span>
+                <span className="text-[10px] font-bold">Catalog</span>
             </button>
         </div>
     );

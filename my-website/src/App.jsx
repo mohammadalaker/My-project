@@ -4904,7 +4904,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
     </div>
     <div class="catalog-title">
         <h3>المجموعة</h3>
-        <h2>الكتالوج</h2>
+        <h2>Catalog</h2>
     </div>
   </div>
 
@@ -4936,7 +4936,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
   };
 
   const clearCatalog = () => {
-    if (window.confirm('مسح جميع المنتجات من الكتالوج؟')) {
+    if (window.confirm('مسح جميع المنتجات من Catalog؟')) {
       setCatalogItems([]);
     }
   };
@@ -5181,6 +5181,16 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 {customOffers.filter(o => o.items && o.items.length > 0 && o.showOnSalesScreen !== false).length}
                               </span>
                             )}
+                          </button>
+                        )}
+
+                        {userRole === 'customer' && (
+                          <button
+                            onClick={() => { setShowProfileMenu(false); setMode('catalog'); }}
+                            className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 ${mode === 'catalog' ? 'bg-rose-50 text-rose-700' : 'text-slate-700 hover:bg-slate-100 hover:text-rose-600'}`}
+                          >
+                            <Grid size={18} />
+                            Catalog
                           </button>
                         )}
 
@@ -6602,9 +6612,9 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-6 shadow-inner">
                               <Grid size={32} />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-800 mb-3">كتالوج المنتجات</h3>
+                            <h3 className="text-2xl font-black text-slate-800 mb-3">Product Catalog</h3>
                             <p className="text-slate-500 mb-8 leading-relaxed">
-                              استعرض كتالوج المنتجات كاملاً مع الأسعار والتفاصيل للعملاء دون إدخال الطلب.
+                              استعرض Product Catalog كاملاً مع الأسعار والتفاصيل للعملاء دون إدخال الطلب.
                             </p>
                             <div className="mt-auto">
                               <button
@@ -8115,7 +8125,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                           {catalogItems.some((i) => i.id === item.id) ? (
                                             <><FileText size={16} /> تمت الإضافة ✓</>
                                           ) : (
-                                            <><FileText size={16} /> الكتالوج</>
+                                            <><FileText size={16} /> Catalog</>
                                           )}
                                         </button>
                                       ) : (
@@ -8990,11 +9000,11 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       </AnimatePresence>
 
       {
-        showCatalogPanel && (
-          <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60 transition-all duration-300">
+        showCatalogPanel && mode === 'catalog' && (
+          <aside className="pos-panel fixed right-0 top-0 bottom-0 z-50 flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden border-l shadow-2xl transition-all duration-500 backdrop-blur-xl bg-white/95 border-slate-200 text-slate-800">
             {/* Header */}
             <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
-              <h2 className="text-base font-bold text-slate-800">الكتالوج <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
+              <h2 className="text-base font-bold text-slate-800">Catalog <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
               <button onClick={() => setShowCatalogPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
             </div>
 
@@ -9084,8 +9094,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             </div>
             {catalogItems.length > 0 && (
               <div className="p-3 border-t border-slate-200/60 bg-white/50 backdrop-blur-sm space-y-2">
-                <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">طباعة / عرض الكتالوج</button>
-                <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">مسح الكتالوج</button>
+                <button onClick={handlePrintCatalog} className="w-full py-2.5 rounded-2xl bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-bold shadow-lg shadow-rose-500/25 transition-all">Print / Show Catalog</button>
+                <button onClick={clearCatalog} className="w-full py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium transition-all">Clear Catalog</button>
               </div>
             )}
           </aside>
@@ -9505,7 +9515,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div>
                 <h3 id="stock-zero-confirm-title" className="text-lg font-black text-slate-900">تنبيه مخزون</h3>
                 <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                  المخزون غير محدد أو يساوي صفراً. سيظهر الصنف كغير متوفر في الكتالوج ولن يُباع حتى تحديث الكمية في المخزون. هل تريد المتابعة؟
+                  المخزون غير محدد أو يساوي صفراً. سيظهر الصنف كغير متوفر في Catalog ولن يُباع حتى تحديث الكمية في المخزون. هل تريد المتابعة؟
                 </p>
               </div>
             </div>
