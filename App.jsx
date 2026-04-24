@@ -777,7 +777,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
   return (
     <div
-      className={`font-sans flex h-screen overflow-hidden ${showOrderPanel ? 'flex-row min-h-0' : 'flex-col'}`}
+      className={`font-sans flex h-screen overflow-hidden ${showOrderPanel ? 'flex-col sm:flex-row min-h-0' : 'flex-col'}`}
       style={{ background: 'linear-gradient(180deg, #fdf2f8 0%, #fce7f3 20%, #f5f3ff 50%, #eff6ff 80%, #f0fdf4 100%)' }}
     >
       <div
@@ -1016,7 +1016,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       {!showOrderPanel && (
         <button
           onClick={() => setShowOrderPanel(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-8 px-4 rounded-l-2xl bg-gradient-to-b from-orange-500 to-orange-600 text-white text-xl font-bold shadow-[0_0_24px_-4px_rgba(249,115,22,0.4)] hover:from-orange-600 hover:to-orange-700 transition-all"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 py-4 px-2 sm:py-8 sm:px-4 rounded-l-xl sm:rounded-l-2xl bg-gradient-to-b from-orange-500 to-orange-600 text-white text-base sm:text-xl font-bold shadow-[0_0_24px_-4px_rgba(249,115,22,0.4)] hover:from-orange-600 hover:to-orange-700 transition-all"
           style={{ writingMode: 'vertical-rl' }}
         >
           اتفاقية بيع طلبية
@@ -1024,7 +1024,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
       )}
 
       {showOrderPanel && (
-        <aside className="flex-shrink-0 min-h-0 w-[min(520px,42vw)] min-w-[320px] flex flex-col overflow-hidden rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] border-l border-slate-200/60">
+        <aside className="fixed inset-0 z-50 sm:static sm:z-auto sm:inset-auto flex-shrink-0 min-h-0 w-full sm:w-[min(520px,42vw)] sm:min-w-[320px] flex flex-col overflow-hidden sm:rounded-l-2xl bg-gradient-to-b from-white to-slate-50/80 shadow-[0_0_40px_-12px_rgba(0,0,0,0.15),-4px_0_24px_-8px_rgba(0,0,0,0.08)] sm:border-l border-slate-200/60">
           <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
             <h2 className="text-base font-bold text-slate-800">سلة الطلبية <span className="text-orange-500" dir="ltr" lang="en">({orderLines.length})</span></h2>
             <button onClick={() => setShowOrderPanel(false)} className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 transition-colors flex items-center justify-center text-sm font-medium">✕</button>
