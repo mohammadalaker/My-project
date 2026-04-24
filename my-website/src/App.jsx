@@ -5041,7 +5041,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
         </div>
       )}
       <div
-        className={`font-sans flex h-screen overflow-hidden transition-colors duration-500 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'} text-slate-800 bg-slate-50`}
+        className={`font-sans flex h-[100dvh] sm:h-screen overflow-hidden transition-colors duration-500 ${(showOrderPanel || showCatalogPanel) ? 'flex-row min-h-0' : 'flex-col'} text-slate-800 bg-slate-50`}
       >
       <div
         className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden transition-all duration-500 ${(showOrderPanel || showCatalogPanel) ? 'p-3 sm:p-4' : 'p-0 sm:p-0'}`}
@@ -5282,7 +5282,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
 
           {/* بدون dir=rtl هنا: يمنع انعكاس شبكة المنتجات وصفوف الأقسام؛ النص العربي يبقى عبر text-right و dir محلي حيث يلزم */}
-          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50">
+          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto scroll-smooth relative transition-colors duration-500 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50 pb-[100px] sm:pb-0">
             {isSortingMode && (
               <AdminSortProducts
                 items={sortingCategory === 'electrical' ? filteredItems.filter((i) => isElectricalGroup(i.group)) : filteredItems.filter((i) => !isElectricalGroup(i.group))}
@@ -8518,7 +8518,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 w-[min(360px,100vw)] z-[49] flex flex-col overflow-hidden border-l border-white/40 shadow-2xl bg-white/70 backdrop-blur-2xl"
+              className="fixed right-0 top-0 bottom-0 w-[min(360px,100vw)] z-[49] flex flex-col overflow-hidden border-l border-white/40 shadow-2xl bg-white/70 backdrop-blur-2xl pb-[100px] sm:pb-0"
             >
               <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-200/60 bg-white/50">
                 <h3 className="text-lg font-black text-slate-800">سلة المشتريات</h3>
@@ -9001,7 +9001,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
       {
         showCatalogPanel && mode === 'catalog' && (
-          <aside className="pos-panel fixed right-0 top-0 bottom-0 z-50 flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden border-l shadow-2xl transition-all duration-500 backdrop-blur-xl bg-white/95 border-slate-200 text-slate-800">
+          <aside className="pos-panel fixed right-0 top-0 bottom-0 z-50 flex-shrink-0 min-h-0 w-[min(520px,100vw)] sm:w-[500px] flex flex-col overflow-hidden border-l shadow-2xl transition-all duration-500 backdrop-blur-xl bg-white/95 border-slate-200 text-slate-800 pb-[100px] sm:pb-0">
             {/* Header */}
             <div className="flex-shrink-0 px-4 py-3 flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
               <h2 className="text-base font-bold text-slate-800">Catalog <span className="text-rose-500" dir="ltr">({catalogItems.length})</span></h2>
