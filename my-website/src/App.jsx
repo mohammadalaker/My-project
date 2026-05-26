@@ -8256,109 +8256,112 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               <div className="h-px flex-1 bg-slate-200"></div>
                             </div>
                           )}
-                          <SwipeToDeleteItem onDelete={() => removeFromOrder(o.id)}>
+                           <SwipeToDeleteItem onDelete={() => removeFromOrder(o.id)}>
                             <div className={`group relative rounded-3xl p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count))
                               ? 'bg-amber-50 border border-amber-300 shadow-[0_4px_20px_-4px_rgba(251,191,36,0.3)] hover:shadow-[0_8px_30px_-4px_rgba(251,191,36,0.4)]'
                               : 'bg-white hover:bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border border-slate-100 hover:border-slate-200 hover:shadow-slate-200/50'
                               }`}>
                               {(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) && (
                                 <div className="absolute -top-3 -right-2 z-10 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md shadow-amber-500/20 flex items-center gap-1 animate-pulse border-2 border-white">
-                                  <span>⚠️</span> آخر قطعة بالمخزون!
+                                  <span>⚠️</span> Last unit in stock!
                                 </div>
                               )}
-                              <div className="flex gap-4">
-                                <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border relative pointer-events-none ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? 'bg-amber-100/50 border-amber-200' : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-100'
-                                  }`}>
-                                  {getImage(o.item) ? (
-                                    <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
-                                  ) : (
-                                    <Package size={24} className={(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? "text-amber-400" : "text-slate-300"} />
-                                  )}
+                              <div className="flex flex-col gap-3">
+                                {/* Top row: Image + Name + Barcode */}
+                                <div className="flex flex-row gap-3">
+                                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border relative pointer-events-none ${(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? 'bg-amber-100/50 border-amber-200' : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-100'
+                                    }`}>
+                                    {getImage(o.item) ? (
+                                      <img src={getImage(o.item)} alt="" loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
+                                    ) : (
+                                      <Package size={24} className={(o.item?.stock_count === 1 || (o.qty > 0 && o.qty === o.item?.stock_count)) ? "text-amber-400" : "text-slate-300"} />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start gap-3">
+                                      <input
+                                        className="text-base font-black leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400 text-slate-800"
+                                        value={o.customName || o.name || o.item?.name || ''}
+                                        onChange={(e) => setOrderLineName(o.id, e.target.value)}
+                                        placeholder="Product Name"
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                      />
+                                      <motion.button whileTap={{ scale: 0.8, rotate: 10 }} onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="transition-colors bg-transparent p-2.5 rounded-xl -mt-2 -mr-2 flex-shrink-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50">
+                                        <Trash2 size={16} />
+                                      </motion.button>
+                                    </div>
+                                    <p className="text-xs font-mono mt-1 flex items-center gap-2 pointer-events-none text-slate-400">
+                                      <span>{o.item?.barcode}</span>
+                                      {o.item?.group && <span>• {o.item?.group}</span>}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex justify-between items-start gap-3">
+
+                                <div className="flex flex-col gap-3 mt-1 notranslate" dir="rtl">
+                                  {/* Qty Control */}
+                                  <div className="flex flex-row justify-between items-center rounded-2xl px-2 border shadow-sm shrink-0 w-full h-10 bg-white border-slate-200" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
+                                    <motion.button
+                                      whileTap={{ scale: 0.8 }}
+                                      onClick={() => changeOrderQtyBy(o.id, -1)}
+                                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
+                                    >
+                                      <Minus size={18} strokeWidth={3} />
+                                    </motion.button>
                                     <input
-                                      className="text-base font-bold leading-snug w-full bg-transparent border-b border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-colors placeholder-slate-400 text-slate-800"
-                                      value={o.customName || o.name || o.item?.name || ''}
-                                      onChange={(e) => setOrderLineName(o.id, e.target.value)}
-                                      placeholder="Product Name"
-                                      onPointerDown={(e) => e.stopPropagation()}
+                                      className="w-12 bg-transparent text-center text-lg font-black outline-none text-slate-700"
+                                      value={o.qty ?? ''}
+                                      onChange={(e) => setOrderQty(o.id, e.target.value)}
                                     />
-                                    <motion.button whileTap={{ scale: 0.8, rotate: 10 }} onClick={() => removeFromOrder(o.id)} onPointerDown={(e) => e.stopPropagation()} className="transition-colors bg-transparent p-2.5 rounded-xl -mt-2 -mr-2 flex-shrink-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50">
-                                      <Trash2 size={16} />
+                                    <motion.button
+                                      whileTap={{ scale: 0.8 }}
+                                      onClick={() => changeOrderQtyBy(o.id, 1)}
+                                      className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
+                                    >
+                                      <Plus size={18} strokeWidth={3} />
                                     </motion.button>
                                   </div>
-                                  <p className={`text-[10px] font-mono mt-1 flex items-center gap-2 pointer-events-none text-slate-500`}>
-                                    <span className="px-1.5 py-0.5 rounded border bg-slate-100 text-slate-500 border-slate-200">{o.item?.barcode}</span>
-                                    {o.item?.group && <span className="text-slate-400 font-bold">• {o.item?.group}</span>}
-                                  </p>
 
-                                  <div className="flex flex-col sm:flex-row items-stretch gap-4 mt-6 notranslate" dir="rtl">
-                                    {/* Qty Control */}
-                                    <div className="flex flex-col justify-center items-center rounded-2xl p-1.5 border shadow-sm shrink-0 w-14 bg-white border-slate-200" dir="ltr" onPointerDown={(e) => e.stopPropagation()}>
-                                      <motion.button
-                                        whileTap={{ scale: 0.8 }}
-                                        onClick={() => changeOrderQtyBy(o.id, 1)}
-                                        className={`w-full h-8 flex items-center justify-center rounded-lg transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
-                                      >
-                                        <Plus size={18} strokeWidth={3} />
-                                      </motion.button>
-                                      <input
-                                        className="w-full bg-transparent text-center text-lg font-black outline-none my-1 text-slate-700"
-                                        value={o.qty ?? ''}
-                                        onChange={(e) => setOrderQty(o.id, e.target.value)}
-                                      />
-                                      <motion.button
-                                        whileTap={{ scale: 0.8 }}
-                                        onClick={() => changeOrderQtyBy(o.id, -1)}
-                                        className={`w-full h-8 flex items-center justify-center rounded-lg transition-colors text-slate-400 hover:text-indigo-600 hover:bg-indigo-50`}
-                                      >
-                                        <Minus size={18} strokeWidth={3} />
-                                      </motion.button>
+                                  {/* Pricing Squares Grid */}
+                                  <div className="w-full grid grid-cols-4 gap-2" onPointerDown={(e) => e.stopPropagation()}>
+
+                                    {/* Card 1: Consumer Price */}
+                                    <div className="rounded-2xl p-2 border border-slate-200 flex flex-col items-center justify-center gap-1 text-center shadow-sm bg-slate-50 text-slate-600">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">List Price</span>
+                                      <span className="font-bold text-sm sm:text-base font-mono text-slate-600">₪{getLineOriginalPrice(o)}</span>
                                     </div>
 
-                                    {/* Pricing Squares Grid */}
-                                    <div className="flex-1 w-full grid grid-cols-2 gap-3" onPointerDown={(e) => e.stopPropagation()}>
-
-                                      {/* Card 1: Consumer Price */}
-                                      <div className="rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm bg-gradient-to-br from-slate-50 to-slate-100/80 border-slate-200/60">
-                                        <span className={`text-[10px] font-bold uppercase tracking-wider text-slate-400`}>سعر المستهلك</span>
-                                        <span className="font-bold text-sm sm:text-base font-mono text-slate-600">₪{getLineOriginalPrice(o)}</span>
-                                      </div>
-
-                                      {/* Card 2: Discount */}
-                                      <div className={`rounded-2xl p-3 border flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all ${getLineDiscountPercent(o) > 0 ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200' : 'bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] border-slate-100 opacity-60'}`}>
-                                        <span className={`text-[10px] font-bold uppercase tracking-wider text-slate-400`}>نسبة الخصم</span>
-                                        <span className={`font-bold text-sm sm:text-base font-mono ${getLineDiscountPercent(o) > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{getLineDiscountPercent(o)}%</span>
-                                      </div>
-
-                                      {/* Card 3: Price After Discount (Input) */}
-                                      <div className="rounded-2xl p-2 border shadow-sm flex flex-col items-center justify-center gap-1 text-center relative focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white border-slate-200 hover:border-indigo-200">
-                                        <span className="text-[10px] font-bold text-indigo-500/80 uppercase tracking-wider">بعد الخصم</span>
-                                        <div className="flex items-center justify-center gap-0.5" dir="ltr">
-                                          <span className={`font-bold text-xs mb-0.5 text-slate-400`}>₪</span>
-                                          <input
-                                            type="number"
-                                            className={`w-20 bg-transparent text-center font-black outline-none text-lg sm:text-lg text-slate-800`}
-                                            value={getLineUnitPrice(o) || ''}
-                                            onChange={(e) => setOrderLinePrice(o.id, e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                          />
-                                        </div>
-                                      </div>
-
-                                      {/* Card 4: Total */}
-                                      <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-2xl p-3 border border-orange-200/60 flex flex-col items-center justify-center gap-1 text-center shadow-sm">
-                                        <span className="text-[10px] font-bold text-orange-600/70 uppercase tracking-wider">المجموع</span>
-                                        <span dir="ltr" className="font-black text-orange-600 text-lg sm:text-xl tracking-tight">₪{getLineTotal(o).toFixed(2)}</span>
-                                      </div>
-
+                                    {/* Card 2: Discount */}
+                                    <div className="rounded-2xl p-2 border border-emerald-200 flex flex-col items-center justify-center gap-1 text-center shadow-sm transition-all bg-emerald-50 text-emerald-700">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80">Discount</span>
+                                      <span className="font-bold text-sm sm:text-base font-mono text-emerald-700">{getLineDiscountPercent(o)}%</span>
                                     </div>
+
+                                    {/* Card 3: Price After Discount (Input) */}
+                                    <div className="rounded-2xl p-2 border border-indigo-200 shadow-sm flex flex-col items-center justify-center gap-1 text-center relative focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white hover:border-indigo-300 text-indigo-700">
+                                      <span className="text-[10px] font-bold text-indigo-500/80 uppercase tracking-wider">Unit Price</span>
+                                      <div className="flex items-center justify-center gap-0.5" dir="ltr">
+                                        <span className="font-bold text-xs mb-0.5 text-indigo-500">₪</span>
+                                        <input
+                                          type="number"
+                                          className="w-16 bg-transparent text-center font-black outline-none text-lg sm:text-lg text-indigo-700"
+                                          value={getLineUnitPrice(o) || ''}
+                                          onChange={(e) => setOrderLinePrice(o.id, e.target.value)}
+                                          onFocus={(e) => e.target.select()}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Card 4: Total */}
+                                    <div className="rounded-2xl p-2 border border-orange-200 flex flex-col items-center justify-center gap-1 text-center shadow-sm bg-orange-50 text-orange-600 font-black">
+                                      <span className="text-[10px] font-bold text-orange-500/80 uppercase tracking-wider">Total</span>
+                                      <span dir="ltr" className="font-black text-orange-600 text-lg sm:text-xl tracking-tight">₪{getLineTotal(o).toFixed(2)}</span>
+                                    </div>
+
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </SwipeToDeleteItem>
+                           </SwipeToDeleteItem>
                         </div>
                       );
                     })
