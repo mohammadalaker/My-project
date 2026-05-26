@@ -14,6 +14,8 @@ function Sidebar({
     badgeLowStock = 0,
     badgeHeld = 0,
 }) {
+    const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
     const overlayVariants = {
         hidden: { opacity: 0 },
         visible: { opacity: 1, transition: { duration: 0.2 } },
@@ -77,6 +79,7 @@ function Sidebar({
                                         Maslamani
                                     </h2>
                                     <span className="text-xs font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-600 to-slate-500">Premium Appliances</span>
+                                    <p className="text-xs text-slate-400 mt-0.5">{todayLabel}</p>
                                 </div>
                             </div>
                             <button
@@ -124,14 +127,23 @@ function Sidebar({
                                                 }`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <item.icon
-                                                    size={20}
-                                                    className={isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}
-                                                />
+                                                <div className="relative">
+                                                    {isActive && (
+                                                        <motion.span
+                                                            className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.65)]"
+                                                            animate={{ scale: [1, 1.3, 1], opacity: [0.75, 1, 0.75] }}
+                                                            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                                                        />
+                                                    )}
+                                                    <item.icon
+                                                        size={20}
+                                                        className={isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}
+                                                    />
+                                                </div>
                                                 <span>{item.label}</span>
                                                 {badgeCount > 0 && (
                                                     <span
-                                                        title={item.badgeKey === 'lowStock' ? 'أصناف أوشكت على النفاد (كمية ≤5)' : undefined}
+                                                        title={item.badgeKey === 'lowStock' ? 'Items low in stock (qty ≤5)' : undefined}
                                                         className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-sm"
                                                     >
                                                         {badgeCount > 99 ? '99+' : badgeCount}
@@ -149,6 +161,26 @@ function Sidebar({
 
                         {/* Footer */}
                         <div className="p-4 border-t backdrop-blur-md rounded-b-3xl border-white/30 bg-white/30">
+                            <div className="px-1 pb-3">
+                                <div className="flex items-center gap-3 rounded-2xl border border-white/50 bg-white/55 backdrop-blur-sm p-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-500/25">
+                                        {String(username || '?').trim().charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-bold text-slate-700 truncate">{username || '—'}</p>
+                                        <span className={`inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                            userRole === 'admin'
+                                                ? 'bg-violet-100 text-violet-700'
+                                                : userRole === 'supervisor'
+                                                    ? 'bg-blue-100 text-blue-700'
+                                                    : 'bg-slate-100 text-slate-600'
+                                            }`}>
+                                            {userRole || 'guest'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="h-px bg-white/60 mb-3 mx-1" />
                             <button
                                 onClick={() => {
                                     handleLogout();
@@ -157,7 +189,7 @@ function Sidebar({
                                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl backdrop-blur-sm font-semibold transition-colors shadow-sm bg-white/60 border border-white/50 text-rose-500 hover:bg-rose-50/80 border-white/50"
                             >
                                 <LogOut size={18} className="text-rose-500" />
-                                <span>تسجيل الخروج</span>
+                                <span>Logout</span>
                             </button>
                         </div>
                     </motion.div>

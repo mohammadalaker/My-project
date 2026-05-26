@@ -155,7 +155,7 @@ export default function Dashboard({ items, orders }) {
                 // If it's explicitly tracked and > 0 but < 3
                 const s = Number(i.stock_count);
                 if (isNaN(s)) return false; // Infinite/Unlimited
-                return s >= 0 && s <= 3;
+                return s >= 0 && s <= 5;
             })
             .sort((a, b) => Number(a.stock_count) - Number(b.stock_count));
     }, [items]);
@@ -247,10 +247,10 @@ export default function Dashboard({ items, orders }) {
         <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500 bg-slate-50 min-h-screen">
 
             {/* Header / Actions */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
-                <div className="flex flex-col gap-2">
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">Supervisor Dashboard</h2>
-                    <p className="text-slate-500 font-medium">Overview of your sales performance and metrics.</p>
+            <div dir="rtl" className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
+                <div className="flex flex-col gap-2 text-right">
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tight">لوحة التحكم</h2>
+                    <p className="text-slate-500 font-medium">نظرة شاملة على أداء المبيعات والإحصائيات</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -280,6 +280,34 @@ export default function Dashboard({ items, orders }) {
                 </div>
             </div>
 
+            {/* Greeting Card */}
+            <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-3xl p-6">
+                <div className="flex flex-col gap-4">
+                    <div>
+                        <h3 className="font-black text-slate-800 text-2xl">نبض المحل اليوم 🏪</h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                            {new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" dir="rtl">
+                        <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
+                            <p className="text-xs text-indigo-600 font-bold">اليوم</p>
+                            <p className="text-xl font-black text-slate-900 tabular-nums" dir="ltr">₪{Math.round(todayVsYesterday.today).toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                            <p className="text-xs text-slate-500 font-bold">أمس</p>
+                            <p className="text-xl font-black text-slate-700 tabular-nums" dir="ltr">₪{Math.round(todayVsYesterday.yesterday).toLocaleString()}</p>
+                        </div>
+                        <div className={`rounded-2xl border p-4 ${todayVsYesterday.pct != null && todayVsYesterday.pct >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                            <p className="text-xs text-slate-500 font-bold">نسبة التغيير</p>
+                            <p className={`text-xl font-black tabular-nums ${todayVsYesterday.pct != null && todayVsYesterday.pct >= 0 ? 'text-emerald-700' : 'text-rose-700'}`} dir="ltr">
+                                {todayVsYesterday.pct == null ? '—' : `${todayVsYesterday.pct >= 0 ? '+' : ''}${todayVsYesterday.pct.toFixed(1)}%`}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
@@ -288,7 +316,7 @@ export default function Dashboard({ items, orders }) {
                         <DollarSign size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Total Revenue</p>
+                        <p className="text-sm font-bold text-slate-500 tracking-wider mb-1">إجمالي الإيرادات</p>
                         <h3 className="text-3xl font-black text-slate-800">₪{Math.round(kpis.totalRevenue).toLocaleString()}</h3>
                     </div>
                 </div>
@@ -298,7 +326,7 @@ export default function Dashboard({ items, orders }) {
                         <ShoppingCart size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Total Orders</p>
+                        <p className="text-sm font-bold text-slate-500 tracking-wider mb-1">عدد الطلبات</p>
                         <h3 className="text-3xl font-black text-slate-800">{kpis.totalOrders}</h3>
                     </div>
                 </div>
@@ -308,7 +336,7 @@ export default function Dashboard({ items, orders }) {
                         <TrendingUp size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Avg Order Value</p>
+                        <p className="text-sm font-bold text-slate-500 tracking-wider mb-1">متوسط الفاتورة</p>
                         <h3 className="text-3xl font-black text-slate-800">₪{Math.round(kpis.avgOrderValue).toLocaleString()}</h3>
                     </div>
                 </div>
@@ -321,11 +349,11 @@ export default function Dashboard({ items, orders }) {
                         <Award size={24} strokeWidth={2.5} />
                     </div>
                     <div className="relative z-10">
-                        <p className="text-sm font-bold text-indigo-200/80 uppercase tracking-wider mb-1">Top Seller</p>
-                        <h3 className="text-lg font-bold truncate" title={topSellers[0]?.name || 'N/A'}>
-                            {topSellers[0]?.name || 'N/A'}
+                        <p className="text-sm font-bold text-indigo-200/80 tracking-wider mb-1">الأكثر مبيعاً</p>
+                        <h3 className="text-lg font-bold truncate" title={topSellers[0]?.name || 'لا يوجد'}>
+                            {topSellers[0]?.name || 'لا يوجد'}
                         </h3>
-                        <p className="text-sm text-indigo-200 mt-1">{topSellers[0]?.qty || 0} units sold</p>
+                        <p className="text-sm text-indigo-200 mt-1">{topSellers[0]?.qty || 0} وحدة مباعة</p>
                     </div>
                 </div>
 
@@ -414,8 +442,8 @@ export default function Dashboard({ items, orders }) {
                 {/* Donut Chart (Categories) */}
                 <div className="bg-white/70 backdrop-blur-2xl rounded-3xl p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-6 transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.12)]">
                     <div className="flex flex-col gap-1">
-                        <h3 className="text-lg font-bold text-slate-800">Sales by Category</h3>
-                        <p className="text-sm text-slate-500">Revenue distribution</p>
+                        <h3 className="text-lg font-bold text-slate-800">المبيعات حسب الفئة</h3>
+                        <p className="text-sm text-slate-500">توزيع الإيرادات</p>
                     </div>
                     <div className="h-72 w-full flex items-center justify-center">
                         {pieChartData.length > 0 ? (
@@ -442,7 +470,7 @@ export default function Dashboard({ items, orders }) {
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="text-sm text-slate-400 font-medium">No category data available</div>
+                            <div className="text-sm text-slate-400 font-medium">لا توجد بيانات</div>
                         )}
                     </div>
                 </div>
@@ -491,7 +519,7 @@ export default function Dashboard({ items, orders }) {
                 <div className="bg-rose-50/70 backdrop-blur-xl border border-rose-100 rounded-3xl p-6 shadow-[0_8px_30px_rgb(225,29,72,0.06)] transition-all duration-300 hover:shadow-[0_12px_40px_rgb(225,29,72,0.12)]">
                     <div className="flex items-center gap-2 mb-4 text-rose-700">
                         <AlertTriangle size={24} strokeWidth={2.5} />
-                        <h3 className="text-lg font-bold">تنبيه المخزون المنخفض (أقل من 3 قطع)</h3>
+                        <h3 className="text-lg font-bold">تنبيه المخزون المنخفض (أقل من 5 قطع)</h3>
                     </div>
                     <div className="bg-white rounded-2xl overflow-hidden border border-rose-100">
                         <table className="w-full text-sm text-right" dir="rtl">
