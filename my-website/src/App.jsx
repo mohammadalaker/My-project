@@ -600,9 +600,11 @@ function App() {
       setUsername(storedUser || null);
       if (role === 'customer' && !activeReportTab) setMode('order');
     } else {
-      setIsAuthenticated(true);
-      setUserRole('customer');
-      setUsername('public_sale');
+      // No guest/public access: always require PIN login for sales users.
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setUsername(null);
+      setShowLoginScreen(true);
       setMode('order');
     }
     setHasCheckedAuth(true);
@@ -711,13 +713,14 @@ function App() {
         setUsername(null);
         setShowLoginScreen(true);
       } else {
-        setIsAuthenticated(true);
-        setUserRole('customer');
-        setUsername('public_sale');
+        // After logout, return to login screen instead of guest mode.
+        setIsAuthenticated(false);
+        setUserRole(null);
+        setUsername(null);
         setMode('order');
-        setShowLoginScreen(false);
+        setShowLoginScreen(true);
       }
-      /* لا نُعيد شاشة الترحيب بعد الخروج — يبقى التطبيق يعمل مباشرة كوضع زائر */
+      /* لا نُعيد شاشة الترحيب بعد الخروج — يعود المستخدم مباشرة إلى شاشة تسجيل الدخول */
       setShowSplash(false);
     }
   };
