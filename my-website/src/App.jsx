@@ -8881,7 +8881,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <div className="space-y-3 pt-2 border-t border-slate-100">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">طريقة الدفع</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Cash' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
+                  <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 p-3 transition-all font-bold text-sm ${orderInfo.paymentMethod === 'Cash' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-slate-50'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
@@ -8892,7 +8892,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     />
                     <span className="font-bold text-sm">نقدي (Cash)</span>
                   </label>
-                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Checks' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
+                  <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 p-3 transition-all font-bold text-sm ${orderInfo.paymentMethod === 'Checks' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-slate-50'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
@@ -8903,7 +8903,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     />
                     <span className="font-bold text-sm">شيكات (Checks)</span>
                   </label>
-                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Credit' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
+                  <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 p-3 transition-all font-bold text-sm ${orderInfo.paymentMethod === 'Credit' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-slate-50'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
@@ -8914,7 +8914,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     />
                     <span className="font-bold text-sm">آجل / ذمم (Credit / A/R)</span>
                   </label>
-                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Installment' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
+                  <label className={`flex items-center gap-3 cursor-pointer rounded-xl border-2 p-3 transition-all font-bold text-sm ${orderInfo.paymentMethod === 'Installment' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-slate-50'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
