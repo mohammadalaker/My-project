@@ -8647,14 +8647,19 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
           onClick={() => setShowOrderSubmitModal(false)}
         >
           <div
-            className="flex max-h-[min(92vh,880px)] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl"
+            className="flex max-h-[min(92vh,880px)] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white shadow-2xl shadow-slate-900/20"
             dir="rtl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 pb-3 pt-5">
-              <h2 id="order-submit-modal-title" className="text-xl font-black text-slate-900">
-                معلومات الطلبية
-              </h2>
+            <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 pb-4 pt-5 bg-gradient-to-l from-indigo-50/50 to-white">
+              <div className="flex flex-col gap-1">
+                <h2 id="order-submit-modal-title" className="text-2xl font-black text-slate-900">
+                  معلومات الطلبية
+                </h2>
+                <p className="text-sm text-slate-400">
+                  أدخل بيانات العميل لإتمام الطلبية
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowOrderSubmitModal(false)}
@@ -8668,7 +8673,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
             <div className="custom-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-4 pt-4">
               {/* 1. التلفون */}
               <div className="space-y-1.5 relative">
-                <label className="text-[11px] font-bold text-slate-500 mr-1 flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 mr-1 flex items-center justify-between">
                   <span>التلفون <span className="text-rose-500">*</span></span>
                   {orderInfo.phone && currentCustomerByPhone && (
                     <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
@@ -8711,7 +8716,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                   }}
                   onFocus={() => setShowCustomerPredictions(true)}
                   onBlur={() => setTimeout(() => setShowCustomerPredictions(false), 200)}
-                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm font-mono text-left"
+                  className="w-full rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 hover:bg-white transition-all py-3 px-4 text-slate-800 placeholder-slate-400 outline-none shadow-sm font-mono text-left"
                   placeholder="05..."
                   dir="ltr"
                   lang="en"
@@ -8818,33 +8823,33 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               ) : null}
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 mr-1">اسم الشركة ( المشتري ) <span className="text-rose-500">*</span></label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 mr-1">اسم الشركة ( المشتري ) <span className="text-rose-500">*</span></label>
                 <input
                   value={orderInfo.companyName}
                   onChange={(e) => setOrderInfoField('companyName', e.target.value)}
-                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                  className="w-full rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 hover:bg-white transition-all py-3 px-4 text-slate-800 placeholder-slate-400 outline-none shadow-sm"
                   placeholder="أدخل اسم الشركة..."
                   dir="rtl"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 mr-1">اسم التاجر ( المشتري ) <span className="text-rose-500">*</span></label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 mr-1">اسم التاجر ( المشتري ) <span className="text-rose-500">*</span></label>
                 <input
                   value={orderInfo.merchantName}
                   onChange={(e) => setOrderInfoField('merchantName', e.target.value)}
-                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                  className="w-full rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 hover:bg-white transition-all py-3 px-4 text-slate-800 placeholder-slate-400 outline-none shadow-sm"
                   placeholder="أدخل اسم التاجر..."
                   dir="rtl"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 mr-1">العنوان <span className="text-rose-500">*</span></label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 mr-1">العنوان <span className="text-rose-500">*</span></label>
                 <input
                   value={orderInfo.address}
                   onChange={(e) => setOrderInfoField('address', e.target.value)}
-                  className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all shadow-sm"
+                  className="w-full rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 hover:bg-white transition-all py-3 px-4 text-slate-800 placeholder-slate-400 outline-none shadow-sm"
                   placeholder="المدينة، الشارع..."
                   dir="rtl"
                 />
@@ -8852,20 +8857,20 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 mr-1">التاريخ <span className="text-rose-500">*</span></label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 mr-1">التاريخ <span className="text-rose-500">*</span></label>
                   <input
                     type="date"
                     value={orderInfo.orderDate}
                     onChange={(e) => setOrderInfoField('orderDate', e.target.value)}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                    className="w-full rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 hover:bg-white transition-all py-3 px-4 text-slate-800 outline-none"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 mr-1">رقم الزبون ( في الشركة )</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 mr-1">رقم الزبون ( في الشركة )</label>
                   <input
                     value={orderInfo.customerNumber}
                     onChange={(e) => setOrderInfoField('customerNumber', toEnglishDigits(e.target.value))}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-mono text-left"
+                    className="w-full rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 hover:bg-white transition-all py-3 px-4 text-slate-800 placeholder-slate-400 outline-none font-mono text-left"
                     placeholder="#"
                     dir="ltr"
                     lang="en"
@@ -8874,49 +8879,49 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               </div>
 
               <div className="space-y-3 pt-2 border-t border-slate-100">
-                <p className="text-[11px] font-bold text-slate-500">طريقة الدفع</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">طريقة الدفع</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Cash' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
                       value="Cash"
                       checked={orderInfo.paymentMethod === 'Cash'}
                       onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                      className="sr-only"
                     />
                     <span className="font-bold text-sm">نقدي (Cash)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-orange-300 transition-colors has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 has-[:checked]:text-orange-700">
+                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Checks' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
                       value="Checks"
                       checked={orderInfo.paymentMethod === 'Checks'}
                       onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                      className="w-4 h-4 text-orange-500 focus:ring-orange-500"
+                      className="sr-only"
                     />
                     <span className="font-bold text-sm">شيكات (Checks)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-rose-300 transition-colors has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 has-[:checked]:text-rose-800">
+                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Credit' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
                       value="Credit"
                       checked={orderInfo.paymentMethod === 'Credit'}
                       onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                      className="w-4 h-4 text-rose-500 focus:ring-rose-500"
+                      className="sr-only"
                     />
                     <span className="font-bold text-sm">آجل / ذمم (Credit / A/R)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-violet-300 transition-colors has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 has-[:checked]:text-violet-800">
+                  <label className={`rounded-xl border-2 p-3 cursor-pointer transition-all flex items-center gap-2 ${orderInfo.paymentMethod === 'Installment' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white hover:border-indigo-200 text-slate-600'}`}>
                     <input
                       type="radio"
                       name="paymentMethodOrderSubmitModal"
                       value="Installment"
                       checked={orderInfo.paymentMethod === 'Installment'}
                       onChange={(e) => setOrderInfoField('paymentMethod', e.target.value)}
-                      className="w-4 h-4 text-violet-500 focus:ring-violet-500"
+                      className="sr-only"
                     />
                     <span className="font-bold text-sm">تقسيط (Installment)</span>
                   </label>
@@ -8925,13 +8930,13 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
               {orderInfo.paymentMethod === 'Checks' && (
                 <div className="space-y-1.5 animate-fade-in">
-                  <label className="text-[11px] font-bold text-slate-500 mr-1">عدد الشيكات</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5 mr-1">عدد الشيكات</label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={orderInfo.checksCount}
                     onChange={(e) => setOrderInfoField('checksCount', toEnglishDigits(e.target.value))}
-                    className="w-full bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9] hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-800 focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
+                    className="w-full rounded-xl border-2 border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 hover:bg-white transition-all py-3 px-4 text-slate-800 outline-none"
                     placeholder="أدخل عدد الشيكات (مثلاً ٦ أو 6)..."
                   />
                 </div>
@@ -8942,14 +8947,14 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
               <button
                 type="button"
                 onClick={() => setShowOrderSubmitModal(false)}
-                className="flex-1 rounded-2xl border-2 border-slate-200 py-3.5 font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                className="w-full py-4 rounded-2xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
               >
                 إلغاء
               </button>
               <button
                 type="button"
                 onClick={handleConfirmOrderSubmitModal}
-                className="flex-1 rounded-2xl bg-slate-900 py-3.5 font-bold text-white shadow-lg transition-colors hover:bg-slate-800"
+                className="w-full py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-base shadow-lg"
               >
                 إرسال الطلبية
               </button>
