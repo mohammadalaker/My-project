@@ -6039,6 +6039,28 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </div>
                             </div>
                           </div>
+
+                          {/* تقرير العملاء */}
+                          <div className="flex-1 bg-white rounded-3xl p-8 shadow-xl shadow-emerald-900/5 border border-emerald-50 relative overflow-hidden group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                            onClick={() => setActiveReportTab('customers')}
+                            role="button" tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveReportTab('customers'); } }}
+                          >
+                            <div className="absolute top-0 right-0 p-32 bg-emerald-50 rounded-full blur-3xl -mr-16 -mt-16 transition-transform group-hover:scale-110"/>
+                            <div className="relative z-10 flex flex-col h-full">
+                              <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-6 shadow-inner">
+                                <Users size={32} />
+                              </div>
+                              <h3 className="text-2xl font-black text-slate-800 mb-3">تقرير العملاء</h3>
+                              <p className="text-slate-500 mb-8 leading-relaxed flex-1">أعلى العملاء إنفاقاً، الذمم والديون، نقاط الولاء، وعدد الطلبات.</p>
+                              <div className="mt-auto">
+                                <span className="inline-flex items-center gap-2 py-3 text-emerald-600 font-bold">
+                                  <span>عرض التقرير</span>
+                                  <ChevronRight size={20} />
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -6057,10 +6079,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               </button>
                               <div>
                                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                                  {activeReportTab === 'sales' ? 'تقرير المبيعات' : 'تقرير المخزون'}
+                                  {activeReportTab === 'sales' ? 'تقرير المبيعات' : activeReportTab === 'inventory' ? 'تقرير المخزون' : 'تقرير العملاء'}
                                 </h2>
                                 <p className="text-slate-500 text-sm mt-1">
-                                  {activeReportTab === 'sales' ? 'إحصائيات المبيعات حسب الفترة المختارة.' : 'حالة المخزون والتصدير للتجرد.'}
+                                  {activeReportTab === 'sales' ? 'إحصائيات المبيعات حسب الفترة المختارة.' : activeReportTab === 'inventory' ? 'حالة المخزون والتصدير للتجرد.' : 'تفاصيل العملاء، الديون ونقاط الولاء.'}
                                 </p>
                               </div>
                             </div>
@@ -6083,13 +6105,21 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                               >
                                 <Package size={18} /> المخزون
                               </button>
+                              <button
+                                onClick={() => setActiveReportTab('customers')}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${activeReportTab === 'customers'
+                                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 scale-100'
+                                  : 'text-slate-500 hover:text-slate-800 hover:bg-white/50 scale-95'}`}
+                              >
+                                <Users size={18} /> العملاء
+                              </button>
                             </div>
                           </div>
                         </div>
 
                         <div className="p-6 sm:p-8 relative min-h-[400px]">
                           <AnimatePresence mode="wait">
-                            {activeReportTab === 'sales' ? (
+                            {activeReportTab === 'sales' && (
                               /* Sales Report Tab — فلتر زمني + رسم */
                               <motion.div
                                 key="sales"
@@ -6174,9 +6204,58 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                       </span>
                                     ))}
                                   </div>
+
+                                  {/* كروت الإحصائيات */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                                    <div className="rounded-2xl p-5 bg-indigo-50 border border-indigo-100">
+                                      <p className="text-xs font-bold text-indigo-400 uppercase tracking-wide mb-1">عدد الطلبات</p>
+                                      <p className="text-2xl font-black text-indigo-700">{salesLast7.filter(p => p.value > 0).length}</p>
+                                      <p className="text-xs text-indigo-400 mt-1">يوم نشط من أصل {reportSalesDays}</p>
+                                    </div>
+                                    <div className="rounded-2xl p-5 bg-emerald-50 border border-emerald-100">
+                                      <p className="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-1">متوسط اليوم</p>
+                                      <p className="text-2xl font-black text-emerald-700">
+                                        ₪{salesLast7.length > 0 ? Math.round(salesLast7.reduce((s, p) => s + (p.value || 0), 0) / reportSalesDays).toLocaleString('en-US') : 0}
+                                      </p>
+                                      <p className="text-xs text-emerald-400 mt-1">معدل يومي خلال الفترة</p>
+                                    </div>
+                                    <div className="rounded-2xl p-5 bg-orange-50 border border-orange-100">
+                                      <p className="text-xs font-bold text-orange-400 uppercase tracking-wide mb-1">أعلى يوم</p>
+                                      <p className="text-2xl font-black text-orange-700">
+                                        ₪{salesLast7.length > 0 ? Math.max(...salesLast7.map(p => p.value || 0)).toLocaleString('en-US') : 0}
+                                      </p>
+                                      <p className="text-xs text-orange-400 mt-1">{salesLast7.length > 0 ? (salesLast7.find(p => p.value === Math.max(...salesLast7.map(x => x.value || 0)))?.label || '—') : '—'}</p>
+                                    </div>
+                                  </div>
+
+                                  {/* جدول أعلى الأيام مبيعاً */}
+                                  <div className="rounded-2xl border border-slate-100 overflow-hidden mt-4">
+                                    <div className="bg-slate-50 px-5 py-3 border-b border-slate-100">
+                                      <p className="text-sm font-black text-slate-700">تفاصيل المبيعات اليومية</p>
+                                    </div>
+                                    <div className="divide-y divide-slate-50">
+                                      {[...salesLast7].sort((a, b) => (b.value || 0) - (a.value || 0)).map((p, i) => (
+                                        <div key={p.date} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
+                                          <div className="flex items-center gap-3">
+                                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-100 text-slate-600' : 'bg-slate-50 text-slate-400'}`}>{i + 1}</span>
+                                            <span className="text-sm font-bold text-slate-700">{p.label}</span>
+                                            <span className="text-xs text-slate-400">{p.date}</span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <div className="h-2 rounded-full bg-indigo-100 w-24 overflow-hidden">
+                                              <div className="h-full rounded-full bg-indigo-500" style={{width: `${salesLast7.length > 0 && Math.max(...salesLast7.map(x => x.value || 0)) > 0 ? ((p.value || 0) / Math.max(...salesLast7.map(x => x.value || 0)) * 100) : 0}%`}} />
+                                            </div>
+                                            <span className="text-sm font-black text-slate-900 w-24 text-left" dir="ltr">₪{Number(p.value || 0).toLocaleString('en-US')}</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
                                 </div>
                               </motion.div>
-                            ) : (
+                            )}
+
+                            {activeReportTab === 'inventory' && (
                               /* Inventory Report Tab — تصدير Excel / PDF وتنبيهات بصرية */
                               <motion.div
                                 key="inventory"
@@ -6636,6 +6715,110 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   </div>
                                 </div>
 
+                              </motion.div>
+                            )}
+
+                            {activeReportTab === 'customers' && (
+                              <motion.div
+                                key="customers"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                className="space-y-6"
+                              >
+                                {/* كروت الإحصائيات */}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                  <div className="rounded-2xl p-5 bg-emerald-50 border border-emerald-100">
+                                    <p className="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-1">إجمالي العملاء</p>
+                                    <p className="text-2xl font-black text-emerald-700">{customers.length}</p>
+                                    <p className="text-xs text-emerald-400 mt-1">عميل مسجّل</p>
+                                  </div>
+                                  <div className="rounded-2xl p-5 bg-indigo-50 border border-indigo-100">
+                                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wide mb-1">إجمالي المبيعات</p>
+                                    <p className="text-2xl font-black text-indigo-700">₪{Math.round(customers.reduce((s, c) => s + (Number(c.total_spent) || 0), 0)).toLocaleString('en-US')}</p>
+                                    <p className="text-xs text-indigo-400 mt-1">مجموع مشتريات الكل</p>
+                                  </div>
+                                  <div className="rounded-2xl p-5 bg-rose-50 border border-rose-100">
+                                    <p className="text-xs font-bold text-rose-400 uppercase tracking-wide mb-1">إجمالي الذمم</p>
+                                    <p className="text-2xl font-black text-rose-700">₪{Math.round(customers.reduce((s, c) => s + (Number(c.outstanding_debt) || 0), 0)).toLocaleString('en-US')}</p>
+                                    <p className="text-xs text-rose-400 mt-1">رصيد مستحق</p>
+                                  </div>
+                                  <div className="rounded-2xl p-5 bg-amber-50 border border-amber-100">
+                                    <p className="text-xs font-bold text-amber-400 uppercase tracking-wide mb-1">إجمالي النقاط</p>
+                                    <p className="text-2xl font-black text-amber-700">{customers.reduce((s, c) => s + (Number(c.loyalty_points) || 0), 0).toLocaleString('en-US')}</p>
+                                    <p className="text-xs text-amber-400 mt-1">نقطة ولاء</p>
+                                  </div>
+                                </div>
+
+                                {/* أعلى العملاء إنفاقاً */}
+                                <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                                  <div className="bg-slate-50 px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                                    <p className="text-sm font-black text-slate-700">🏆 أعلى العملاء إنفاقاً</p>
+                                    <span className="text-xs text-slate-400">أعلى 10 عملاء</span>
+                                  </div>
+                                  <div className="divide-y divide-slate-50">
+                                    {[...customers].sort((a, b) => (Number(b.total_spent) || 0) - (Number(a.total_spent) || 0)).slice(0, 10).map((c, i) => (
+                                      <div key={c.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-50 text-slate-400'}`}>{i + 1}</span>
+                                          <div>
+                                            <p className="text-sm font-bold text-slate-800">{c.company_name || c.name || '—'}</p>
+                                            <p className="text-xs text-slate-400">{c.phone || '—'}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                          <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full">{c.loyalty_points || 0} نقطة</span>
+                                          {Number(c.outstanding_debt) > 0 && <span className="text-xs bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full">ذمة ₪{Number(c.outstanding_debt).toFixed(0)}</span>}
+                                          <span className="text-sm font-black text-slate-900" dir="ltr">₪{Number(c.total_spent || 0).toLocaleString('en-US')}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* العملاء الذين لديهم ذمم */}
+                                {customers.filter(c => Number(c.outstanding_debt) > 0).length > 0 && (
+                                  <div className="rounded-2xl border border-rose-100 overflow-hidden">
+                                    <div className="bg-rose-50 px-5 py-3 border-b border-rose-100 flex items-center justify-between">
+                                      <p className="text-sm font-black text-rose-700">⚠️ العملاء الذين لديهم ذمم</p>
+                                      <span className="text-xs text-rose-400">{customers.filter(c => Number(c.outstanding_debt) > 0).length} عميل</span>
+                                    </div>
+                                    <div className="divide-y divide-rose-50">
+                                      {[...customers].filter(c => Number(c.outstanding_debt) > 0).sort((a, b) => (Number(b.outstanding_debt) || 0) - (Number(a.outstanding_debt) || 0)).map((c) => (
+                                        <div key={c.id} className="flex items-center justify-between px-5 py-3 hover:bg-rose-50/50 transition-colors">
+                                          <div>
+                                            <p className="text-sm font-bold text-slate-800">{c.company_name || c.name || '—'}</p>
+                                            <p className="text-xs text-slate-400">{c.phone || '—'}</p>
+                                          </div>
+                                          <span className="text-sm font-black text-rose-600" dir="ltr">₪{Number(c.outstanding_debt).toLocaleString('en-US')}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* أعلى العملاء نقاطاً */}
+                                <div className="rounded-2xl border border-amber-100 overflow-hidden">
+                                  <div className="bg-amber-50 px-5 py-3 border-b border-amber-100 flex items-center justify-between">
+                                    <p className="text-sm font-black text-amber-700">⭐ أعلى العملاء نقاط ولاء</p>
+                                    <span className="text-xs text-amber-400">أعلى 5 عملاء</span>
+                                  </div>
+                                  <div className="divide-y divide-amber-50">
+                                    {[...customers].sort((a, b) => (Number(b.loyalty_points) || 0) - (Number(a.loyalty_points) || 0)).slice(0, 5).map((c, i) => (
+                                      <div key={c.id} className="flex items-center justify-between px-5 py-3 hover:bg-amber-50/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-lg">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '⭐'}</span>
+                                          <div>
+                                            <p className="text-sm font-bold text-slate-800">{c.company_name || c.name || '—'}</p>
+                                            <p className="text-xs text-slate-400">{c.phone || '—'}</p>
+                                          </div>
+                                        </div>
+                                        <span className="text-sm font-black text-amber-700">{Number(c.loyalty_points || 0).toLocaleString('en-US')} نقطة</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               </motion.div>
                             )}
                           </AnimatePresence>
