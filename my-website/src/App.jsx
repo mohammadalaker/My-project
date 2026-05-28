@@ -421,6 +421,22 @@ function SwipeToDeleteItem({ children, onDelete }) {
 }
 
 
+const avatarColors = [
+  'from-indigo-100 to-violet-100 text-indigo-600',
+  'from-emerald-100 to-teal-100 text-emerald-600',
+  'from-rose-100 to-pink-100 text-rose-600',
+  'from-amber-100 to-orange-100 text-amber-600',
+  'from-blue-100 to-cyan-100 text-blue-600',
+  'from-purple-100 to-fuchsia-100 text-purple-600',
+];
+const getAvatarColor = (name) => {
+  const str = String(name || '؟');
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+};
+
+
 function App() {
   const { getLogoUrl, uploadLogo, removeLogo, logos, loading: logosLoading, fetchLogos } = useBrandLogos();
   const queryClient = useQueryClient();
@@ -1181,6 +1197,7 @@ function App() {
 
   // Customers page (Sidebar) state
   const [customersPageSearch, setCustomersPageSearch] = useState('');
+  const [customersSort, setCustomersSort] = useState('name');
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryLowStockOnly, setInventoryLowStockOnly] = useState(false);
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('');
@@ -1194,15 +1211,33 @@ function App() {
 
   const filteredCustomersPage = useMemo(() => {
     const raw = (customersPageSearch || '').trim().toLowerCase();
-    if (!raw) return customers;
-    const qNorm = toEnglishDigits(raw.replace(/\s/g, ''));
-    return customers.filter((c) => {
-      const name = (c.name || '').toLowerCase();
-      const company = (c.company_name || '').toLowerCase();
-      const phone = (c.phone || '').replace(/\s/g, '');
-      return name.includes(raw) || company.includes(raw) || phone.includes(qNorm);
-    });
-  }, [customers, customersPageSearch]);
+    let list = customers;
+    if (raw) {
+      const qNorm = toEnglishDigits(raw.replace(/\s/g, ''));
+      list = customers.filter((c) => {
+        const name = (c.name || '').toLowerCase();
+        const company = (c.company_name || '').toLowerCase();
+        const phone = (c.phone || '').replace(/\s/g, '');
+        return name.includes(raw) || company.includes(raw) || phone.includes(qNorm);
+      });
+    }
+
+    const sorted = [...list];
+    if (customersSort === 'name') {
+      sorted.sort((a, b) => {
+        const nameA = (a.company_name || a.name || '').toLowerCase();
+        const nameB = (b.company_name || b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB, 'ar', { sensitivity: 'base' });
+      });
+    } else if (customersSort === 'points') {
+      sorted.sort((a, b) => (Number(b.loyalty_points) || 0) - (Number(a.loyalty_points) || 0));
+    } else if (customersSort === 'debt') {
+      sorted.sort((a, b) => (Number(b.outstanding_debt) || 0) - (Number(a.outstanding_debt) || 0));
+    } else if (customersSort === 'spent') {
+      sorted.sort((a, b) => (Number(b.total_spent) || 0) - (Number(a.total_spent) || 0));
+    }
+    return sorted;
+  }, [customers, customersPageSearch, customersSort]);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [customersLoading, setCustomersLoading] = useState(false);
@@ -7414,7 +7449,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                           <Users size={32} className="text-white" />
                         </div>
                         <div>
-                          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">العملاء</h1>
+                          <div className="flex items-center gap-2">
+                            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">العملاء</h1>
+                            {customersSectionTab === 'directory' && (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold">{filteredCustomersPage.length} عميل</span>
+                            )}
+                          </div>
                           <p className="text-slate-500 text-sm sm:text-base mt-1">إدارة بيانات العملاء ونقاط الولاء</p>
                         </div>
                       </div>
@@ -7462,15 +7502,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
 
                     {customersSectionTab === 'directory' && (
                     <>
-                    <div className="relative">
-                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={customersPageSearch}
-                        onChange={(e) => setCustomersPageSearch(e.target.value)}
-                        placeholder="بحث بالاسم أو اسم الشركة أو رقم الهاتف..."
-                        className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-base"
-                      />
+                    <div className="flex gap-3 flex-wrap">
+                      <select value={customersSort} onChange={(e) => setCustomersSort(e.target.value)} className="rounded-2xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 focus:border-indigo-500 outline-none">
+                        <option value="name">أبجدي (الاسم)</option>
+                        <option value="points">الأعلى نقاطاً</option>
+                        <option value="debt">الأعلى رصيداً</option>
+                        <option value="spent">الأكثر شراءً</option>
+                      </select>
+                      <div className="relative flex-1">
+                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={customersPageSearch}
+                          onChange={(e) => setCustomersPageSearch(e.target.value)}
+                          placeholder="بحث بالاسم أو اسم الشركة أو رقم الهاتف..."
+                          className="w-full pr-12 pl-5 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-base"
+                        />
+                      </div>
                     </div>
 
                     <div className="rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
@@ -7489,7 +7537,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                 className="text-right w-full rounded-2xl border-2 border-slate-100 bg-white p-5 sm:p-6 shadow-sm hover:shadow-lg hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                               >
                                 <div className="flex items-start gap-4">
-                                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-100 to-violet-100 text-indigo-600 flex items-center justify-center flex-shrink-0 text-xl font-black group-hover:from-indigo-200 group-hover:to-violet-200 transition-colors">
+                                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${getAvatarColor(c.company_name || c.name)} flex items-center justify-center flex-shrink-0 text-xl font-black transition-colors`}>
                                     {((c.company_name || c.name) || '؟').charAt(0).toUpperCase()}
                                   </div>
                                   <div className="min-w-0 flex-1">
