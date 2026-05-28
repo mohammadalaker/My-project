@@ -7918,16 +7918,12 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                   whileHover={isOutOfStock ? {
                                     boxShadow: '0 4px 12px rgba(15,23,42,0.06)',
                                     transition: { duration: 0.2, ease: 'easeOut' }
-                                  } : {
-                                    y: -6,
-                                    boxShadow: "0 8px 16px rgba(0,0,0,0.04), 0 24px 48px -12px rgba(0,0,0,0.08)",
-                                    transition: { duration: 0.2, ease: "easeOut" }
-                                  }}
+                                  } : undefined}
                                   key={item.id}
-                                  className={`group flex flex-col h-full cursor-pointer transition-colors rounded-3xl overflow-hidden border glass-card shadow-lg ${
+                                  className={`group flex flex-col h-full cursor-pointer rounded-3xl overflow-hidden border glass-card shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
                                     isOutOfStock
-                                      ? 'opacity-[0.82] saturate-[0.65] border-slate-300/80 bg-slate-100/40 ring-1 ring-slate-200/60 hover:shadow-md'
-                                      : 'border-white/80 hover:shadow-xl'
+                                      ? 'opacity-[0.82] saturate-[0.65] border-slate-100/80 bg-slate-100/40 ring-1 ring-slate-200/60'
+                                      : 'border-slate-100/80'
                                   }`}
                                   onDoubleClick={(e) => { if (!e.target.closest('button')) setSelectedItem(item); }}
                                 >
@@ -8046,45 +8042,39 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                     </div>
                                     <p className="text-sm font-mono mb-1.5 text-slate-500">{item.barcode}</p>
                                     <div className="flex items-center gap-1 mb-4">
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-sm shadow-emerald-500/20 border border-white/20">
+                                      <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full px-2 py-0.5 font-bold">
                                         <ShieldCheck size={10} className="opacity-90" />
                                         {item.warranty || '1 Year Warranty'}
                                       </span>
                                     </div>
 
                                     <div className="mt-auto space-y-3">
-                                      <div className="flex items-end justify-between">
+                                      <div className="flex items-end justify-between gap-2">
                                         <div>
                                           <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Price</p>
-                                          <p className="text-3xl font-black text-slate-800">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
+                                          <p className="text-2xl font-black text-slate-900">₪{Math.round(item.priceAfterDiscount ?? item.price ?? 0)}</p>
                                         </div>
                                         {item.priceAfterDiscount && item.priceAfterDiscount < item.price && (
-                                          <div className="text-right">
-                                            <p className="text-sm text-slate-400">₪{item.price}</p>
-                                            <p className="text-sm font-bold text-emerald-500">
+                                          <div className="text-right flex flex-col items-end gap-1">
+                                            <p className="text-sm text-slate-400 line-through">₪{item.price}</p>
+                                            <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">
                                               -{Math.round(((item.price - item.priceAfterDiscount) / item.price) * 100)}%
-                                            </p>
+                                            </span>
                                           </div>
                                         )}
                                       </div>
 
                                       <div className="flex items-center justify-between pt-3 border-t relative border-slate-100">
-                                        <div className="flex flex-col">
-                                          <span className="text-[10px] font-bold uppercase text-slate-400">Stock</span>
-                                          {stockStatus === 'Out of Stock' ? (
-                                            <span className="text-xs font-bold text-red-500">Out of Stock</span>
-                                          ) : stockStatus === 'Low Stock' ? (
-                                            <span className="text-xs font-bold text-amber-500 flex items-center gap-1">
-                                              {item.stock_count} <span className="text-[10px]">Last 5 units</span>
-                                            </span>
-                                          ) : (
-                                            <span className="text-xs font-bold text-emerald-500">Available</span>
-                                          )}
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                          <span className="text-[10px] font-bold uppercase text-slate-400">Box</span>
-                                          <span className="text-xs font-bold text-slate-700">{item.box || '-'}</span>
-                                        </div>
+                                        {stockStatus === 'Out of Stock' ? (
+                                          <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">Out of Stock</span>
+                                        ) : stockStatus === 'Low Stock' ? (
+                                          <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                            {item.stock_count} <span className="text-[10px]">Last 5 units</span>
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Available</span>
+                                        )}
+                                        <span className="text-xs font-bold text-slate-500">Box {item.box || '-'}</span>
 
                                         {/* Restock Request Button Overlay */}
                                         {item.stock_count > 0 && item.stock_count <= 2 && (
@@ -8143,11 +8133,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                                             handleOpenQuantityModal(item, { clientX, clientY });
                                           }}
                                           whileTap={{ scale: 0.95 }}
-                                          className={`w-full py-3 rounded-xl text-sm font-bold shadow-lg flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 ease-out ${
-                                            addToCartPressedId === item.id
-                                              ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-orange-500/30'
-                                              : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-slate-700 hover:shadow-xl hover:shadow-slate-600/20 hover:-translate-y-0.5 active:bg-slate-800 active:shadow-inner'
-                                          }`}
+                                          className="w-full py-3 rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-2 min-h-[44px] transition-all duration-200 bg-slate-900 text-white hover:bg-slate-700 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
                                         >
                                           <motion.span
                                             key={addToCartPressedId === item.id ? 'added' : 'default'}
