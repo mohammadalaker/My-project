@@ -1067,6 +1067,45 @@ function App() {
   const [completedOrders, setCompletedOrders] = useState([]);
   const [completedOrdersLoading, setCompletedOrdersLoading] = useState(false);
   const [submittedOrdersTab, setSubmittedOrdersTab] = useState('pending'); // 'pending' | 'completed'
+  const [ordersSearch, setOrdersSearch] = useState('');
+  const [ordersDateFilter, setOrdersDateFilter] = useState('');
+
+  const filteredSubmittedOrders = useMemo(() => {
+    return submittedOrders.filter(order => {
+      const matchesSearch = !ordersSearch || (order.customer_name && order.customer_name.toLowerCase().includes(ordersSearch.toLowerCase()));
+      const orderDateStr = (() => {
+        const rawDate = order.order_date || order.created_at;
+        if (!rawDate) return '';
+        try {
+          const d = new Date(rawDate);
+          return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+        } catch {
+          return '';
+        }
+      })();
+      const matchesDate = !ordersDateFilter || orderDateStr === ordersDateFilter;
+      return matchesSearch && matchesDate;
+    });
+  }, [submittedOrders, ordersSearch, ordersDateFilter]);
+
+  const filteredCompletedOrders = useMemo(() => {
+    return completedOrders.filter(order => {
+      const matchesSearch = !ordersSearch || (order.customer_name && order.customer_name.toLowerCase().includes(ordersSearch.toLowerCase()));
+      const orderDateStr = (() => {
+        const rawDate = order.order_date || order.created_at;
+        if (!rawDate) return '';
+        try {
+          const d = new Date(rawDate);
+          return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+        } catch {
+          return '';
+        }
+      })();
+      const matchesDate = !ordersDateFilter || orderDateStr === ordersDateFilter;
+      return matchesSearch && matchesDate;
+    });
+  }, [completedOrders, ordersSearch, ordersDateFilter]);
+
   /** طلبات حديثة لكل الحالات — للوحة التحكم (الإيرادات والعمليات الأخيرة)، وليس لقائمة «انتظار الموافقة» */
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
@@ -3202,157 +3241,131 @@ function App() {
         const displayName = prodType ? prodType : rawName;
         const productTypeStr = ''; // Removed the badge since we are replacing the name entirely
         const barcode = barcodeToLookup.replace(/</g, '&lt;');
-        const imgUrl = !isSubmitted && o.item?.image ? getPublicImageUrl(o.item.image, { thumb: true }) : null;
+        
+        const imgPath = isSubmitted ? (o.image_url || o.image || liveItem?.image) : (o.item?.image || liveItem?.image);
+        const imgUrl = imgPath ? getPublicImageUrl(imgPath, { thumb: true }) : null;
         const imgSrc = imgUrl ? String(imgUrl).replace(/"/g, '&quot;') : '';
-        const imgCell = imgSrc ? `<td class="inv-td-img"><img src="${imgSrc}" alt="" loading="lazy" /></td>` : '<td class="inv-td-img">—</td>';
+        const imgCell = imgSrc 
+          ? `<td class="inv-td-img"><img src="${imgSrc}" alt="" loading="lazy" /></td>` 
+          : `<td class="inv-td-img"><div class="no-img-placeholder">📦</div></td>`;
 
         return `<tr>
           ${imgCell}
           <td style="font-weight: 600;">${productTypeStr}${displayName}</td>
-          <td dir="ltr" lang="en" style="font-family: monospace; color: #64748b;">${barcode}</td>
+          <td class="barcode-text" dir="ltr" lang="en">${barcode}</td>
           <td dir="ltr" lang="en" style="font-weight: 700;">${o.qty}</td>
           <td dir="ltr" lang="en">₪${consumerPrice}</td>
           <td dir="ltr" lang="en">
-            <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.85rem;">${discPercent}%</span>
+            <span class="badge-discount">${discPercent}%</span>
           </td>
           <td dir="ltr" lang="en" style="font-weight: 600;">₪${unitPrice}</td>
-          <td dir="ltr" lang="en" style="font-weight: 800; color: #ea580c; font-size: 1.05rem;">₪${total.toFixed(2)}</td>
+          <td dir="ltr" lang="en" style="font-weight: 800; color: #4f46e5;">₪${total.toFixed(2)}</td>
         </tr>`;
       })
       .join('') : '<tr><td colspan="8" style="text-align:center; padding: 40px; color:#64748b; font-size: 1.1rem;">لا توجد أصناف في الطلبية</td></tr>';
 
-    const infoGridHtml = [
-      ['اسم الشركة', currentInfo.companyName],
-      ['رقم العميل', currentInfo.customerNumber, true],
-      ['اسم التاجر', currentInfo.merchantName],
-      ['رقم الهاتف', currentInfo.phone, true],
-      ['العنوان', currentInfo.address],
-      ['تاريخ الطلب', currentInfo.orderDate],
-      ['طريقة الدفع', currentInfo.paymentMethod],
-    ]
-      .filter(([_, v]) => v) // only show if there is a value
-      .map(
-        ([l, v, isLtr]) =>
-          `<div class="info-item"><span class="info-label">${l}</span><span class="info-value text-slate-800" ${isLtr ? 'dir="ltr" lang="en" style="font-family: monospace;"' : ''}>${(String(v) || '').replace(/</g, '&lt;')}</span></div>`
-      )
-      .join('');
-
-    return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>طلبية مبيعات</title>
+    return `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<title>فاتورة مبيعات - Maslamani</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
-  body { font-family: 'Tajawal', system-ui, sans-serif; padding: 40px; background: #f8fafc; color: #1e293b; margin: 0; direction: rtl; }
-  .invoice-container { max-width: 1000px; margin: 0 auto; background: #ffffff; padding: 48px; border-radius: 20px; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.06); border: 1px solid #f1f5f9; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Tajawal', sans-serif; background: #f8fafc; color: #1e293b; padding: 32px; }
+  .invoice-wrap { max-width: 960px; margin: 0 auto; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
   
-  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 24px; margin-bottom: 32px; }
-  .header-left { display: flex; align-items: center; gap: 16px; }
-  .brand-icon { width: 56px; height: 56px; background: linear-gradient(135deg, #4f46e5, #6366f1); border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25); }
-  .print-title { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
-  .print-subtitle { color: #64748b; font-weight: 700; font-size: 0.9rem; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
-  .header-meta { text-align: left; color: #64748b; font-size: 0.95rem; display: flex; flex-direction: column; gap: 6px; background: #f8fafc; padding: 12px 20px; border-radius: 12px; }
-  .header-meta span strong { color: #334155; font-weight: 800; }
-  
-  .section-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 16px 0; display: flex; align-items: center; gap: 10px; }
-  .section-title::before { content: ''; display: block; width: 6px; height: 20px; background: #4f46e5; border-radius: 4px; }
-  
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; background: transparent; margin-bottom: 32px; }
-  .info-item { display: flex; flex-direction: column; gap: 4px; background: #f8fafc; padding: 12px 16px; border-radius: 12px; border: 1px solid #e2e8f0; border-right: 4px solid #4f46e5; }
-  .info-label { font-size: 0.8rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-  .info-value { font-size: 1.1rem; font-weight: 800; color: #0f172a; word-break: break-word; }
-  
-  table.data-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-bottom: 2rem; font-size: 0.95rem; }
-  table.data-table thead th { background: #f1f5f9; color: #475569; padding: 14px 16px; text-align: right; font-weight: 800; white-space: nowrap; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
-  table.data-table thead th:first-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
-  table.data-table thead th:last-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-  
-  table.data-table tbody td { padding: 16px; background: #ffffff; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
-  table.data-table tbody td:first-child { border-right: 1px solid #f1f5f9; border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
-  table.data-table tbody td:last-child { border-left: 1px solid #f1f5f9; border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-  table.data-table tbody tr:hover td { background: #f8fafc; border-color: #e2e8f0; }
-  
-  .inv-td-img { width: 70px; text-align: center; }
-  .inv-td-img img { width: 50px; height: 50px; object-fit: contain; border-radius: 8px; border: 1px solid #f1f5f9; background: #fff; padding: 2px; }
-  
-  .total-section { display: flex; justify-content: flex-end; margin-top: 32px; }
-  .total-card { background: #f8fafc; padding: 24px 32px; border-radius: 16px; min-width: 340px; border: 1px solid #e2e8f0; }
-  .total-row-flex { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; color: #475569; margin-bottom: 16px; font-weight: 700; }
-  .total-row-main { display: flex; justify-content: space-between; align-items: center; font-size: 2rem; font-weight: 900; border-top: 2px dashed #cbd5e1; padding-top: 20px; color: #0f172a; }
-  .total-row-main span:last-child { color: #4f46e5; }
-  
-  .btn-print { padding: 16px 40px; background: #0f172a; color: #fff; border: none; border-radius: 16px; cursor: pointer; font-weight: 800; font-size: 1.1rem; margin: 40px auto 0; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25); transition: all 0.2s ease; font-family: 'Tajawal', sans-serif; width: fit-content; }
-  .btn-print:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(15, 23, 42, 0.35); background: #4f46e5; }
-  
-  @media screen and (max-width: 1024px) {
-    body { padding: 20px; }
-    .invoice-container { padding: 24px; border-radius: 16px; }
-    .header { flex-direction: column; align-items: flex-start; gap: 20px; }
-    .header-meta { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
-    .total-section { justify-content: stretch; }
-    .total-card { width: 100%; min-width: 0; }
-    .btn-print { width: 100%; }
-    
-    /* Make table scrollable horizontally if it overflows */
-    .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 2rem; border-radius: 12px; }
-    table.data-table { min-width: 700px; margin-bottom: 0; }
-  }
-  
+  /* Header */
+  .inv-header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 40px 48px; display: flex; justify-content: space-between; align-items: center; }
+  .inv-brand h1 { font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; }
+  .inv-brand h1 span { font-weight: 300; opacity: 0.8; }
+  .inv-brand p { font-size: 0.85rem; opacity: 0.7; margin-top: 4px; }
+  .inv-meta { text-align: left; }
+  .inv-meta .inv-number { font-size: 1.1rem; font-weight: 800; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 10px; }
+  .inv-meta .inv-date { font-size: 0.8rem; opacity: 0.7; margin-top: 8px; text-align: left; }
+
+  /* Customer Info */
+  .inv-customer { padding: 32px 48px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+  .inv-customer h2 { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+  .inv-customer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .inv-customer-item { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; }
+  .inv-customer-item label { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .inv-customer-item span { font-size: 0.95rem; font-weight: 700; color: #1e293b; }
+
+  /* Table */
+  .inv-table-wrap { padding: 32px 48px; }
+  .inv-table-wrap h2 { font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; }
+  thead th { padding: 14px 12px; text-align: right; font-size: 0.8rem; font-weight: 700; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:hover { background: #f1f5f9; }
+  tbody td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: middle; }
+  .inv-td-img { width: 56px; }
+  .inv-td-img img { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; background: white; padding: 2px; }
+  .no-img-placeholder { width: 44px; height: 44px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+  .total-row { background: #f1f5f9 !important; font-weight: 900; font-size: 1.1rem; }
+  .total-row td { padding: 16px 12px; border-top: 2px solid #e2e8f0; }
+
+  /* Discount badge */
+  .disc-badge { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
+
+  /* Total Section */
+  .inv-total-section { padding: 24px 48px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; }
+  .inv-total-card { background: white; border: 2px solid #4f46e5; border-radius: 16px; padding: 24px 32px; min-width: 300px; }
+  .inv-total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #64748b; }
+  .inv-total-final { display: flex; justify-content: space-between; font-size: 1.6rem; font-weight: 900; color: #4f46e5; border-top: 2px dashed #e2e8f0; padding-top: 16px; margin-top: 8px; }
+
+  /* Footer */
+  .inv-footer { padding: 24px 48px; text-align: center; background: #1e293b; color: #94a3b8; font-size: 0.85rem; }
+  .inv-footer strong { color: white; }
+
+  /* Print */
+  .btn-print { display: block; margin: 24px auto; padding: 14px 40px; background: #4f46e5; color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; font-family: 'Tajawal', sans-serif; }
   @media print {
-    @page { margin: 0.5cm; }
-    body { padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .invoice-container { box-shadow: none; border: none; padding: 0; max-width: 100%; width: 100%; }
+    body { background: white; padding: 0; }
+    .invoice-wrap { box-shadow: none; border-radius: 0; }
     .btn-print { display: none; }
-    
-    .header { border-bottom-color: #e2e8f0; }
-    .brand-icon { box-shadow: none; }
-    .header-meta { background: transparent !important; padding: 0; border: none; text-align: left; align-items: end; }
-    
-    .info-grid { background: transparent !important; border: none; padding: 0; gap: 8px; margin-bottom: 16px; grid-template-columns: repeat(4, 1fr); }
-    .info-item { background: transparent !important; border: 1px solid #cbd5e1; border-right: 4px solid #0f172a; padding: 8px 12px; }
-    
-    table.data-table { font-size: 0.85rem; border-spacing: 0; }
-    table.data-table thead th { background: transparent !important; border-bottom: 2px solid #0f172a; color: #0f172a; padding: 8px 4px; white-space: normal; font-size: 0.8rem; border-radius: 0 !important; }
-    table.data-table tbody td { border: none; border-bottom: 1px solid #e2e8f0; padding: 8px 4px; border-radius: 0 !important; }
-    .inv-td-img img { width: 40px; height: 40px; border-color: #cbd5e1; }
-    .inv-td-img { width: 50px; }
-    
-    .total-card { background: transparent !important; box-shadow: none; border: 2px solid #0f172a; page-break-inside: avoid; break-inside: avoid; min-width: 280px; padding: 16px 24px; }
-    .total-row-main { border-top-color: #0f172a; border-top-style: solid; }
-    .section-title::before { background: #0f172a !important; }
+    .inv-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
-</style></head><body>
+</style>
+</head>
+<body>
+<div class="invoice-wrap">
 
-<div class="invoice-container">
-  <div class="header">
-    <div class="header-left">
-      <div class="brand-icon">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
-      </div>
-      <div>
-        <h1 class="print-title">طلبية مبيعات</h1>
-        <div class="print-subtitle">SALES ORDER AGREEMENT</div>
-      </div>
+  <div class="inv-header">
+    <div class="inv-brand">
+      <h1>Maslamani<span>Sales</span></h1>
+      <p>Premium Appliances — نظام المبيعات</p>
     </div>
-    <div class="header-meta">
-      <span>تاريخ الإصدار: <strong dir="ltr">${new Date().toISOString().slice(0, 10)}</strong></span>
-      <span>عدد الأصناف: <strong dir="ltr">${lines.length}</strong></span>
+    <div class="inv-meta">
+      <div class="inv-number">فاتورة مبيعات</div>
+      <div class="inv-date">التاريخ: ${currentInfo.orderDate || new Date().toISOString().slice(0,10)}</div>
     </div>
   </div>
 
-  <div class="section-title">بيانات العميل</div>
-  <div class="info-grid">
-    ${infoGridHtml}
+  <div class="inv-customer">
+    <h2>بيانات العميل</h2>
+    <div class="inv-customer-grid">
+      <div class="inv-customer-item"><label>اسم الشركة</label><span>${(currentInfo.companyName || '—').replace(/</g,'&lt;')}</span></div>
+      <div class="inv-customer-item"><label>اسم التاجر</label><span>${(currentInfo.merchantName || '—').replace(/</g,'&lt;')}</span></div>
+      <div class="inv-customer-item"><label>رقم الهاتف</label><span dir="ltr">${(currentInfo.phone || '—').replace(/</g,'&lt;')}</span></div>
+      <div class="inv-customer-item"><label>العنوان</label><span>${(currentInfo.address || '—').replace(/</g,'&lt;')}</span></div>
+      ${currentInfo.paymentMethod ? `<div class="inv-customer-item"><label>طريقة الدفع</label><span>${currentInfo.paymentMethod}</span></div>` : ''}
+      ${currentInfo.customerNumber ? `<div class="inv-customer-item"><label>رقم العميل</label><span>${currentInfo.customerNumber}</span></div>` : ''}
+    </div>
   </div>
 
-  <div class="section-title">تفاصيل المنتجات</div>
-  <div class="table-responsive">
-    <table class="data-table">
+  <div class="inv-table-wrap">
+    <h2>تفاصيل المنتجات (${lines.length} صنف)</h2>
+    <table>
       <thead>
         <tr>
           <th>صورة</th>
-          <th>وصف المنتج</th>
+          <th>المنتج</th>
           <th>الباركود</th>
-          <th>العدد</th>
+          <th>الكمية</th>
           <th>السعر</th>
           <th>الخصم</th>
           <th>سعر الوحدة</th>
@@ -3361,32 +3374,35 @@ function App() {
       </thead>
       <tbody>
         ${rows}
+        <tr class="total-row">
+          <td colspan="6"></td>
+          <td style="color:#64748b;">الإجمالي الكلي</td>
+          <td style="color:#4f46e5;" dir="ltr">₪${Number(totalAmount).toFixed(2)}</td>
+        </tr>
       </tbody>
     </table>
   </div>
 
-  <div class="total-section">
-    <div class="total-card">
-      <div class="total-row-flex"><span>إجمالي كمية المنتجات</span><strong dir="ltr" lang="en">${lines.reduce((sum, l) => sum + (l.qty || 0), 0)}</strong></div>
-      ${printDiscount > 0 ? `
-      <div class="total-row-flex"><span>المجموع قبل الخصم</span><span dir="ltr" lang="en">₪${printSubtotal.toFixed(2)}</span></div>
-      <div class="total-row-flex" style="color: #059669;"><span>الخصم الإضافي</span><span dir="ltr" lang="en">-₪${printDiscount.toFixed(2)}</span></div>
-      ` : ''}
-      <div class="total-row-main"><span>${printDiscount > 0 ? 'المجموع النهائي' : 'المجموع الكلي'}</span><span dir="ltr" lang="en">₪${Number(totalAmount).toFixed(2)}</span></div>
+  ${printDiscount > 0 ? `
+  <div class="inv-total-section">
+    <div class="inv-total-card">
+      <div class="inv-total-row"><span>المجموع قبل الخصم</span><span dir="ltr">₪${printSubtotal.toFixed(2)}</span></div>
+      <div class="inv-total-row" style="color:#16a34a"><span>الخصم</span><span dir="ltr">-₪${printDiscount.toFixed(2)}</span></div>
+      <div class="inv-total-final"><span>الإجمالي</span><span dir="ltr">₪${Number(totalAmount).toFixed(2)}</span></div>
     </div>
+  </div>` : ''}
+
+  <div class="inv-footer">
+    <strong>شكراً لتعاملكم معنا — Maslamani Sales</strong>
+    <p style="margin-top:4px;">Premium Appliances | maslamanisales.app</p>
   </div>
 
-  <button class="btn-print" onclick="window.print()">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-    طباعة / حفظ PDF
-  </button>
 </div>
-
-  <script>
-    window.onload = function() { setTimeout(function() { window.print(); }, 800); };
-  </script>
-</body></html>`;
-  }, [orderLines, orderTotal, orderInfo]);
+<button class="btn-print" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+<script>window.onload = function() { setTimeout(function() { window.print(); }, 800); }</script>
+</body>
+</html>`;
+  }, [orderLines, orderTotal, orderInfo, items]);
 
   const getInventoryHtml = useCallback(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -5420,6 +5436,35 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                     </button>
                   </div>
 
+                  {/* Filters */}
+                  <div className="flex gap-3 flex-wrap items-center mb-6">
+                    <input
+                      type="text"
+                      placeholder="بحث باسم العميل..."
+                      value={ordersSearch}
+                      onChange={(e) => setOrdersSearch(e.target.value)}
+                      className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                    <input
+                      type="date"
+                      value={ordersDateFilter}
+                      onChange={(e) => setOrdersDateFilter(e.target.value)}
+                      className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                    {(ordersSearch || ordersDateFilter) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrdersSearch('');
+                          setOrdersDateFilter('');
+                        }}
+                        className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors"
+                      >
+                        مسح الفلتر
+                      </button>
+                    )}
+                  </div>
+
                   {ordersError && submittedOrdersTab === 'pending' && (
                     <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
                       <p className="font-medium">{ordersError}</p>
@@ -5437,7 +5482,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     ) : (
                       <div className="grid gap-4">
-                        {submittedOrders.map((order, i) => (
+                        {filteredSubmittedOrders.map((order, i) => (
                           <div
                             key={order.id || i}
                             role="button"
@@ -5467,7 +5512,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             </div>
                           </div>
                         ))}
-                        {!ordersLoading && submittedOrders.length === 0 && !ordersError && (
+                        {!ordersLoading && filteredSubmittedOrders.length === 0 && !ordersError && (
                           <div className="text-center py-20 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50 rounded-3xl border border-dashed border-slate-200">
                             <Package size={48} className="mx-auto text-slate-300 mb-4" />
                             <p className="text-slate-400 font-medium">لا توجد طلبيات بانتظار الموافقة.</p>
@@ -5486,7 +5531,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                       </div>
                     ) : (
                       <div className="grid gap-4">
-                        {completedOrders.map((order, i) => (
+                        {filteredCompletedOrders.map((order, i) => (
                           <div
                             key={order.id || i}
                             role="button"
@@ -5516,7 +5561,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;padding:28px;max-width:720px;mar
                             </div>
                           </div>
                         ))}
-                        {!completedOrdersLoading && completedOrders.length === 0 && (
+                        {!completedOrdersLoading && filteredCompletedOrders.length === 0 && (
                           <div className="text-center py-20 bg-gradient-to-br from-[#f6f7fb] to-[#eef2f9]/50 rounded-3xl border border-dashed border-slate-200">
                             <Package size={48} className="mx-auto text-slate-300 mb-4" />
                             <p className="text-slate-400 font-medium">لا توجد طلبيات مكتملة بعد.</p>
